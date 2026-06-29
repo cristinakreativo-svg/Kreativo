@@ -1023,8 +1023,9 @@ function App() {
     if(t==="clients") setClients(p=>p.map(c=>({...c,open:false})));
     if(t==="motionblinds") setOpenModel({});
     if(t==="oferte") setOferte(p=>p.map(o=>({...o,open:false})));
-  };if(r.type==="lunar_zi") return `Lunar, ziua ${r.day}`;if(r.type==="lunar_inceput") return "Lunar, prima zi";if(r.type==="lunar_sfarsit") return "Lunar, ultima zi";if(r.type==="saptamanal") return `Săptămânal, ${r.day}`;return "";};
+  };
 
+  const recLabel=(r)=>{if(r.type==="lunar_zi") return `Lunar, ziua ${r.day}`;if(r.type==="lunar_inceput") return "Lunar, prima zi";if(r.type==="lunar_sfarsit") return "Lunar, ultima zi";if(r.type==="saptamanal") return `Săptămânal, ${r.day}`;return "";};
   if(!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#F2EFE9",flexDirection:"column",gap:16}}>
     <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:300,color:"#2A2118",letterSpacing:"0.05em"}}>Kreativo Studio</div>
     <div style={{fontSize:11,color:"#A8998A",textTransform:"uppercase",letterSpacing:"0.15em"}}>Se încarcă datele...</div>
