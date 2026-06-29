@@ -1299,14 +1299,14 @@ function App() {
           {["all","pending","done"].map(f=><button key={f} onClick={()=>setCliFilter(f)} style={{...btnS,fontSize:11,padding:"5px 12px",background:cliFilter===f?C.accent:"transparent",color:cliFilter===f?"#fff":C.textSub,border:cliFilter===f?"none":`1px solid ${C.border}`}}>{f==="all"?"Toți":f==="pending"?"Cu sarcini":"Finalizați"}</button>)}
         </div>
       </div>
-      {filtCl.map(client=>{
-        const ci=clients.indexOf(client);const color=CC[ci%CC.length];const colorLight=CC_LIGHT[ci%CC_LIGHT.length];
+      {filtCl.map((client,fi)=>{
+        const ci=clients.indexOf(client);const color=CC[fi%CC.length];
         const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
         return <div key={client.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
-          <div onClick={()=>togCliOpen(ci)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
-            <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,0.22)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12,fontWeight:600,color:"#fff"}}>{client.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span></div>
-            <div style={{fontSize:11,background:ci%2===0?"rgba(255,255,255,0.22)":"rgba(160,132,92,0.15)",color:ci%2===0?"#fff":C.accent,padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
-            <div style={{fontSize:11,color:ci%2===0?"rgba(255,255,255,0.7)":C.textMuted}}>{client.open?"▾":"▸"}</div>
+          <div onClick={()=>togCliOpen(ci)} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
+            <div style={{flex:1,fontSize:13,fontWeight:500,color:"#fff",letterSpacing:"0.01em"}}>{client.name}</div>
+            <div style={{fontSize:11,background:"rgba(255,255,255,0.22)",color:"#fff",padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.7)"}}>{client.open?"▾":"▸"}</div>
           </div>
           {client.open&&<div style={{padding:"12px"}}>
             {/* Valoare comandă */}
