@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kreativo Studio · Panou de control</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+body{background:#F2EFE9;margin:0;font-family:'Jost',sans-serif;}
+input,select,textarea,button{font-family:'Jost',sans-serif;}
+input[type=checkbox]{accent-color:#A0845C;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:#D4C9B8;border-radius:4px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+const SUPA_URL = "https://ktaeonovsygwtsoorrdn.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0YWVvbm92c3lnd3Rzb29ycmRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2ODg4OTUsImV4cCI6MjA5ODI2NDg5NX0.pFC9iOB6xA0XrAYDVC0qG_VhakGaP_KfRxoffz5C6Ms";
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const SK = "asistenta_kreativo_v1";
+const CK = "asistenta_chat_v1";
+const CLK = "kreativo_clienti_v2";
+const AK = "kreativo_admin_v1";
+const PK = "kreativo_perdele_v1";
+const MIK = "kreativo_mit_v1";
+const JK = "kreativo_jurnal_v1";
+const PLK = "kreativo_plan_v1";
+const RK = "kreativo_recurente_v1";
+const MOK = "kreativo_motoare_v1";
+const IEK = "kreativo_iesiri_v1";
+const INK = "kreativo_intrari_v1";
+const BLK = "kreativo_bilete_v1";
+const TRK = "kreativo_trezorerie_v1";
+const OFK = "kreativo_oferte_v1";
+const LGK = "kreativo_log_v1";
+
+const MOTOARE_INIT = [
+  {model:"CM-03",stoc:18},{model:"CM-07",stoc:8},{model:"CM-36",stoc:2},
+  {model:"CM-36E",stoc:4},{model:"CM-38",stoc:12},{model:"CM-39",stoc:9},{model:"CM-57",stoc:18}
+];
+
+const IC = [
+  {id:"apostu",name:"Apostu",tasks:["Comanda plisee","Comanda manere noi si vechi"],dates:["",""],motoare:[{model:"CM-36",qty:1}]},
+  {id:"alexandra",name:"Alexandra",tasks:["Comanda productie storuri romane","Fisa productie rulouri"],dates:["",""],motoare:[{model:"CM-07",qty:8},{model:"CM-39",qty:8}]},
+  {id:"campu",name:"Campu",tasks:["Factura"],dates:[""],motoare:[]},
+  {id:"darstar",name:"Darstar",tasks:["Comanda canapea","Comanda fotolii","Comanda manere","Comanda noptiere acasa","Comanda candelabru masa","Comanda masa","Comanda scaune","Comanda candelabru acasa","Comanda aplica acasa","Livrare corpuri iluminat","Comanda vopsele + pigmenti"],dates:Array(11).fill(""),motoare:[]},
+  {id:"diaconescu",name:"Diaconescu",tasks:["Comanda atelier Nico"],dates:[""],motoare:[]},
+  {id:"piatra",name:"Piatra Neamt",tasks:["Comanda sine atelier","Comanda rulouri atelier"],dates:["",""],motoare:[{model:"CM-57",qty:4},{model:"CM-03",qty:5}]},
+  {id:"nenciu",name:"Nenciu",tasks:["Masuratori sine","Montaj sine"],dates:["",""],motoare:[{model:"CM-57",qty:6}]},
+  {id:"kronwell",name:"Kronwell",tasks:["Masuratori","Comanda storuri atelier"],dates:["",""],motoare:[]},
+  {id:"liviu",name:"Liviu Tacu",tasks:["Factura","Livrat bridge"],dates:["",""],motoare:[]},
+  {id:"porumb",name:"Porumb",tasks:["Asteptam telefon client"],dates:[""],motoare:[]},
+  {id:"silvia",name:"Silvia",tasks:["Adauga oferta corpuri iluminat","Comanda Vegas auriu","Centralizare cost","Oferta plisee"],dates:["","","",""],motoare:[]},
+  {id:"franz",name:"Franz",tasks:["Comanda perdea Hohmann","Comanda Nico atelier","Comanda sine atelier","Comanda jaluzea lemn"],dates:["","","",""],motoare:[{model:"CM-57",qty:2},{model:"CM-36",qty:1}]},
+  {id:"ornela",name:"Ornela",tasks:["Comanda Nico","Programeaza montaj"],dates:["",""],motoare:[]},
+  {id:"opresu",name:"Opresu",tasks:["Montaj"],dates:[""],motoare:[{model:"CM-57",qty:1}]},
+  {id:"ionita",name:"Ionita",tasks:["Oferta stor roman bucatarie"],dates:[""],motoare:[]},
+  {id:"butuza",name:"Butuza",tasks:["Oferta centralizata","Oferta perete decorativ"],dates:["",""],motoare:[]},
+];
+
+const PP = [
+  {etapa:"ETAPA 1",titlu:"Consolidare & Fundație",period:"Iulie–Sept 2025",color:"#5C6B65",taskuri:[
+    {id:"p1",text:"Rezolvare probleme tehnice perdelekreativo.ro",resp:"Expert-Online",done:false,deadline:""},
+    {id:"p2",text:"Reducere pagini neindexate de la 176 la sub 80",resp:"Cristina + Expert-Online",done:false,deadline:""},
+    {id:"p3",text:"Publicare 4 articole blog SEO",resp:"Cristina",done:false,deadline:""},
+    {id:"p4",text:"Listare completă produse Twinbru Luxury Silk pe site",resp:"Cristina",done:false,deadline:""},
+    {id:"p5",text:"PRIORITATE: Solicitat Agnieska (Coulisse) drepturi bază de date materiale",resp:"Cristina",done:false,deadline:""},
+    {id:"p9b",text:"Creare pagină rulouri pe perdelekreativo.ro",resp:"Cristina + Expert-Online",done:false,deadline:""},
+    {id:"p6",text:"Finalizare video mătase (Doni) — publicat pe toate canalele",resp:"Doni",done:false,deadline:""},
+    {id:"p7",text:"Documentare proces producție rulouri — fișă internă",resp:"Cristina",done:false,deadline:""},
+    {id:"p8",text:"Tudor: secvență email → telefon arhitecți/designeri Brașov",resp:"Tudor Proca",done:false,deadline:""},
+    {id:"p9",text:"Obiectiv B2B: 5 întâlniri arhitecți, 2 proiecte noi",resp:"Tudor Proca",done:false,deadline:""},
+  ]},
+  {etapa:"ETAPA 2",titlu:"Creștere & Diferențiere",period:"Oct 2025–Mar 2026",color:"#4A6070",taskuri:[
+    {id:"p10",text:"Pagină Smart Shading cu CM-50-E",resp:"Cristina + Expert-Online",done:false,deadline:""},
+    {id:"p11",text:"Campanie Google Ads smart shading — 50–100 RON/zi",resp:"Cristina",done:false,deadline:""},
+    {id:"p12",text:"2 articole blog/lună smart shading + tendințe",resp:"Cristina",done:false,deadline:""},
+    {id:"p13",text:"Reels lunar înainte/după — Doni cu DJI Osmo",resp:"Doni + Cristina",done:false,deadline:""},
+    {id:"p14",text:"Campanie Meta smart shading — 30–50 RON/zi",resp:"Cristina",done:false,deadline:""},
+    {id:"p15",text:"Prezentare fizică la 10 birouri arhitectură",resp:"Tudor Proca",done:false,deadline:""},
+    {id:"p16",text:"Definire discount B2B arhitecți: 10–15% off retail",resp:"Cristina",done:false,deadline:""},
+    {id:"p17",text:"Evaluare credit investiție utilaj producție",resp:"Cristina",done:false,deadline:""},
+  ]},
+  {etapa:"ETAPA 3",titlu:"Scalare Controlată",period:"Apr–Dec 2026",color:"#506050",taskuri:[
+    {id:"p19",text:"Identificare 5–10 parteneri B2B naționali",resp:"Cristina + Tudor",done:false,deadline:""},
+    {id:"p20",text:"Negociere model discount B2B național: 35–40%",resp:"Cristina",done:false,deadline:""},
+    {id:"p21",text:"Target SEO: 500+ sesiuni/28 zile, 20+ articole blog",resp:"Cristina",done:false,deadline:""},
+    {id:"p22",text:"Actualizare expunere showroom 2026",resp:"Cristina",done:false,deadline:""},
+    {id:"p23",text:"Zonă demo smart shading în showroom",resp:"Cristina",done:false,deadline:""},
+  ]}
+];
+
+const CC = ["#B8A080","#E8E2D8"];
+const CC_LIGHT = ["#A0845C","#C4A882"];
+
+function tagTask(task) {
+  const t=(typeof task==="object"?task.title:task).toLowerCase();
+  if(t.includes("montaj")||t.includes("programeaza")) return {label:"Montaj",bg:"#EEF2EE",color:"#3D5C3D"};
+  if(t.includes("factur")||t.includes("avans")) return {label:"Factură",bg:"#F2EEF0",color:"#5C3D50"};
+  if(t.includes("ofert")) return {label:"Ofertă",bg:"#EEF0F2",color:"#3D4A5C"};
+  if(t.includes("masur")) return {label:"Măsurători",bg:"#F2EEEE",color:"#5C3D3D"};
+  if(t.includes("livrat")||t.includes("livrare")) return {label:"Livrare",bg:"#EEF2EE",color:"#3D5040"};
+  if(t.includes("telefon")||t.includes("asteapt")) return {label:"Așteptare",bg:"#F2F2EE",color:"#505050"};
+  return {label:"Comandă",bg:"#EEF0F2",color:"#3D485C"};
+}
+
+const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
+const tday=()=>new Date().toISOString().slice(0,10);
+const tmrw=()=>{const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);};
+const fmtD=s=>{if(!s)return"";const[y,m,d]=s.split("-");return`${d}.${m}.${y}`;};
+const isOvd=(dl,done)=>!!(dl&&!done&&dl<tday());
+const isToday=s=>s===tday();
+const daysTo=s=>{if(!s)return null;return Math.ceil((new Date(s)-new Date(tday()))/86400000);};
+
+function nxtRecur(r) {
+  const now=new Date(),t=tday();
+  if(r.type==="lunar_zi"){
+    const day=parseInt(r.day);
+    // Incearca luna curenta
+    let d=new Date(now.getFullYear(),now.getMonth(),day);
+    // Daca ziua a depasit luna (ex: ziua 31 in feb), JavaScript o muta automat - normalizam
+    if(d.getMonth()!==now.getMonth()) d=new Date(now.getFullYear(),now.getMonth()+1,0); // ultima zi a lunii
+    if(d.toISOString().slice(0,10)<=t){
+      // Trecem la luna urmatoare
+      d=new Date(now.getFullYear(),now.getMonth()+1,day);
+      if(d.getMonth()!==now.getMonth()+1&&d.getMonth()!==0) d=new Date(now.getFullYear(),now.getMonth()+2,0);
+    }
+    return d.toISOString().slice(0,10);
+  }
+  if(r.type==="lunar_inceput"){let d=new Date(now.getFullYear(),now.getMonth(),1);if(d.toISOString().slice(0,10)<=t)d=new Date(now.getFullYear(),now.getMonth()+1,1);return d.toISOString().slice(0,10);}
+  if(r.type==="lunar_sfarsit"){let d=new Date(now.getFullYear(),now.getMonth()+1,0);if(d.toISOString().slice(0,10)<=t)d=new Date(now.getFullYear(),now.getMonth()+2,0);return d.toISOString().slice(0,10);}
+  if(r.type==="saptamanal"){const dm={"Luni":1,"Marți":2,"Miercuri":3,"Joi":4,"Vineri":5,"Sâmbătă":6,"Duminică":0};const target=dm[r.day]??1;let d=new Date(now);d.setDate(d.getDate()+((target-d.getDay()+7)%7||7));return d.toISOString().slice(0,10);}
+  return tmrw();
+}
+
+function impactScore(task,cat,prio) {
+  let s=0;
+  if(prio==="Urgent")s+=40;else if(prio==="Normal")s+=20;
+  if(cat==="Benjamin Moore"||cat==="Kreativo")s+=30;
+  const t=(task||"").toLowerCase();
+  if(t.includes("b2b")||t.includes("arhitect"))s+=25;
+  if(t.includes("factur")||t.includes("plat"))s+=20;
+  if(t.includes("campanie")||t.includes("ads"))s+=15;
+  if(t.includes("ofert"))s+=10;
+  return s;
+}
+
+const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#6B5E4E",textMuted:"#A8998A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#8B3A3A",dangerLight:"#F7EFEF",warn:"#8B6914",warnLight:"#F7F0E0"};
+
+function ClientTaskRow({task,date,notif,onToggle,onDelete,onDateChange,onNotifChange}) {
+  const taskTitle=typeof task==="object"?task.title:task;
+  const [d,setD]=useState(date||"");
+  const tg=tagTask(taskTitle);
+  const ov=d&&d<tday();
+  const soon=d&&!ov&&daysTo(d)<=2&&daysTo(d)>=0;
+  return <div style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":soon?"#C8A870":C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <input type="checkbox" checked={false} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
+      <span style={{flex:1,fontSize:13,color:C.text}}>{taskTitle}</span>
+      <span style={{fontSize:10,padding:"2px 7px",borderRadius:6,background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
+      <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
+        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
+      <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,borderRadius:4,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
+      <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
+    </div>
+  </div>;
+}
+
+function AdminTaskRow({task,onToggle,onDelete,onRespChange,onDateChange}) {
+  const [lr,setLr]=useState(task.resp||"Cristina");
+  const [ld,setLd]=useState(task.deadline||"");
+  const ov=ld&&!task.done&&ld<tday();
+  return <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+    <div style={{display:"flex",alignItems:"center",gap:8}}>
+      <input type="checkbox" checked={task.done} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
+      <span style={{flex:1,fontSize:13,color:task.done?C.textMuted:C.text,textDecoration:task.done?"line-through":"none"}}>{task.title}</span>
+      {!task.done&&<input value={lr} onChange={e=>{setLr(e.target.value);onRespChange(e.target.value);}} placeholder="Resp."
+        style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:C.textSub,outline:"none",width:100,flexShrink:0}}/>}
+      {!task.done&&<input type="date" value={ld} onChange={e=>{setLd(e.target.value);onDateChange(e.target.value);}}
+        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>}
+      <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
+    </div>
+  </div>;
+}
+
+function CalItem({item,onComplete,onReschedule}) {
+  const [ed,setEd]=useState(false);
+  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.surface,border:`1px solid ${item.isRecurent?"#D4B88A":C.border}`,borderRadius:10,marginBottom:6}}>
+    <input type="checkbox" checked={false} onChange={onComplete} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
+    <div style={{flex:1}}>
+      <div style={{fontSize:13,color:C.text}}>{item.title}</div>
+      <div style={{fontSize:11,color:C.textMuted}}>{item.source}{item.loc?` · ${item.loc}`:""}{item.time?` · ${item.time}`:""}</div>
+    </div>
+    {!item.isRecurent&&(ed?
+      <input type="date" autoFocus defaultValue={item.date} onChange={e=>{if(e.target.value){onReschedule(e.target.value);setEd(false);}}} onBlur={()=>setEd(false)}
+        style={{fontSize:12,border:`1px solid ${C.accent}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>:
+      <button onClick={()=>setEd(true)} style={{fontSize:11,color:C.textMuted,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Mută</button>
+    )}
+  </div>;
+}
+
+function ManualInput({onAdd}) {
+  const [v,setV]=useState("");
+  return <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+    <input style={{padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,flex:1,background:C.surface,color:C.text,outline:"none"}}
+      value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&v.trim()){onAdd(v.trim());setV("");}}}
+      placeholder="Adaugă ce ai făcut neprogramat..."/>
+    <button style={{padding:"8px 16px",border:"none",borderRadius:8,background:C.accent,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,whiteSpace:"nowrap"}}
+      onClick={()=>{if(v.trim()){onAdd(v.trim());setV("");}}}>+ Adaugă</button>
+  </div>;
+}
+
+function ClientMotoare({client,motoare,onAdd,onRemove}) {
+  const [sel,setSel]=useState(motoare[0]?.model||"");
+  const [qty,setQty]=useState(1);
+  return <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.bg}`}}>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:500,marginBottom:8}}>Motoare necesare</div>
+    {(client.motoare||[]).map(m=><div key={m.model} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"5px 10px",background:C.accentLight,borderRadius:7}}>
+      <span style={{fontSize:12,fontWeight:500,color:C.accent,minWidth:55}}>{m.model}</span>
+      <span style={{fontSize:12,color:C.text}}>× {m.qty} buc.</span>
+      <button onClick={()=>onRemove(m.model)} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14}}>×</button>
+    </div>)}
+    <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginTop:6}}>
+      <select value={sel} onChange={e=>setSel(e.target.value)}
+        style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",background:C.surface,outline:"none",color:C.text}}>
+        {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
+      </select>
+      <input type="number" min="1" value={qty} onChange={e=>setQty(parseInt(e.target.value)||1)}
+        style={{width:55,fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
+      <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
+      <button onClick={()=>onAdd(sel||motoare[0]?.model,qty)}
+        style={{padding:"4px 12px",border:"none",borderRadius:6,background:C.accent,color:"#fff",cursor:"pointer",fontSize:12}}>+ Adaugă</button>
+    </div>
+  </div>;
+}
+
+function LogDiscutii({id,log,setLog,C,inp,btnP,gid,tday,fmtD}){
+  const [open,setOpen]=React.useState(false);
+  const [text,setText]=React.useState("");
+  const entries=(log[id]||[]).slice().reverse();
+  const addEntry=()=>{
+    if(!text.trim()) return;
+    const now=new Date();
+    const ora=now.toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"});
+    setLog(p=>({...p,[id]:[...(p[id]||[]),{id:Date.now().toString(),text:text.trim(),data:tday(),ora}]}));
+    setText("");
+  };
+  const delEntry=(eid)=>setLog(p=>({...p,[id]:(p[id]||[]).filter(e=>e.id!==eid)}));
+  return <div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:open?10:0}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,cursor:"pointer"}} onClick={()=>setOpen(!open)}>
+        Discuții {entries.length>0&&<span style={{background:C.accentLight,color:C.accent,padding:"1px 6px",borderRadius:10,fontSize:10,marginLeft:4}}>{entries.length}</span>}
+        <span style={{marginLeft:6,fontSize:10}}>{open?"▾":"▸"}</span>
+      </div>
+      {!open&&entries.length>0&&<span style={{fontSize:11,color:C.textMuted}}>{fmtD(entries[0].data)} — {entries[0].text.slice(0,40)}{entries[0].text.length>40?"...":""}</span>}
+    </div>
+    {open&&<div>
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        <input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addEntry()} placeholder="Notează ce s-a discutat..." style={{...inp,flex:1,padding:"6px 10px",fontSize:12}}/>
+        <button onClick={addEntry} style={{...btnP(),fontSize:11,padding:"6px 14px"}}>+ Adaugă</button>
+      </div>
+      {entries.length===0&&<div style={{fontSize:12,color:C.textMuted,textAlign:"center",padding:"0.5rem"}}>Nicio discuție notată.</div>}
+      {entries.map(e=><div key={e.id} style={{display:"flex",gap:8,padding:"8px 10px",background:C.bg,borderRadius:8,marginBottom:4,alignItems:"flex-start"}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,color:C.text}}>{e.text}</div>
+          <div style={{fontSize:10,color:C.textMuted,marginTop:2}}>{fmtD(e.data)} · {e.ora}</div>
+        </div>
+        <button onClick={()=>delEntry(e.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
+      </div>)}
+    </div>}
+  </div>;
+}
+
+function OfertaAddTask({onAdd,inp,btnP,tday}){
+  const [open,setOpen]=React.useState(false);
+  const [task,setTask]=React.useState("");
+  const [tip,setTip]=React.useState("Comandă");
+  const [data,setData]=React.useState("");
+  const TIPURI=["Comandă","Ofertă","Măsurătoare","Montaj","Livrare","Plată","Alt task"];
+  if(!open) return <button onClick={()=>setOpen(true)} style={{fontSize:11,color:"#A0845C",border:"1px dashed #D4C9B8",borderRadius:6,padding:"5px 12px",background:"transparent",cursor:"pointer",marginTop:6,width:"100%"}}>+ adaugă sarcină</button>;
+  return <div style={{marginTop:6,padding:"10px",background:"#F5F0E8",borderRadius:8,border:"1px solid #E0D8CC"}}>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+      <input autoFocus value={task} onChange={e=>setTask(e.target.value)} onKeyDown={e=>e.key==="Escape"&&setOpen(false)} placeholder="Descriere sarcină..." style={{...inp,flex:2,minWidth:120,padding:"6px 10px",fontSize:12}}/>
+      <select value={tip} onChange={e=>setTip(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",borderRadius:6,padding:"6px 8px",background:"#FAF8F4",outline:"none"}}>
+        {TIPURI.map(t=><option key={t} value={t}>{t}</option>)}
+      </select>
+      <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",borderRadius:6,padding:"6px 8px",background:"#FAF8F4",outline:"none"}}/>
+    </div>
+    <div style={{display:"flex",gap:6}}>
+      <button onClick={()=>{if(task.trim()){onAdd({title:task.trim(),tip,date:data});setTask("");setTip("Comandă");setData("");setOpen(false);}}} style={{...btnP(),fontSize:11,padding:"5px 12px"}}>+ Adaugă</button>
+      <button onClick={()=>setOpen(false)} style={{fontSize:11,padding:"5px 10px",border:"1px solid #E0D8CC",borderRadius:6,background:"transparent",cursor:"pointer",color:"#A8998A"}}>Anulează</button>
+    </div>
+  </div>;
+}
+
+function AddOfertaForm({onAdd,inp,btnP,btnS,C}){
+  const [open,setOpen]=React.useState(false);
+  const [name,setName]=React.useState("");
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,borderRadius:12,background:"transparent",cursor:"pointer"}}>+ ofertă nouă</button>;
+  return <div style={{display:"flex",gap:6}}>
+    <input autoFocus value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&name.trim()){onAdd(name.trim());setName("");setOpen(false);}if(e.key==="Escape")setOpen(false);}} placeholder="Nume client / ofertă..." style={{...inp,flex:1}}/>
+    <button onClick={()=>{if(name.trim()){onAdd(name.trim());setName("");setOpen(false);}}} style={btnP()}>Adaugă</button>
+    <button onClick={()=>setOpen(false)} style={btnS}>✕</button>
+  </div>;
+}
+
+function AddBiletForm({furnizori,onAdd,onAddFurnizor}){
+  const [open,setOpen]=React.useState(false);
+  const [numar,setNumar]=React.useState("");
+  const [furnizor,setFurnizor]=React.useState(furnizori[0]||"");
+  const [furnizorNou,setFurnizorNou]=React.useState("");
+  const [valoare,setValoare]=React.useState("");
+  const [scadenta,setScadenta]=React.useState("");
+  const [addingFurnizor,setAddingFurnizor]=React.useState(false);
+  const C2={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textMuted:"#A8998A",accent:"#A0845C"};
+  const confirmFurnizorNou=()=>{if(furnizorNou.trim()){const f=furnizorNou.trim();setFurnizor(f);onAddFurnizor(f);setAddingFurnizor(false);setFurnizorNou("");}};
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:C2.accent,border:`1.5px dashed ${C2.border}`,borderRadius:10,background:C2.surface,cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Bilet la ordin nou</button>;
+  return <div style={{background:C2.surface,border:`1px solid ${C2.border}`,borderRadius:12,padding:"16px",marginBottom:16}}>
+    <div style={{fontSize:11,color:C2.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Bilet la ordin nou</div>
+    <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10}}>
+      <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Nr. bilet</div>
+        <input value={numar} onChange={e=>setNumar(e.target.value)} placeholder="ex: 001" style={{width:90,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
+      <div style={{flex:2,minWidth:140}}>
+        <div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Furnizor</div>
+        {addingFurnizor?<div style={{display:"flex",gap:6}}>
+          <input autoFocus value={furnizorNou} onChange={e=>setFurnizorNou(e.target.value)} onKeyDown={e=>e.key==="Enter"&&confirmFurnizorNou()} placeholder="Nume furnizor nou" style={{flex:1,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/>
+          <button onClick={confirmFurnizorNou} style={{padding:"6px 10px",border:"none",borderRadius:6,background:C2.accent,color:"#fff",cursor:"pointer",fontSize:12}}>OK</button>
+          <button onClick={()=>{setAddingFurnizor(false);setFurnizorNou("");}} style={{padding:"6px 10px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12}}>✕</button>
+        </div>:<div style={{display:"flex",gap:6}}>
+          <select value={furnizor} onChange={e=>setFurnizor(e.target.value)} style={{flex:1,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 8px",background:"#fff",outline:"none"}}>
+            {furnizori.map(f=><option key={f} value={f}>{f}</option>)}
+          </select>
+          <button onClick={()=>setAddingFurnizor(true)} style={{padding:"6px 10px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C2.textMuted,whiteSpace:"nowrap"}}>+ nou</button>
+        </div>}
+      </div>
+      <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Valoare (RON)</div>
+        <input type="number" value={valoare} onChange={e=>setValoare(e.target.value)} placeholder="0" style={{width:110,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
+      <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Scadență</div>
+        <input type="date" value={scadenta} onChange={e=>setScadenta(e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
+    </div>
+    <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+      <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
+      <button onClick={()=>{if(valoare&&scadenta){onAdd({numar,furnizor,valoare:Number(valoare),scadenta});setNumar("");setValoare("");setScadenta("");setOpen(false);}}} style={{padding:"7px 20px",border:"none",borderRadius:6,background:C2.accent,color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează</button>
+    </div>
+  </div>;
+}
+
+function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,setFurnizoriLista,C,card,inp,btnP,btnS,row,fmtD,tday,gid,daysTo}){
+  const [sectiune,setSectiune]=React.useState("registru");
+  const [showForm,setShowForm]=React.useState(null); // null | {data, tip}
+  const [formData,setFormData]=React.useState({descriere:"",suma:""});
+  const [editId,setEditId]=React.useState(null);
+  const [editData,setEditData]=React.useState({descriere:"",suma:"",data:""});
+  const [showAddRec,setShowAddRec]=React.useState(false);
+  const [newRec,setNewRec]=React.useState({denumire:"",suma:"",ziua:"15"});
+
+  const updT=(f,v)=>setTrezorerie(t=>({...t,[f]:v}));
+  const inreg=trezorerie.inregistrari||[];
+  const recurente=trezorerie.recurente||[];
+  const soldInit=Number(trezorerie.soldInitial||0);
+
+  const adaugaInreg=(data,tip)=>{
+    if(!formData.suma) return;
+    updT("inregistrari",[...inreg,{id:gid(),descriere:formData.descriere,suma:Number(formData.suma),data,tip}]);
+    setFormData({descriere:"",suma:""});setShowForm(null);
+  };
+  const stergeInreg=(id)=>updT("inregistrari",inreg.filter(x=>x.id!==id));
+  const salveazaEdit=(id)=>{
+    updT("inregistrari",inreg.map(x=>x.id!==id?x:{...x,descriere:editData.descriere,suma:Number(editData.suma),data:editData.data||x.data}));
+    setEditId(null);
+  };
+  const adaugaRec=()=>{
+    if(!newRec.denumire||!newRec.suma) return;
+    updT("recurente",[...recurente,{id:gid(),...newRec,suma:Number(newRec.suma)}]);
+    setNewRec({denumire:"",suma:"",ziua:"15"});setShowAddRec(false);
+  };
+
+  // Construieste zilele
+  const getZile=()=>{
+    const zile=[];
+    let sold=soldInit;
+    for(let i=-3;i<90;i++){
+      const d=new Date();d.setDate(d.getDate()+i);
+      const ds=d.toISOString().slice(0,10);
+      const zi=d.getDate();
+      const soldZiStart=sold;
+      const incasariZi=inreg.filter(x=>x.data===ds&&x.tip==="incasare");
+      const platiZi=inreg.filter(x=>x.data===ds&&x.tip==="plata");
+      const bileteZi=bilete.filter(b=>!b.achitat&&b.scadenta===ds);
+      const recZi=recurente.filter(r=>parseInt(r.ziua)===zi);
+      const totalIn=incasariZi.reduce((s,x)=>s+x.suma,0);
+      const totalOut=platiZi.reduce((s,x)=>s+x.suma,0)+bileteZi.reduce((s,b)=>s+Number(b.valoare||0),0)+recZi.reduce((s,r)=>s+r.suma,0);
+      sold=sold+totalIn-totalOut;
+      zile.push({data:ds,soldStart:soldZiStart,soldEnd:sold,totalIn,totalOut,incasariZi,platiZi,bileteZi,recZi,
+        label:d.toLocaleDateString("ro-RO",{weekday:"short",day:"2-digit",month:"short",year:"numeric"}),
+        isAzi:ds===tday(),isTrecut:ds<tday()});
+    }
+    return zile;
+  };
+  const zile=getZile();
+  const soldAzi=zile.find(z=>z.isAzi)?.soldEnd||soldInit;
+  const primaZiNeg=zile.find(z=>z.soldEnd<0&&!z.isTrecut);
+  const inpS={...inp,padding:"6px 10px",fontSize:13};
+
+  return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Cash Flow · Registru zilnic</div>
+
+    {primaZiNeg&&<div style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,borderRadius:10,marginBottom:10,fontSize:13,color:C.danger,fontWeight:500}}>
+      ⚠️ Sold negativ previzionat pe {primaZiNeg.label}: {primaZiNeg.soldEnd.toLocaleString("ro-RO")} RON
+    </div>}
+    {bilete.filter(b=>!b.achitat&&b.scadenta&&daysTo(b.scadenta)<=7&&daysTo(b.scadenta)>=0).map(b=>(
+      <div key={b.id} style={{padding:"8px 14px",background:C.warnLight,border:`1px solid #C8A870`,borderRadius:10,marginBottom:6,fontSize:12,color:C.warn}}>
+        ⏰ Bilet #{b.numar} · {b.furnizor} · {Number(b.valoare).toLocaleString("ro-RO")} RON — scadent {fmtD(b.scadenta)}
+      </div>
+    ))}
+
+    {/* Sold initial + sold azi */}
+    <div style={{...card,marginBottom:12}}>
+      <div style={{display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+        <div>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Sold inițial</div>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <input type="number" value={trezorerie.soldInitial||0} onChange={e=>updT("soldInitial",Number(e.target.value))} style={{...inpS,width:130}}/>
+            <span style={{fontSize:12,color:C.textMuted}}>RON</span>
+          </div>
+        </div>
+        <div style={{flex:1}}/>
+        <div style={{textAlign:"right"}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4}}>Sold azi</div>
+          <div style={{fontSize:26,fontWeight:700,color:soldAzi<0?C.danger:C.accent}}>{soldAzi.toLocaleString("ro-RO")} RON</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Sectiuni */}
+    <div style={{display:"flex",gap:6,marginBottom:14}}>
+      {[["registru","Registru"],["bilete","Bilete la ordin"],["recurente","Recurente"]].map(([id,l])=>
+        <button key={id} onClick={()=>setSectiune(id)} style={{padding:"7px 14px",border:`1px solid ${sectiune===id?C.accent:C.border}`,borderRadius:8,background:sectiune===id?C.accentLight:"transparent",color:sectiune===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:sectiune===id?500:400}}>{l}</button>
+      )}
+    </div>
+
+    {/* REGISTRU ZILNIC */}
+    {sectiune==="registru"&&<div>
+      {zile.filter(z=>!z.isTrecut||z.totalIn>0||z.totalOut>0||z.isAzi).map(z=>(
+        <div key={z.data} style={{...card,marginBottom:10,opacity:z.isTrecut&&!z.isAzi?0.7:1,border:z.isAzi?`2px solid ${C.accent}`:`1px solid ${C.border}`}}>
+
+          {/* Header zi */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:z.isAzi?C.accent:C.text}}>{z.label}</div>
+              <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>Sold la început de zi: <strong style={{color:z.soldStart<0?C.danger:C.textSub}}>{z.soldStart.toLocaleString("ro-RO")} RON</strong></div>
+            </div>
+            {z.isAzi&&<span style={{fontSize:10,background:C.accent,color:"#fff",padding:"3px 8px",borderRadius:6,fontWeight:600}}>AZI</span>}
+          </div>
+
+          {/* ÎNCASĂRI */}
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:10,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:6}}>↓ Încasări</div>
+            {z.incasariZi.map(m=><div key={m.id} style={{marginBottom:4}}>
+              {editId===m.id?
+                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:"#F2F8F2",borderRadius:8,flexWrap:"wrap"}}>
+                  <input value={editData.descriere} onChange={e=>setEditData(x=>({...x,descriere:e.target.value}))} placeholder="Descriere" style={{...inpS,flex:2,minWidth:100}}/>
+                  <input type="number" value={editData.suma} onChange={e=>setEditData(x=>({...x,suma:e.target.value}))} style={{...inpS,width:90}}/>
+                  <input type="date" value={editData.data} onChange={e=>setEditData(x=>({...x,data:e.target.value}))} style={{...inpS,width:130}}/>
+                  <button onClick={()=>salveazaEdit(m.id)} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
+                  <button onClick={()=>setEditId(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
+                </div>:
+                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#F5FBF5",borderRadius:8,gap:8}}>
+                  <span style={{flex:1,fontSize:13,color:"#2A4A2A"}}>{m.descriere||"—"}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:"#2A6A2A",minWidth:140,textAlign:"right"}}>+{m.suma.toLocaleString("ro-RO")} RON</span>
+                  <button onClick={()=>{setEditId(m.id);setEditData({descriere:m.descriere,suma:m.suma,data:m.data});}} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:12,width:16}}>✎</button>
+                  <button onClick={()=>stergeInreg(m.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.danger,fontSize:14,width:16}}>×</button>
+                </div>
+              }
+            </div>)}
+            {/* Buton adauga incasare */}
+            {showForm?.data===z.data&&showForm?.tip==="incasare"?
+              <div style={{display:"flex",gap:6,alignItems:"center",padding:"8px 10px",background:"#F2F8F2",borderRadius:8,marginTop:4}}>
+                <input autoFocus value={formData.descriere} onChange={e=>setFormData(x=>({...x,descriere:e.target.value}))} placeholder="Client / descriere" style={{...inpS,flex:2}}/>
+                <input type="number" value={formData.suma} onChange={e=>setFormData(x=>({...x,suma:e.target.value}))} placeholder="Sumă" style={{...inpS,width:100}}/>
+                <button onClick={()=>adaugaInreg(z.data,"incasare")} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
+                <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
+              </div>:
+              <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",borderRadius:6,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
+            }
+            {z.totalIn>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:"#2A6A2A",marginTop:6,paddingTop:6,borderTop:"1px solid #D0E8D0"}}>Total încasări: +{z.totalIn.toLocaleString("ro-RO")} RON</div>}
+          </div>
+
+          {/* PLĂȚI */}
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:10,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:6}}>↑ Plăți</div>
+            {z.platiZi.map(m=><div key={m.id} style={{marginBottom:4}}>
+              {editId===m.id?
+                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:C.dangerLight,borderRadius:8,flexWrap:"wrap"}}>
+                  <input value={editData.descriere} onChange={e=>setEditData(x=>({...x,descriere:e.target.value}))} placeholder="Descriere" style={{...inpS,flex:2,minWidth:100}}/>
+                  <input type="number" value={editData.suma} onChange={e=>setEditData(x=>({...x,suma:e.target.value}))} style={{...inpS,width:90}}/>
+                  <input type="date" value={editData.data} onChange={e=>setEditData(x=>({...x,data:e.target.value}))} style={{...inpS,width:130}}/>
+                  <button onClick={()=>salveazaEdit(m.id)} style={{...btnP(C.danger),fontSize:11,padding:"5px 12px"}}>✓</button>
+                  <button onClick={()=>setEditId(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
+                </div>:
+                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",borderRadius:8,gap:8}}>
+                  <span style={{flex:1,fontSize:13,color:"#4A2A2A"}}>{m.descriere||"—"}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:C.danger,minWidth:140,textAlign:"right"}}>-{m.suma.toLocaleString("ro-RO")} RON</span>
+                  <button onClick={()=>{setEditId(m.id);setEditData({descriere:m.descriere,suma:m.suma,data:m.data});}} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:12,width:16}}>✎</button>
+                  <button onClick={()=>stergeInreg(m.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.danger,fontSize:14,width:16}}>×</button>
+                </div>
+              }
+            </div>)}
+            {/* Bilete scadente */}
+            {z.bileteZi.map(b=><div key={b.id} style={{marginBottom:4}}>
+              {editId===b.id?
+                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:C.dangerLight,borderRadius:8,flexWrap:"wrap"}}>
+                  <input value={editData.descriere} onChange={e=>setEditData(x=>({...x,descriere:e.target.value}))} placeholder="Furnizor" style={{...inpS,flex:2,minWidth:100}}/>
+                  <input type="number" value={editData.suma} onChange={e=>setEditData(x=>({...x,suma:e.target.value}))} style={{...inpS,width:90}}/>
+                  <input type="date" value={editData.data} onChange={e=>setEditData(x=>({...x,data:e.target.value}))} style={{...inpS,width:130}}/>
+                  <button onClick={()=>{setBilete(p=>p.map(x=>x.id!==b.id?x:{...x,furnizor:editData.descriere,valoare:Number(editData.suma),scadenta:editData.data}));setEditId(null);}} style={{...btnP(C.danger),fontSize:11,padding:"5px 12px"}}>✓</button>
+                  <button onClick={()=>setEditId(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
+                </div>:
+                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",borderRadius:8,gap:8}}>
+                  <span style={{flex:1,fontSize:13,color:"#4A2A2A"}}>Bilet #{b.numar} · {b.furnizor}</span>
+                  <span style={{fontSize:14,fontWeight:700,color:C.danger,minWidth:140,textAlign:"right"}}>-{Number(b.valoare).toLocaleString("ro-RO")} RON</span>
+                  <button onClick={()=>{setEditId(b.id);setEditData({descriere:b.furnizor,suma:b.valoare,data:b.scadenta});}} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:12,width:16}}>✎</button>
+                  <div style={{width:16}}/>
+                </div>
+              }
+            </div>)}
+            {/* Recurente */}
+            {z.recZi.map(r=><div key={r.id} style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",borderRadius:8,gap:8,marginBottom:4}}>
+              <span style={{flex:1,fontSize:13,color:"#4A2A2A"}}>{r.denumire}</span>
+              <span style={{fontSize:14,fontWeight:700,color:C.danger,minWidth:140,textAlign:"right"}}>-{Number(r.suma).toLocaleString("ro-RO")} RON</span>
+              <div style={{width:32}}/>
+            </div>)}
+            {/* Buton adauga plata */}
+            {showForm?.data===z.data&&showForm?.tip==="plata"?
+              <div style={{padding:"8px 10px",background:C.dangerLight,borderRadius:8,marginTop:4}}>
+                <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:6}}>
+                  {formData.addingFurnizor?
+                    <>
+                      <input autoFocus value={formData.furnizorNou||""} onChange={e=>setFormData(x=>({...x,furnizorNou:e.target.value}))} placeholder="Furnizor nou" style={{...inpS,flex:2}}/>
+                      <button onClick={()=>{if((formData.furnizorNou||"").trim()){const f=formData.furnizorNou.trim();setFurnizoriLista(p=>[...p.includes(f)?p:[...p,f]]);setFormData(x=>({...x,descriere:f,addingFurnizor:false,furnizorNou:""}));}}} style={{...btnP(C.danger),fontSize:11,padding:"5px 10px"}}>OK</button>
+                      <button onClick={()=>setFormData(x=>({...x,addingFurnizor:false}))} style={{...btnS,fontSize:11,padding:"5px 8px"}}>✕</button>
+                    </>:
+                    <>
+                      <select value={formData.descriere} onChange={e=>setFormData(x=>({...x,descriere:e.target.value}))} style={{...inpS,flex:2,minWidth:120}}>
+                        <option value="">— alege furnizor —</option>
+                        {furnizoriLista.map(f=><option key={f} value={f}>{f}</option>)}
+                      </select>
+                      <button onClick={()=>setFormData(x=>({...x,addingFurnizor:true}))} style={{fontSize:11,padding:"5px 10px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",color:C.textSub,whiteSpace:"nowrap"}}>+ nou</button>
+                    </>
+                  }
+                  <input type="number" value={formData.suma} onChange={e=>setFormData(x=>({...x,suma:e.target.value}))} placeholder="Sumă" style={{...inpS,width:100}}/>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>adaugaInreg(z.data,"plata")} style={{...btnP(C.danger),fontSize:11,padding:"5px 12px"}}>✓ Salvează</button>
+                  <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>Anulează</button>
+                </div>
+              </div>:
+              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:C.danger,border:`1px dashed #C0A0A0`,borderRadius:6,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
+            }
+            {z.totalOut>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:C.danger,marginTop:6,paddingTop:6,borderTop:"1px solid #E8D0D0"}}>Total plăți: -{z.totalOut.toLocaleString("ro-RO")} RON</div>}
+          </div>
+
+          {/* SOLD FINAL ZI */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:z.soldEnd<0?C.dangerLight:C.accentLight,borderRadius:10,marginTop:4}}>
+            <div style={{fontSize:12,color:C.textSub}}>
+              {z.soldStart.toLocaleString("ro-RO")} RON
+              {z.totalIn>0&&<span style={{color:"#3A6A3A"}}> + {z.totalIn.toLocaleString("ro-RO")}</span>}
+              {z.totalOut>0&&<span style={{color:C.danger}}> − {z.totalOut.toLocaleString("ro-RO")}</span>}
+            </div>
+            <div style={{fontSize:16,fontWeight:700,color:z.soldEnd<0?C.danger:C.accent}}>= {z.soldEnd.toLocaleString("ro-RO")} RON</div>
+          </div>
+        </div>
+      ))}
+    </div>}
+
+    {/* BILETE LA ORDIN */}
+    {sectiune==="bilete"&&<div>
+      <AddBiletForm furnizori={furnizoriLista} onAddFurnizor={(f)=>setFurnizoriLista(p=>[...p,f])} onAdd={(b)=>setBilete(p=>[{id:gid(),...b,achitat:false},...p])}/>
+      {bilete.length>0&&<div style={{display:"flex",gap:10,marginBottom:12}}>
+        <div style={{flex:1,...card,padding:"12px 16px",marginBottom:0}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Neachitat</div>
+          <div style={{fontSize:18,fontWeight:700,color:C.danger}}>{bilete.filter(b=>!b.achitat).reduce((s,b)=>s+Number(b.valoare||0),0).toLocaleString("ro-RO")} RON</div>
+        </div>
+        <div style={{flex:1,...card,padding:"12px 16px",marginBottom:0}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Achitat</div>
+          <div style={{fontSize:18,fontWeight:700,color:C.accent}}>{bilete.filter(b=>b.achitat).reduce((s,b)=>s+Number(b.valoare||0),0).toLocaleString("ro-RO")} RON</div>
+        </div>
+      </div>}
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"70px 1fr 110px 100px 90px 40px",padding:"8px 14px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+          {["NR.","FURNIZOR","VALOARE","SCADENȚĂ","STATUS",""].map(h=><div key={h} style={{fontSize:9,fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</div>)}
+        </div>
+        {bilete.length===0&&<div style={{padding:"2rem",textAlign:"center",fontSize:13,color:C.textMuted}}>Niciun bilet la ordin.</div>}
+        {bilete.map(b=>{
+          const ov=!b.achitat&&b.scadenta&&b.scadenta<tday();
+          const soon=!b.achitat&&b.scadenta&&daysTo(b.scadenta)<=7&&daysTo(b.scadenta)>=0;
+          return <div key={b.id} style={{display:"grid",gridTemplateColumns:"70px 1fr 110px 100px 90px 40px",padding:"10px 14px",borderBottom:`1px solid ${C.bg}`,alignItems:"center",opacity:b.achitat?0.55:1}}>
+            <div style={{fontSize:12,color:C.textSub}}>#{b.numar}</div>
+            <div style={{fontSize:13,color:C.text,fontWeight:500}}>{b.furnizor}</div>
+            <div style={{fontSize:13,fontWeight:600,color:ov?C.danger:C.text}}>{Number(b.valoare||0).toLocaleString("ro-RO")} RON</div>
+            <div style={{fontSize:12,color:ov?C.danger:soon?C.warn:C.textSub,fontWeight:ov||soon?600:400}}>{fmtD(b.scadenta)}</div>
+            <button onClick={()=>setBilete(p=>p.map(x=>x.id===b.id?{...x,achitat:!x.achitat}:x))}
+              style={{fontSize:10,padding:"3px 8px",borderRadius:6,border:"none",cursor:"pointer",fontWeight:500,background:b.achitat?C.accentLight:C.dangerLight,color:b.achitat?C.accent:C.danger}}>
+              {b.achitat?"✓ Achitat":"Neachitat"}
+            </button>
+            <button onClick={()=>setBilete(p=>p.filter(x=>x.id!==b.id))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
+          </div>;
+        })}
+      </div>
+    </div>}
+
+    {/* PLATI RECURENTE */}
+    {sectiune==="recurente"&&<div>
+      <div style={{marginBottom:12}}>
+        <button onClick={()=>setShowAddRec(!showAddRec)} style={{...btnP(),fontSize:11}}>+ Plată recurentă nouă</button>
+      </div>
+      {showAddRec&&<div style={{...card,marginBottom:12}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+          <input placeholder="ex: Salarii, Chirie..." value={newRec.denumire} onChange={e=>setNewRec(x=>({...x,denumire:e.target.value}))} style={{...inpS,flex:2,minWidth:150}}/>
+          <input type="number" placeholder="Sumă RON" value={newRec.suma} onChange={e=>setNewRec(x=>({...x,suma:e.target.value}))} style={{...inpS,width:120}}/>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            <span style={{fontSize:12,color:C.textMuted}}>Ziua</span>
+            <input type="number" min="1" max="31" value={newRec.ziua} onChange={e=>setNewRec(x=>({...x,ziua:e.target.value}))} style={{...inpS,width:60}}/>
+            <span style={{fontSize:12,color:C.textMuted}}>a lunii</span>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={adaugaRec} style={{...btnP(),fontSize:11}}>Salvează</button>
+          <button onClick={()=>setShowAddRec(false)} style={{...btnS,fontSize:11}}>Anulează</button>
+        </div>
+      </div>}
+      {recurente.length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nicio plată recurentă.</div>}
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+        {recurente.map(r=><div key={r.id} style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",borderBottom:`1px solid ${C.bg}`,flexWrap:"wrap"}}>
+          <div style={{flex:2,minWidth:120}}>
+            <input value={r.denumire} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,denumire:e.target.value}))} style={{width:"100%",fontSize:13,fontWeight:500,color:C.text,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",background:C.surface}}/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Ziua</span>
+            <input type="number" min="1" max="31" value={r.ziua} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,ziua:e.target.value}))} style={{width:50,fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",outline:"none",textAlign:"center",background:C.surface}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>/ lună</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <input type="number" value={r.suma} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,suma:Number(e.target.value)||0}))} style={{width:100,fontSize:13,fontWeight:600,color:C.danger,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",textAlign:"right",background:C.surface}}/>
+            <span style={{fontSize:12,color:C.textMuted}}>RON</span>
+          </div>
+          <button onClick={()=>updT("recurente",recurente.filter(x=>x.id!==r.id))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
+        </div>)}
+        {recurente.length>0&&<div style={{padding:"10px 16px",background:C.bg,fontSize:12,fontWeight:600,color:C.danger,textAlign:"right"}}>
+          Total lunar: {recurente.reduce((s,r)=>s+r.suma,0).toLocaleString("ro-RO")} RON
+        </div>}
+      </div>
+    </div>}
+  </div>;
+}
+
+
+function AddFacturaForm({motoare, onAdd}){
+  const [open,setOpen]=React.useState(false);
+  const [furnizor,setFurnizor]=React.useState("");
+  const [factura,setFactura]=React.useState("");
+  const [data,setData]=React.useState(new Date().toISOString().slice(0,10));
+  const [pozitii,setPozitii]=React.useState([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
+  const C2={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textMuted:"#A8998A"};
+  const addPoz=()=>setPozitii(p=>[...p,{id:Date.now().toString(),model:motoare[0]?.model||"",qty:1}]);
+  const updPoz=(id,f,v)=>setPozitii(p=>p.map(pz=>pz.id!==id?pz:{...pz,[f]:f==="qty"?parseInt(v)||1:v}));
+  const delPoz=(id)=>setPozitii(p=>p.filter(pz=>pz.id!==id));
+  const handleSave=()=>{
+    if(pozitii.length===0) return;
+    onAdd({furnizor:furnizor||"Furnizor necunoscut",factura,data,pozitii:[...pozitii]});
+    setFurnizor("");setFactura("");setData(new Date().toISOString().slice(0,10));
+    setPozitii([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
+    setOpen(false);
+  };
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#3A6A3A",border:"1.5px dashed #90C090",borderRadius:10,background:"#F2F8F2",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Înregistrează intrare nouă (factură)</button>;
+  return <div style={{background:"#F2F8F2",border:"1.5px solid #90C090",borderRadius:12,padding:"16px",marginBottom:16}}>
+    <div style={{fontSize:11,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Intrare nouă · Factură</div>
+    <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:12}}>
+      <div style={{flex:2,minWidth:120}}><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Furnizor *</div>
+        <input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="ex: Coulisse" style={{width:"100%",fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
+      <div style={{flex:2,minWidth:120}}><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Nr. factură</div>
+        <input value={factura} onChange={e=>setFactura(e.target.value)} placeholder="ex: F2024-001" style={{width:"100%",fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
+      <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Data</div>
+        <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
+    </div>
+    <div style={{fontSize:10,color:C2.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Poziții</div>
+    {pozitii.map((pz,i)=><div key={pz.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+      <select value={pz.model} onChange={e=>updPoz(pz.id,"model",e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 8px",background:C2.surface,outline:"none",flex:1}}>
+        {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
+      </select>
+      <input type="number" min="1" value={pz.qty} onChange={e=>updPoz(pz.id,"qty",e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 8px",outline:"none",textAlign:"center"}}/>
+      <span style={{fontSize:12,color:C2.textMuted}}>buc.</span>
+      {pozitii.length>1&&<button onClick={()=>delPoz(pz.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#C07070",fontSize:16,padding:"0 4px"}}>×</button>}
+    </div>)}
+    <button onClick={addPoz} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",borderRadius:6,padding:"4px 12px",background:"transparent",cursor:"pointer",marginBottom:12}}>+ adaugă poziție</button>
+    <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+      <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
+      <button onClick={handleSave} style={{padding:"7px 20px",border:"none",borderRadius:6,background:"#3A6A3A",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează factura</button>
+    </div>
+  </div>;
+}
+
+function App() {
+  const [tab,setTab]=useState("focus");
+  const [data,setData]=useState({tasks:[],notes:[],events:[]});
+  const [admin,setAdmin]=useState({contabilitate:[],administrativ:[],marketing:[],personal:[]});
+  const [clients,setClients]=useState([]);
+  const [perdele,setPerdele]=useState(PP);
+  const [motoare,setMotoare]=useState(MOTOARE_INIT.map(m=>({...m})));
+  const [iesiri,setIesiri]=useState([]);
+  const [intrari,setIntrari]=useState([]);
+  const [bilete,setBilete]=useState([]);
+  const [trezorerie,setTrezorerie]=useState({soldInitial:0,incasari:[],plati:[],recurente:[]});
+  const [furnizoriLista,setFurnizoriLista]=useState(["Coulisse","Benjamin Moore","Darstar","Duval"]);
+  const [oferte,setOferte]=useState([]);
+  const [log,setLog]=useState({});
+  const [ofertaSubtab,setOfertaSubtab]=useState("lista"); // {clientId: [{text, data, ora}]}
+  const [chat,setChat]=useState([]);
+  const [chatInput,setChatInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [mit,setMit]=useState({task:"",date:tday(),done:false});
+  const [jurnal,setJurnal]=useState({});
+  const [planMaine,setPlanMaine]=useState({});
+  const [recurente,setRecurente]=useState([]);
+  const [showEvForm,setShowEvForm]=useState(false);
+  const [showRecForm,setShowRecForm]=useState(false);
+  const [evForm,setEvForm]=useState({title:"",date:tday(),time:"",loc:""});
+  const [recForm,setRecForm]=useState({title:"",type:"lunar_zi",day:"25",cat:"Contabilitate"});
+  const [newTask,setNewTask]=useState({});
+  const [addingTo,setAddingTo]=useState(null);
+  const [search,setSearch]=useState("");
+  const [cliFilter,setCliFilter]=useState("all");
+  const [addingCli,setAddingCli]=useState(false);
+  const [newCliName,setNewCliName]=useState("");
+  const [openEtapa,setOpenEtapa]=useState({0:true,1:false,2:false});
+  const [newPlan,setNewPlan]=useState("");
+  const [newMotorModel,setNewMotorModel]=useState("");
+  const [openModel,setOpenModel]=useState({});
+  const [loaded, setLoaded] = useState(false);
+  const chatRef=useRef(null);
+  const saveTimer=useRef({});
+
+  const sbGet=async(key)=>{
+    try{const{data}=await sb.from("kreativo_data").select("value").eq("key",key).single();return data?.value?JSON.parse(data.value):null;}catch{return null;}
+  };
+  const sbSet=async(key,value)=>{
+    try{await sb.from("kreativo_data").upsert({key,value:JSON.stringify(value)},{onConflict:"key"});}catch(e){console.log(e);}
+  };
+  const sbSave=(key,value)=>{
+    if(saveTimer.current[key]) clearTimeout(saveTimer.current[key]);
+    saveTimer.current[key]=setTimeout(()=>sbSet(key,value),800);
+  };
+
+  useEffect(()=>{
+    async function load(){
+      try{
+        const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),12000));
+        const loadData = async()=>{
+          const d=await sbGet(SK); if(d) setData(d);
+          const cl=await sbGet(CLK);
+          if(cl) setClients(cl);
+          const ad=await sbGet(AK); if(ad) setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...ad});
+          const pe=await sbGet(PK); if(pe) setPerdele(pe);
+          const m=await sbGet(MIK); if(m) setMit(m);
+          const j=await sbGet(JK); if(j) setJurnal(j);
+          const pl=await sbGet(PLK); if(pl) setPlanMaine(pl);
+          const r=await sbGet(RK); if(r) setRecurente(r);
+          const mo=await sbGet(MOK); if(mo) setMotoare(mo);
+          const ie=await sbGet(IEK); if(ie) setIesiri(ie);
+          const intr=await sbGet(INK); if(intr) setIntrari(intr);
+          const bl=await sbGet(BLK); if(bl) setBilete(bl);
+          const of=await sbGet(OFK); if(of) setOferte(of);
+          const lg=await sbGet(LGK); if(lg) setLog(lg);
+          const tr=await sbGet(TRK); if(tr) setTrezorerie(tr);
+        };
+        await Promise.race([loadData(), timeout]);
+      }catch(e){
+        console.log("Load error:",e);
+      }
+      setLoaded(true);
+    }
+    load();
+  },[]);
+
+  useEffect(()=>{if(loaded) sbSave(SK,data);},[data,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CLK,clients);},[clients,loaded]);
+  useEffect(()=>{if(loaded) sbSave(AK,admin);},[admin,loaded]);
+  useEffect(()=>{if(loaded) sbSave(PK,perdele);},[perdele,loaded]);
+  useEffect(()=>{if(loaded) sbSave(MIK,mit);},[mit,loaded]);
+  useEffect(()=>{if(loaded) sbSave(JK,jurnal);},[jurnal,loaded]);
+  useEffect(()=>{if(loaded) sbSave(PLK,planMaine);},[planMaine,loaded]);
+  useEffect(()=>{if(loaded) sbSave(RK,recurente);},[recurente,loaded]);
+  useEffect(()=>{if(loaded) sbSave(MOK,motoare);},[motoare,loaded]);
+  useEffect(()=>{if(loaded) sbSave(IEK,iesiri);},[iesiri,loaded]);
+  useEffect(()=>{if(loaded) sbSave(INK,intrari);},[intrari,loaded]);
+  useEffect(()=>{if(loaded) sbSave(BLK,bilete);},[bilete,loaded]);
+  useEffect(()=>{if(loaded) sbSave(OFK,oferte);},[oferte,loaded]);
+  useEffect(()=>{if(loaded) sbSave(LGK,log);},[log,loaded]);
+  useEffect(()=>{if(loaded) sbSave(TRK,trezorerie);},[trezorerie,loaded]);
+
+  useEffect(()=>{if(chatRef.current) chatRef.current.scrollIntoView({behavior:"smooth"});},[chat,loading]);
+
+  const addJurnal=(title,source)=>{
+    const t=tday();
+    setJurnal(j=>{const ex=j[t]||[];if(ex.find(e=>e.title===title&&e.source===source)) return j;return {...j,[t]:[...ex,{title,source,time:new Date().toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})}]};});
+  };
+
+  const saveEv=()=>{if(!evForm.title.trim()) return;setData(d=>({...d,events:[{id:gid(),...evForm},...d.events].sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1)}));setEvForm({title:"",date:tday(),time:"",loc:""});setShowEvForm(false);};
+  const delEv=(id)=>setData(d=>({...d,events:d.events.filter(e=>e.id!==id)}));
+  const togTask=(id)=>{const t=data.tasks.find(x=>x.id===id);if(t&&!t.done)addJurnal(t.title,t.cat||"Task");setData(d=>({...d,tasks:d.tasks.map(t=>t.id===id?{...t,done:!t.done}:t)}));};
+  const addAdminTask=(s,v)=>{if(!v.trim()) return;setAdmin(a=>({...a,[s]:[{id:gid(),title:v,done:false,created:tday(),deadline:"",resp:"Cristina"},...a[s]]}));};
+  const togAdmin=(s,id)=>{const t=(admin[s]||[]).find(x=>x.id===id);if(t&&!t.done)addJurnal(t.title,s.charAt(0).toUpperCase()+s.slice(1));setAdmin(a=>({...a,[s]:a[s].map(t=>t.id===id?{...t,done:!t.done}:t)}));};
+  const delAdmin=(s,id)=>setAdmin(a=>({...a,[s]:a[s].filter(t=>t.id!==id)}));
+  const updAdmin=(s,id,f,v)=>setAdmin(a=>({...a,[s]:a[s].map(t=>t.id===id?{...t,[f]:v}:t)}));
+
+  const togCli=(ci,ti)=>{const c=clients[ci];if(c&&!c.done[ti])addJurnal(`${c.name} · ${c.tasks[ti]}`,"Client");setClients(p=>p.map((c,i)=>i!==ci?c:{...c,done:c.done.map((d,j)=>j===ti?!d:d)}));};
+  const togCliOpen=(ci)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,open:!c.open}));
+  const addCliTask=(ci)=>{const v=(newTask[ci]||"").trim();if(!v) return;setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:[...c.tasks,v],done:[...c.done,false],dates:[...(c.dates||[]),""],motoare:[...(c.motoare||[])]}));setNewTask(p=>({...p,[ci]:""}));setAddingTo(null);};
+  const updCliDate=(ci,ti,v)=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const d=Array.from({length:c.tasks.length},(_,j)=>(c.dates||[])[j]||"");d[ti]=v;return {...c,dates:d};}));
+  const delCliTask=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:c.tasks.filter((_,j)=>j!==ti),done:c.done.filter((_,j)=>j!==ti),dates:(c.dates||[]).filter((_,j)=>j!==ti)}));
+  const delCli=(ci)=>setClients(p=>p.filter((_,i)=>i!==ci));
+  const addCli=()=>{const n=newCliName.trim();if(!n) return;setClients(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],motoare:[],open:true}]);setNewCliName("");setAddingCli(false);};
+
+  const addMotorCli=(ci,model,qty)=>{if(!model||!qty||qty<=0) return;setClients(p=>p.map((c,i)=>{if(i!==ci) return c;const mo=[...(c.motoare||[])];const idx=mo.findIndex(m=>m.model===model);if(idx>=0)mo[idx]={...mo[idx],qty:mo[idx].qty+qty};else mo.push({model,qty});return {...c,motoare:mo};}));};
+  const remMotorCli=(ci,model)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,motoare:(c.motoare||[]).filter(m=>m.model!==model)}));
+  const stocRamas=(model)=>{const init=motoare.find(m=>m.model===model)?.stoc||0;const cons=clients.reduce((s,c)=>{const m=(c.motoare||[]).find(x=>x.model===model);return s+(m?m.qty:0);},0);const livrate=iesiri.filter(e=>e.model===model).reduce((s,e)=>s+e.qty,0);const intrate=intrari.reduce((s,f)=>s+f.pozitii.filter(p=>p.model===model).reduce((ss,p)=>ss+p.qty,0),0);return init+intrate-cons-livrate;};
+  const adaugaFactura=(factura)=>{setIntrari(p=>[{id:gid(),...factura},...p]);};
+  const stergeFactura=(id)=>{if(window.confirm("Ștergi toată factura?")) setIntrari(p=>p.filter(f=>f.id!==id));};
+  const stergePozitie=(facturaId,pozId)=>setIntrari(p=>p.map(f=>f.id!==facturaId?f:{...f,pozitii:f.pozitii.filter(pz=>pz.id!==pozId)}));
+  const updPozitie=(facturaId,pozId,field,val)=>setIntrari(p=>p.map(f=>f.id!==facturaId?f:{...f,pozitii:f.pozitii.map(pz=>pz.id!==pozId?pz:{...pz,[field]:field==="qty"?parseInt(val)||1:val})}));
+  const soldInitial=(model)=>motoare.find(m=>m.model===model)?.stoc||0;
+  const totalIntrat=(model)=>intrari.reduce((s,f)=>s+f.pozitii.filter(p=>p.model===model).reduce((ss,p)=>ss+p.qty,0),0);
+  const totalIesit=(model)=>iesiri.filter(e=>e.model===model).reduce((s,e)=>s+e.qty,0)+clients.reduce((s,c)=>{const m=(c.motoare||[]).find(x=>x.model===model);return s+(m?m.qty:0);},0);
+  const livreazaMotoare=(ci)=>{const c=clients[ci];if(!c||(c.motoare||[]).length===0) return;const noileIesiri=(c.motoare||[]).map(m=>({id:gid(),model:m.model,qty:m.qty,client:c.name,data:tday()}));setIesiri(p=>[...p,...noileIesiri]);setClients(p=>p.map((cl,i)=>i!==ci?cl:{...cl,motoare:[]}));};
+  const updStoc=(model,v)=>setMotoare(p=>p.map(m=>m.model===model?{...m,stoc:parseInt(v)||0}:m));
+  const addMotorModel=()=>{const n=newMotorModel.trim().toUpperCase();if(!n||motoare.find(m=>m.model===n)) return;setMotoare(p=>[...p,{model:n,stoc:0}]);setNewMotorModel("");};
+  const delMotorModel=(model)=>setMotoare(p=>p.filter(m=>m.model!==model));
+  const defalcatClienti=(model)=>clients.map(c=>{const m=(c.motoare||[]).find(x=>x.model===model);return m?{name:c.name,qty:m.qty}:null;}).filter(Boolean);
+
+  const togP=(ei,id)=>{const t=perdele[ei]?.taskuri.find(x=>x.id===id);if(t&&!t.done)addJurnal(t.text.slice(0,60),"Perdele");setPerdele(p=>p.map((e,i)=>i!==ei?e:{...e,taskuri:e.taskuri.map(t=>t.id===id?{...t,done:!t.done}:t)}));};
+  const updP=(ei,id,f,v)=>setPerdele(p=>p.map((e,i)=>i!==ei?e:{...e,taskuri:e.taskuri.map(t=>t.id===id?{...t,[f]:v}:t)}));
+
+  const saveRec=()=>{if(!recForm.title.trim()) return;setRecurente(p=>[...p,{id:gid(),...recForm,lastDone:"",nextDate:nxtRecur(recForm)}]);setRecForm({title:"",type:"lunar_zi",day:"25",cat:"Contabilitate"});setShowRecForm(false);};
+  const doneRec=(id)=>{addJurnal(recurente.find(r=>r.id===id)?.title||"","Recurent");setRecurente(p=>p.map(r=>r.id===id?{...r,lastDone:tday(),nextDate:nxtRecur(r)}:r));};
+  const delRec=(id)=>setRecurente(p=>p.filter(r=>r.id!==id));
+  const tmPlan=planMaine[tmrw()]||[];
+  const addPlanTask=()=>{if(!newPlan.trim()) return;const tm=tmrw();setPlanMaine(p=>({...p,[tm]:[...(p[tm]||[]),{id:gid(),text:newPlan.trim(),done:false}]}));setNewPlan("");};
+  const delPlanTask=(dt,id)=>setPlanMaine(p=>({...p,[dt]:(p[dt]||[]).filter(t=>t.id!==id)}));
+
+  function buildCal() {
+    const items=[];
+    data.events.forEach(e=>items.push({date:e.date,time:e.time||"",title:e.title,source:"Program",loc:e.loc||"",eventId:e.id,id:e.id}));
+    clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const date=(c.dates||[])[ti]||"";const taskTitle=typeof task==="object"?task.title:task;if(date&&!(c.done||[])[ti])items.push({date,time:"",title:`${c.name} · ${taskTitle}`,source:"Client",clientName:c.name,ti,id:`${c.id}-${ti}`});}));
+    oferte.forEach((o,oi)=>(o.tasks||[]).forEach((task,ti)=>{
+      const date=typeof task==="object"?task.date:(o.dates||[])[ti]||"";
+      if(date&&!(o.done||[])[ti]){
+        const title=typeof task==="object"?task.title:task;
+        items.push({date,time:"",title:`[Ofertă] ${o.name} · ${title}`,source:"Ofertă",ofertaId:o.id,oi,ti,id:`of-${o.id}-${ti}`});
+      }
+    }));
+    ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.title,source:s.charAt(0).toUpperCase()+s.slice(1),id:t.id});}));
+    data.tasks.filter(t=>!t.done&&t.deadline).forEach(t=>items.push({date:t.deadline,time:"",title:t.title,source:t.cat,id:t.id}));
+    perdele.forEach((e,ei)=>e.taskuri.forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.text.slice(0,50),source:"Perdele",id:t.id,ei});}));
+    recurente.forEach(r=>{const nd=nxtRecur(r);if(nd)items.push({date:nd,time:"",title:`${r.title} (recurent)`,source:"Recurent",id:r.id,isRecurent:true});});
+    return items.sort((a,b)=>a.date>b.date?1:-1);
+  }
+
+  const compCal=(item)=>{
+    if(item.isRecurent){doneRec(item.id);return;}
+    if(item.source==="Program") delEv(item.eventId);
+    else if(item.source==="Client"){const ci=clients.findIndex(c=>c.name===item.clientName);if(ci!==-1)togCli(ci,item.ti);}
+    else if(["Contabilitate","Administrativ","Marketing","Personal"].includes(item.source)) togAdmin(item.source.toLowerCase(),item.id);
+    else if(item.source==="Perdele") togP(item.ei,item.id);
+    else if(item.source==="Ofertă") setOferte(p=>p.map((o,i)=>{if(i!==item.oi)return o;const d=[...(o.done||[])];d[item.ti]=true;return {...o,done:d};}));
+    else if(data.tasks.find(t=>t.id===item.id)) togTask(item.id);
+  };
+  const reschedCal=(item,nd)=>{
+    if(item.source==="Program") setData(d=>({...d,events:d.events.map(e=>e.id===item.eventId?{...e,date:nd}:e).sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1)}));
+    else if(item.source==="Client"){const ci=clients.findIndex(c=>c.name===item.clientName);if(ci!==-1)updCliDate(ci,item.ti,nd);}
+    else if(["Contabilitate","Administrativ","Marketing","Personal"].includes(item.source)) updAdmin(item.source.toLowerCase(),item.id,"deadline",nd);
+    else if(item.source==="Perdele") updP(item.ei,item.id,"deadline",nd);
+    else if(item.source==="Ofertă") setOferte(p=>p.map((o,i)=>{
+      if(i!==item.oi)return o;
+      const t=[...(o.tasks||[])];
+      if(typeof t[item.ti]==="object") t[item.ti]={...t[item.ti],date:nd};
+      else{const d=[...(o.dates||Array(t.length).fill(""))];d[item.ti]=nd;return {...o,dates:d};}
+      return {...o,tasks:t};
+    }));
+  };
+
+  const top3=()=>{const all=[];data.tasks.filter(t=>!t.done).forEach(t=>all.push({title:t.title,score:impactScore(t.title,t.cat,t.prio),source:t.cat,resp:t.resp||"Cristina"}));Object.entries(admin).forEach(([s,arr])=>(arr||[]).filter(t=>!t.done).forEach(t=>all.push({title:t.title,score:impactScore(t.title,s,"Normal"),source:s,resp:t.resp||"Cristina"})));return all.sort((a,b)=>b.score-a.score).slice(0,3);};
+  const delegated=()=>{const d=[];data.tasks.filter(t=>!t.done&&t.resp&&t.resp!=="Cristina").forEach(t=>d.push({...t,source:"Task"}));Object.entries(admin).forEach(([s,arr])=>(arr||[]).filter(t=>!t.done&&t.resp&&t.resp!=="Cristina").forEach(t=>d.push({...t,source:s})));return d;};
+
+  const exportDate=()=>{
+    const payload={
+      version:1,
+      exportedAt:new Date().toISOString(),
+      data:{
+        [SK]:data,[CK]:chat,[CLK]:clients,[AK]:admin,
+        [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
+        [RK]:recurente,[MOK]:motoare
+      }
+    };
+    const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download=`kreativo_backup_${tday()}.json`;
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
+  };
+
+  const importRef=useRef(null);
+  const importDate=(e)=>{
+    const file=e.target.files[0];if(!file) return;
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try {
+        const p=JSON.parse(ev.target.result);
+        if(!p.data) throw new Error("Format invalid");
+        const d=p.data;
+        if(d[SK]) setData(d[SK]);
+        if(d[CK]) setChat(d[CK]);
+        if(d[CLK]) setClients(d[CLK]);
+        if(d[AK]) setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...d[AK]});
+        if(d[PK]) setPerdele(d[PK]);
+        if(d[MIK]) setMit(d[MIK]);
+        if(d[JK]) setJurnal(d[JK]);
+        if(d[PLK]) setPlanMaine(d[PLK]);
+        if(d[RK]) setRecurente(d[RK]);
+        if(d[MOK]) setMotoare(d[MOK]);
+        alert(`✓ Date importate din ${file.name}`);
+      } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
+    };
+    reader.readAsText(file);
+    e.target.value="";
+  };
+
+  async function sendChat() {
+    const msg=chatInput.trim();if(!msg||loading) return;
+    setChatInput("");const nc=[...chat,{role:"user",content:msg}];
+    setChat(nc);setLoading(true);
+    const t3=top3();const jAzi=jurnal[tday()]||[];
+    const sys=`Ești asistenta Cristinei (Kreativo Studio Brașov). Română. Directă. Aplici Pareto, MIT, Eat the Frog.\nREALIZAT AZI: ${JSON.stringify(jAzi)}\nTOP 3: ${JSON.stringify(t3)}\nPLAN MÂINE: ${JSON.stringify(tmPlan)}`;
+    try {
+      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:nc.slice(-10).map(m=>({role:m.role,content:m.content}))})});
+      const result=await res.json();
+      const raw=result.content?.[0]?.text||"Eroare.";
+      setChat(c=>[...c,{role:"assistant",content:raw}]);
+    } catch { setChat(c=>[...c,{role:"assistant",content:"Eroare conexiune."}]); }
+    setLoading(false);
+  }
+
+  const calItems=buildCal();
+  const t3=top3();const del=delegated();
+  const todayItems=calItems.filter(i=>isToday(i.date));
+  const ovd=data.tasks.filter(t=>isOvd(t.deadline,t.done));
+  const totCl=clients.reduce((s,c)=>s+c.tasks.length,0);
+  const donCl=clients.reduce((s,c)=>s+c.done.filter(Boolean).length,0);
+  const pct=totCl?Math.round(donCl/totCl*100):0;
+  const filtCl=clients.filter(c=>{const m=c.name.toLowerCase().includes(search.toLowerCase());if(cliFilter==="pending") return m&&c.tasks.some((_,i)=>!c.done[i]);if(cliFilter==="done") return m&&c.tasks.length>0&&c.done.every(Boolean);return m;}).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
+  const jAzi=jurnal[tday()]||[];
+  const recAzi=recurente.filter(r=>nxtRecur(r)<=tday());
+
+  const TABS=[
+    {id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"recurente",l:"Recurente"},
+    {id:"calendar",l:"Calendar"},{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"motionblinds",l:"MotionBlinds"},
+    {id:"contabilitate",l:"Contabilitate"},{id:"administrativ",l:"Administrativ"},
+    {id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"},
+    {id:"perdele",l:"Perdele"},{id:"vopsele",l:"Vopsele"},
+    {id:"trezorerie",l:"Cash Flow"},
+    {id:"chat",l:"Chat"}
+  ];
+
+  const inp={padding:"9px 14px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:13,width:"100%",background:C.surface,color:C.text,outline:"none",letterSpacing:"0.01em"};
+  const card={background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"18px 22px",marginBottom:12,boxShadow:"0 1px 6px rgba(42,33,24,0.04)"};
+  const btnP=(bg)=>({padding:"8px 20px",border:"none",borderRadius:6,background:bg||C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"});
+  const btnS={padding:"8px 16px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub,letterSpacing:"0.04em"};
+  const lbl={fontSize:10,color:C.textMuted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:500};
+  const row={display:"flex",alignItems:"center",gap:10};
+  const PBar=({pct,color})=><div style={{background:C.border,borderRadius:20,height:3,overflow:"hidden",marginBottom:4}}><div style={{width:`${pct}%`,height:3,background:color||C.accent,borderRadius:20,transition:"width .4s"}}/></div>;
+
+  function SimpleTab({section,ph}){
+    const [lv,setLv]=useState("");
+    const items=admin[section]||[];
+    return <div>
+      <div style={{...row,marginBottom:16}}>
+        <input style={{...inp,flex:1}} value={lv} onChange={e=>setLv(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){addAdminTask(section,lv);setLv("");}}} placeholder={ph}/>
+        <button style={btnP()} onClick={()=>{addAdminTask(section,lv);setLv("");}}>+ Adaugă</button>
+      </div>
+      {items.filter(t=>!t.done).length===0&&<div style={{color:C.textMuted,textAlign:"center",padding:"2rem",fontSize:13}}>Nicio sarcină.</div>}
+      {items.filter(t=>!t.done).map(t=><AdminTaskRow key={t.id} task={t} onToggle={()=>togAdmin(section,t.id)} onDelete={()=>delAdmin(section,t.id)} onRespChange={v=>updAdmin(section,t.id,"resp",v)} onDateChange={v=>updAdmin(section,t.id,"deadline",v)}/>)}
+    </div>;
+  }
+
+  const recLabel=(r)=>{if(r.type==="lunar_zi") return `Lunar, ziua ${r.day}`;if(r.type==="lunar_inceput") return "Lunar, prima zi";if(r.type==="lunar_sfarsit") return "Lunar, ultima zi";if(r.type==="saptamanal") return `Săptămânal, ${r.day}`;return "";};
+
+  if(!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#F2EFE9",flexDirection:"column",gap:16}}>
+    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:300,color:"#2A2118",letterSpacing:"0.05em"}}>Kreativo Studio</div>
+    <div style={{fontSize:11,color:"#A8998A",textTransform:"uppercase",letterSpacing:"0.15em"}}>Se încarcă datele...</div>
+  </div>;
+
+  return <div style={{fontFamily:"'Jost',sans-serif",maxWidth:800,margin:"0 auto",background:C.bg,minHeight:"100vh",paddingBottom:"4rem"}}>
+    <div style={{padding:"28px 24px 0",borderBottom:`1px solid ${C.border}`,background:C.surface,boxShadow:"0 1px 12px rgba(42,33,24,0.05)"}}>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:16}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{display:"flex",gap:2}}>
+              <div style={{width:2.5,height:34,background:C.text,borderRadius:1}}/>
+              <div style={{width:1,height:34,background:C.text,opacity:0.35,borderRadius:1}}/>
+            </div>
+            <div>
+              <div style={{fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:C.text,lineHeight:1.15}}>KREATIVO</div>
+              <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:C.textSub,lineHeight:1.15}}>STUDIO</div>
+            </div>
+          </div>
+          <div style={{width:"1px",height:28,background:C.border}}/>
+          <div>
+            <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:2,fontWeight:400}}>Panou de control</div>
+            <div style={{fontSize:10,fontWeight:300,color:C.textMuted,letterSpacing:"0.05em"}}>3P Design SRL</div>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:4}}>
+          <button onClick={exportDate} style={{padding:"6px 14px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C.textSub,fontWeight:400,letterSpacing:"0.06em",display:"flex",alignItems:"center",gap:5,textTransform:"uppercase"}}>
+            <span>↓</span> Export
+          </button>
+          <button onClick={()=>importRef.current?.click()} style={{padding:"6px 14px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C.textSub,fontWeight:400,letterSpacing:"0.06em",display:"flex",alignItems:"center",gap:5,textTransform:"uppercase"}}>
+            <span>↑</span> Import
+          </button>
+          <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
+        </div>
+      </div>
+      <div style={{display:"flex",overflowX:"auto",gap:0}}>
+        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"11px 14px",cursor:"pointer",border:"none",background:tab===t.id?C.accentLight:"transparent",borderBottom:tab===t.id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===t.id?C.accent:C.textSub,fontWeight:tab===t.id?600:400,fontSize:11,whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.05em",textTransform:"uppercase",transition:"color .2s"}}>
+          {t.l}{t.id==="recurente"&&recAzi.length>0?<span style={{marginLeft:4,background:C.danger,color:"#fff",borderRadius:10,fontSize:10,padding:"1px 5px"}}>{recAzi.length}</span>:null}
+        </button>)}
+      </div>
+    </div>
+
+    <div style={{padding:"24px 24px 0"}}>
+
+    {tab==="focus"&&<div>
+      {/* MIT - sarcina zilei */}
+      <div style={{...card,border:`1.5px solid ${C.accent}`,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.accent,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Ce e cel mai important azi?</div>
+        {mit.date===tday()&&mit.task?<div style={row}>
+          <input type="checkbox" checked={mit.done} onChange={()=>{if(!mit.done)addJurnal(mit.task,"MIT");setMit(m=>({...m,done:!m.done}));}} style={{cursor:"pointer",width:17,height:17,flexShrink:0}}/>
+          <span style={{flex:1,fontSize:15,color:mit.done?C.textMuted:C.text,textDecoration:mit.done?"line-through":"none",fontWeight:500}}>{mit.task}</span>
+          <button onClick={()=>setMit({task:"",date:tday(),done:false})} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
+        </div>:<input style={{...inp,fontSize:14}} placeholder="Un singur lucru..." onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setMit({task:e.target.value.trim(),date:tday(),done:false});e.target.value="";}}}/>}
+      </div>
+
+      {/* Notificări active */}
+      {(()=>{const notifAlerts=[];clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const d=(c.dates||[])[ti];const notif=(c.notifs||[])[ti];if(notif&&d&&!( c.done||[])[ti]){const days=daysTo(d);if(days<=2&&days>=0)notifAlerts.push({name:c.name,task:typeof task==="object"?task.title:task,data:d,days});}}));
+      if(notifAlerts.length===0) return null;
+      return <div style={{...card,border:`1px solid #C8A870`,background:C.warnLight,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.warn,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Notificări · {notifAlerts.length}</div>
+        {notifAlerts.map((n,i)=><div key={i} style={{...row,marginBottom:6,fontSize:13}}>
+          <span style={{flex:1,color:C.text}}><strong>{n.name}</strong> · {n.task}</span>
+          <span style={{color:C.warn,fontWeight:500}}>{n.days===0?"Azi":n.days===1?"Mâine":`În ${n.days} zile`}</span>
+        </div>)}
+      </div>;})()} 
+      {recAzi.length>0&&<div style={{...card,border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{recAzi.length} recurente azi</div>
+        {recAzi.map(r=><div key={r.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{r.title}</span><button style={btnP()} onClick={()=>doneRec(r.id)}>✓</button></div>)}
+      </div>}
+      {ovd.length>0&&<div style={{...card,border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{ovd.length} termene depășite</div>
+        {ovd.slice(0,4).map(t=><div key={t.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{t.title}</span><span style={{fontSize:11,color:C.danger}}>{fmtD(t.deadline)}</span></div>)}
+      </div>}
+
+      {/* Azi în calendar */}
+      {todayItems.length>0&&<div style={{...card,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Azi · {fmtD(tday())}</div>
+        {todayItems.map((item,i)=><div key={i} style={{...row,marginBottom:6,padding:"7px 10px",background:C.bg,borderRadius:8}}>
+          {item.time&&<span style={{fontSize:12,fontWeight:500,color:C.accent,minWidth:42}}>{item.time}</span>}
+          <div style={{flex:1}}><div style={{fontSize:13,color:C.text}}>{item.title}</div><div style={{fontSize:11,color:C.textMuted}}>{item.source}</div></div>
+        </div>)}
+      </div>}
+
+      {/* Realizat azi */}
+      {jAzi.length>0&&<div style={{...card,border:`1px solid #B8D4B8`,background:"#F2F7F2",marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>✓ Realizat azi ({jAzi.length})</div>
+        {jAzi.map((item,i)=><div key={i} style={{...row,marginBottom:4}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#3A6A3A",flexShrink:0,marginTop:4}}/>
+          <span style={{flex:1,fontSize:12,color:C.text}}>{item.title}</span>
+          <span style={{fontSize:11,color:C.textMuted}}>{item.time}</span>
+        </div>)}
+      </div>}
+
+      <div style={{...row,justifyContent:"flex-end",gap:8,marginTop:4}}>
+        <button style={{...btnS,fontSize:12}} onClick={()=>setTab("review")}>→ Review & Plan</button>
+      </div>
+    </div>}
+
+    {tab==="review"&&<div>
+      <div style={{...card,marginBottom:20}}>
+        <div style={{fontSize:15,fontWeight:500,color:C.text,marginBottom:4}}>Review · {fmtD(tday())}</div>
+        <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Tot ce ai realizat azi — automat + ce adaugi manual.</div>
+        <ManualInput onAdd={v=>addJurnal(v,"Manual")}/>
+        {jAzi.length===0?<div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:"1.5rem"}}>Niciun task bifat sau adăugat azi încă.</div>:<div>
+          <div style={{fontSize:11,color:C.accent,fontWeight:600,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.06em"}}>✓ {jAzi.length} realizări</div>
+          {jAzi.map((item,i)=><div key={i} style={{...row,padding:"8px 12px",background:i%2===0?C.bg:C.surface,borderRadius:8,marginBottom:4}}>
+            <div style={{width:20,height:20,borderRadius:"50%",background:C.accentLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:10,color:C.accent}}>✓</span></div>
+            <div style={{flex:1}}><div style={{fontSize:13,color:C.text}}>{item.title}</div><div style={{fontSize:11,color:C.textMuted}}>{item.source}</div></div>
+            <span style={{fontSize:11,color:C.textMuted}}>{item.time}</span>
+          </div>)}
+          <div style={{marginTop:12,padding:"10px 14px",background:C.accentLight,borderRadius:8,fontSize:12,color:C.accent}}>Scor zilei: <strong>{jAzi.length} realizări</strong></div>
+        </div>}
+      </div>
+      <div style={card}>
+        <div style={{fontSize:15,fontWeight:500,color:C.text,marginBottom:4}}>Plan · {fmtD(tmrw())}</div>
+        <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Maximum 5 priorități.</div>
+        <div style={{...row,marginBottom:16}}>
+          <input style={{...inp,flex:1}} value={newPlan} onChange={e=>setNewPlan(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addPlanTask()} placeholder="Adaugă prioritate pentru mâine..." disabled={tmPlan.length>=5}/>
+          <button style={btnP()} onClick={addPlanTask} disabled={tmPlan.length>=5}>+ Adaugă</button>
+        </div>
+        {tmPlan.length===0&&<div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:"1rem"}}>Planifică ziua de mâine înainte să închizi.</div>}
+        {tmPlan.map((t,i)=><div key={t.id} style={{...row,padding:"10px 14px",background:t.text.startsWith("[Reportat]")?"#FFF8E8":C.bg,borderRadius:8,marginBottom:6}}>
+          <div style={{width:22,height:22,borderRadius:"50%",background:i===0?C.accent:C.border,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:600,color:i===0?"#fff":C.textSub}}>{i+1}</span></div>
+          <span style={{flex:1,fontSize:13,color:C.text}}>{t.text}</span>
+          <button onClick={()=>delPlanTask(tmrw(),t.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
+        </div>)}
+      </div>
+      {Object.keys(jurnal).filter(d=>d!==tday()).sort((a,b)=>b>a?1:-1).slice(0,5).map(date=>(
+        <div key={date} style={{...card,opacity:0.7,marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:500,color:C.textSub,marginBottom:8}}>{fmtD(date)} · {jurnal[date].length} realizări</div>
+          {jurnal[date].map((item,i)=><div key={i} style={{...row,marginBottom:4}}><span style={{fontSize:10,color:C.accent}}>✓</span><span style={{flex:1,fontSize:12,color:C.textSub}}>{item.title}</span><span style={{fontSize:11,color:C.textMuted}}>{item.source}</span></div>)}
+        </div>
+      ))}
+    </div>}
+
+    {tab==="recurente"&&<div>
+      <div style={{...row,marginBottom:16}}>
+        <div style={{flex:1,fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Sarcini recurente</div>
+        <button style={btnP()} onClick={()=>setShowRecForm(!showRecForm)}>+ Recurentă</button>
+      </div>
+      {showRecForm&&<div style={{...card,marginBottom:16,background:"#FAFAF8"}}>
+        <div style={{display:"grid",gap:10}}>
+          <div><label style={lbl}>Titlu *</label><input style={inp} value={recForm.title} onChange={e=>setRecForm(f=>({...f,title:e.target.value}))} placeholder="Ex: Declarație TVA..."/></div>
+          <div><label style={lbl}>Frecvență</label>
+            <select style={inp} value={recForm.type} onChange={e=>setRecForm(f=>({...f,type:e.target.value}))}>
+              <option value="lunar_zi">Lunar, la ziua...</option><option value="lunar_inceput">Lunar, prima zi</option>
+              <option value="lunar_sfarsit">Lunar, ultima zi</option><option value="saptamanal">Săptămânal...</option>
+            </select>
+          </div>
+          {recForm.type==="lunar_zi"&&<div><label style={lbl}>Ziua lunii</label><input type="number" min="1" max="31" style={inp} value={recForm.day} onChange={e=>setRecForm(f=>({...f,day:e.target.value}))}/></div>}
+          {recForm.type==="saptamanal"&&<div><label style={lbl}>Ziua</label><select style={inp} value={recForm.day} onChange={e=>setRecForm(f=>({...f,day:e.target.value}))}>{["Luni","Marți","Miercuri","Joi","Vineri","Sâmbătă","Duminică"].map(z=><option key={z}>{z}</option>)}</select></div>}
+          <div><label style={lbl}>Categorie</label><select style={inp} value={recForm.cat} onChange={e=>setRecForm(f=>({...f,cat:e.target.value}))}>{["Contabilitate","Administrativ","Marketing","Personal","Kreativo"].map(c=><option key={c}>{c}</option>)}</select></div>
+          <div style={row}><button style={btnP()} onClick={saveRec}>Salvează</button><button style={btnS} onClick={()=>setShowRecForm(false)}>Anulează</button></div>
+        </div>
+      </div>}
+      {recurente.length===0&&<div style={{color:C.textMuted,textAlign:"center",padding:"3rem",fontSize:13}}>Nicio sarcină recurentă.</div>}
+      {recAzi.length>0&&<div style={{marginBottom:16}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Scadente azi</div>
+        {recAzi.map(r=><div key={r.id} style={{...card,padding:"12px 16px",border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:8}}>
+          <div style={row}><div style={{flex:1}}><div style={{fontSize:13,color:C.text,fontWeight:500}}>{r.title}</div><div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{recLabel(r)} · {r.cat}</div></div>
+            <button style={btnP()} onClick={()=>doneRec(r.id)}>✓ Gata</button>
+            <button onClick={()=>delRec(r.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
+          </div>
+        </div>)}
+      </div>}
+      {recurente.filter(r=>!recAzi.find(x=>x.id===r.id)).map(r=><div key={r.id} style={{...card,padding:"12px 16px",marginBottom:8}}>
+        <div style={row}><div style={{flex:1}}><div style={{fontSize:13,color:C.text}}>{r.title}</div><div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{recLabel(r)} · {r.cat} · Urmează: <strong>{fmtD(nxtRecur(r))}</strong> · în {daysTo(nxtRecur(r))} zile</div></div>
+          <button onClick={()=>delRec(r.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
+        </div>
+      </div>)}
+    </div>}
+
+    {tab==="calendar"&&<div>
+      <div style={{...row,marginBottom:16}}>
+        <div style={{flex:1,fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Calendar centralizat</div>
+        <button style={btnP()} onClick={()=>setShowEvForm(!showEvForm)}>+ Programare</button>
+      </div>
+      {showEvForm&&<div style={{...card,marginBottom:16}}>
+        <div style={{display:"grid",gap:10}}>
+          <div><label style={lbl}>Titlu *</label><input style={inp} value={evForm.title} onChange={e=>setEvForm(f=>({...f,title:e.target.value}))} placeholder="Programare, întâlnire..."/></div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+            <div><label style={lbl}>Data</label><input type="date" style={inp} value={evForm.date} onChange={e=>setEvForm(f=>({...f,date:e.target.value}))}/></div>
+            <div><label style={lbl}>Ora</label><input type="time" style={inp} value={evForm.time} onChange={e=>setEvForm(f=>({...f,time:e.target.value}))}/></div>
+            <div><label style={lbl}>Locație</label><input style={inp} value={evForm.loc} onChange={e=>setEvForm(f=>({...f,loc:e.target.value}))} placeholder="Showroom..."/></div>
+          </div>
+          <div style={row}><button style={btnP()} onClick={saveEv}>Salvează</button><button style={btnS} onClick={()=>setShowEvForm(false)}>Anulează</button></div>
+        </div>
+      </div>}
+      {calItems.length===0&&<div style={{color:C.textMuted,textAlign:"center",padding:"3rem",fontSize:13}}>Nicio dată setată.</div>}
+      {(()=>{const g={};calItems.forEach(i=>{if(!g[i.date])g[i.date]=[];g[i.date].push(i);});
+        return Object.entries(g).map(([date,items])=>{
+          const isPast=date<tday(),isT=isToday(date),days=daysTo(date);
+          return <div key={date} style={{marginBottom:16,opacity:isPast?0.6:1}}>
+            <div style={{...row,marginBottom:8}}>
+              <div style={{fontSize:13,fontWeight:500,color:isT?C.accent:isPast?C.textMuted:C.text}}>{fmtD(date)}</div>
+              {isT&&<div style={{fontSize:11,background:C.accent,color:"#fff",padding:"2px 8px",borderRadius:6}}>Azi</div>}
+              {!isT&&!isPast&&days!==null&&days<=3&&<div style={{fontSize:11,background:C.dangerLight,color:C.danger,padding:"2px 8px",borderRadius:6}}>În {days} zile</div>}
+              {isPast&&<div style={{fontSize:11,color:C.danger}}>Trecut</div>}
+            </div>
+            {items.map((item,i)=><CalItem key={i} item={item} onComplete={()=>compCal(item)} onReschedule={nd=>reschedCal(item,nd)}/>)}
+          </div>;
+        });
+      })()}
+    </div>}
+
+    {tab==="clients"&&<div>
+      {/* Subtaburi */}
+      <div style={{display:"flex",gap:6,marginBottom:14}}>
+        {[["lista","Clienți"],["valori","Valori comenzi"]].map(([id,l])=>{
+          const activeCliTab=cliFilter==="valori"?"valori":"lista";
+          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,borderRadius:8,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
+        })}
+      </div>
+
+      {/* Tab Valori */}
+      {cliFilter==="valori"&&<div>
+        <div style={{...card,marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Situație valori comenzi</div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:18,fontWeight:700,color:C.accent}}>{clients.filter(c=>c.valoare).reduce((s,c)=>s+Number(c.valoare||0),0).toLocaleString("ro-RO")} RON</div>
+              <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>
+                Avansuri: <span style={{color:"#3A6A3A",fontWeight:600}}>{clients.filter(c=>Number(c.valoare||0)>0).reduce((s,c)=>{const v=Number(c.valoare||0);return s+(c.avans!==undefined?Number(c.avans):Math.round(v*0.5));},0).toLocaleString("ro-RO")} RON</span>
+                {" · "}Rest: <span style={{color:C.danger,fontWeight:600}}>{clients.filter(c=>Number(c.valoare||0)>0).reduce((s,c)=>{const v=Number(c.valoare||0);const av=c.avans!==undefined?Number(c.avans):Math.round(v*0.5);return s+(v-av);},0).toLocaleString("ro-RO")} RON</span>
+              </div>
+            </div>
+          </div>
+          <div style={{fontSize:11,color:C.textMuted,marginBottom:10}}>Total general · {clients.filter(c=>c.valoare).length} clienți cu valoare</div>
+          {clients.filter(c=>Number(c.valoare||0)>0).sort((a,b)=>Number(b.valoare||0)-Number(a.valoare||0)).map((c,i)=>{
+            const val=Number(c.valoare||0);
+            const avans=Number(c.avans||Math.round(val*0.5));
+            const rest=val-avans;
+            return <div key={c.id} style={{border:`1px solid ${C.border}`,borderRadius:10,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:i%2===0?CC_LIGHT[0]:CC_LIGHT[1]}}>
+                <div style={{width:8,height:8,borderRadius:"50%",background:CC[clients.indexOf(c)%CC.length],flexShrink:0}}/>
+                <span style={{flex:1,fontSize:13,color:C.text,fontWeight:500}}>{c.name}</span>
+                <span style={{fontSize:14,fontWeight:700,color:C.accent}}>{val.toLocaleString("ro-RO")} RON</span>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:0,borderTop:`1px solid ${C.border}`}}>
+                <div style={{padding:"10px 14px",borderRight:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Valoare</div>
+                  <div style={{fontSize:14,fontWeight:600,color:C.text}}>{val.toLocaleString("ro-RO")} RON</div>
+                </div>
+                <div style={{padding:"10px 14px",borderRight:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Avans</div>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <input type="number" value={c.avans!==undefined?c.avans:Math.round(val*0.5)}
+                      onChange={e=>setClients(p=>p.map(x=>x.id!==c.id?x:{...x,avans:Number(e.target.value)}))}
+                      style={{width:"100%",fontSize:13,fontWeight:600,color:"#3A6A3A",border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 6px",outline:"none",background:"#F5FBF5"}}/>
+                  </div>
+                  <div style={{fontSize:10,color:C.textMuted,marginTop:3}}>50% = {Math.round(val*0.5).toLocaleString("ro-RO")}</div>
+                </div>
+                <div style={{padding:"10px 14px"}}>
+                  <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Rest de plată</div>
+                  <div style={{fontSize:14,fontWeight:600,color:(val-(c.avans!==undefined?Number(c.avans):Math.round(val*0.5)))<0?C.danger:C.danger}}>{(val-(c.avans!==undefined?Number(c.avans):Math.round(val*0.5))).toLocaleString("ro-RO")} RON</div>
+                </div>
+              </div>
+            </div>;
+          })}
+          {clients.filter(c=>!c.valoare||c.valoare==="0"||c.valoare==="").length>0&&<div style={{marginTop:10,padding:"8px 12px",background:C.bg,borderRadius:8,fontSize:12,color:C.textMuted}}>
+            {clients.filter(c=>!c.valoare||c.valoare==="0"||c.valoare==="").length} clienți fără valoare setată
+          </div>}
+        </div>
+      </div>}
+
+      {/* Tab Lista clienți */}
+      {cliFilter!=="valori"&&<div>
+      <div style={{marginBottom:16}}>
+        <div style={{...row,marginBottom:6}}>
+          <span style={{fontSize:11,color:C.textMuted,flex:1}}>{donCl} din {totCl} · {pct}%</span>
+          <button onClick={()=>setClients(p=>p.map(c=>({...c,done:new Array(c.tasks.length).fill(false)})))} style={{...btnS,fontSize:11,padding:"4px 10px"}}>Reset bife</button>
+        </div>
+        <PBar pct={pct}/>
+        <div style={{...row,marginTop:12,flexWrap:"wrap",gap:6}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Caută client..." style={{...inp,flex:1,minWidth:120,padding:"7px 12px"}}/>
+          {["all","pending","done"].map(f=><button key={f} onClick={()=>setCliFilter(f)} style={{...btnS,fontSize:11,padding:"5px 12px",background:cliFilter===f?C.accent:"transparent",color:cliFilter===f?"#fff":C.textSub,border:cliFilter===f?"none":`1px solid ${C.border}`}}>{f==="all"?"Toți":f==="pending"?"Cu sarcini":"Finalizați"}</button>)}
+        </div>
+      </div>
+      {filtCl.map(client=>{
+        const ci=clients.indexOf(client);const color=CC[ci%CC.length];const colorLight=CC_LIGHT[ci%CC_LIGHT.length];
+        const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
+        return <div key={client.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+          <div onClick={()=>togCliOpen(ci)} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
+            <div style={{flex:1,fontSize:13,fontWeight:500,color:ci%2===0?"#fff":C.text,letterSpacing:"0.01em"}}>{client.name}</div>
+            <div style={{fontSize:11,background:ci%2===0?"rgba(255,255,255,0.22)":"rgba(160,132,92,0.15)",color:ci%2===0?"#fff":C.accent,padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
+            <div style={{fontSize:11,color:ci%2===0?"rgba(255,255,255,0.7)":C.textMuted}}>{client.open?"▾":"▸"}</div>
+          </div>
+          {client.open&&<div style={{padding:"12px"}}>
+            {/* Valoare comandă */}
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg,borderRadius:10}}>
+              <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Valoare comandă:</span>
+              <input type="number" value={client.valoare||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",outline:"none",background:C.surface}}/>
+              <span style={{fontSize:12,color:C.textMuted}}>RON</span>
+            </div>
+            {client.tasks.map((task,ti)=>{
+              if(client.done[ti]) return null;
+              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} notif={(client.notifs||[])[ti]||false} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))}/>;
+            })}
+            {addingTo===ci?<div style={{...row,marginTop:8}}>
+              <input autoFocus value={newTask[ci]||""} onChange={e=>setNewTask(p=>({...p,[ci]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addCliTask(ci);if(e.key==="Escape")setAddingTo(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
+              <button onClick={()=>addCliTask(ci)} style={btnP(color)}>OK</button>
+              <button onClick={()=>setAddingTo(null)} style={btnS}>✕</button>
+            </div>:<div style={{...row,justifyContent:"space-between",marginTop:8,marginBottom:8}}>
+              <button onClick={()=>setAddingTo(ci)} style={{...btnS,fontSize:12,padding:"4px 12px"}}>+ sarcină</button>
+              <button onClick={()=>delCli(ci)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge client</button>
+            </div>}
+            <ClientMotoare client={client} motoare={motoare} onAdd={(model,qty)=>addMotorCli(ci,model,qty)} onRemove={model=>remMotorCli(ci,model)}/>
+            {(client.motoare||[]).length>0&&<button onClick={()=>{if(window.confirm(`Marchezi motoarele lui ${client.name} ca livrate? Se scad din stoc și se înregistrează în istoric.`)) livreazaMotoare(ci);}} style={{...btnP(C.accent),width:"100%",marginTop:8,fontSize:12}}>✓ Marchează motoare livrate</button>}
+            {/* Log discuții */}
+            <LogDiscutii id={client.id} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
+          </div>}
+        </div>;
+      })}
+      <div style={{marginTop:12}}>
+        {addingCli?<div style={row}>
+          <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder="Nume client nou..." style={{...inp,flex:1}}/>
+          <button onClick={addCli} style={btnP()}>Adaugă</button>
+          <button onClick={()=>setAddingCli(false)} style={btnS}>✕</button>
+        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,borderRadius:12,background:"transparent",cursor:"pointer"}}>+ client nou</button>}
+      </div>
+      </div>}
+    </div>}
+
+    {tab==="oferte"&&<div>
+      {/* Subtaburi */}
+      <div style={{display:"flex",gap:6,marginBottom:14}}>
+        {[["lista","Oferte"],["valori","Valori oferte"]].map(([id,l])=>{
+          const activeTab=ofertaSubtab||"lista";
+          return <button key={id} onClick={()=>setOfertaSubtab(id)} style={{padding:"7px 14px",border:`1px solid ${id===activeTab?C.accent:C.border}`,borderRadius:8,background:id===activeTab?C.accentLight:"transparent",color:id===activeTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeTab?500:400}}>{l}</button>;
+        })}
+      </div>
+
+      {/* Tab Valori oferte */}
+      {(ofertaSubtab||"lista")==="valori"&&<div>
+        <div style={{...card,marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Situație valori oferte</div>
+            <div style={{fontSize:18,fontWeight:700,color:C.accent}}>
+              {oferte.filter(o=>o.valoare).reduce((s,o)=>s+Number(o.valoare||0),0).toLocaleString("ro-RO")} RON
+            </div>
+          </div>
+          <div style={{fontSize:11,color:C.textMuted,marginBottom:10}}>Total pipeline · {oferte.filter(o=>o.valoare).length} oferte cu valoare</div>
+          {oferte.filter(o=>Number(o.valoare||0)>0).sort((a,b)=>Number(b.valoare||0)-Number(a.valoare||0)).map((o,i)=><div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:i%2===0?C.bg:C.surface,borderRadius:8,marginBottom:4}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:CC[oferte.indexOf(o)%CC.length],flexShrink:0}}/>
+            <span style={{flex:1,fontSize:13,color:C.text,fontWeight:500}}>{o.name}</span>
+            <span style={{fontSize:11,color:C.textMuted,marginRight:8}}>{fmtD(o.data)}</span>
+            <span style={{fontSize:14,fontWeight:700,color:C.accent}}>{Number(o.valoare).toLocaleString("ro-RO")} RON</span>
+          </div>)}
+          {oferte.filter(o=>!o.valoare||o.valoare==="0"||o.valoare==="").length>0&&<div style={{marginTop:10,padding:"8px 12px",background:C.bg,borderRadius:8,fontSize:12,color:C.textMuted}}>
+            {oferte.filter(o=>!o.valoare||o.valoare==="0"||o.valoare==="").length} oferte fără valoare estimată
+          </div>}
+        </div>
+      </div>}
+
+      {/* Tab Lista oferte */}
+      {(ofertaSubtab||"lista")==="lista"&&<div>
+      <div style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>
+          Oferte active — {oferte.filter(o=>!o.renuntat).length}
+        </div>
+      </div>
+
+      {oferte.filter(o=>!o.renuntat).map((oferta,oi)=>{
+        const color=CC[oi%CC.length];
+        const pending=(oferta.done||[]).filter(d=>!d).length;
+        const allDone=(oferta.tasks||[]).length>0&&(oferta.done||[]).every(Boolean);
+        return <div key={oferta.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+          {/* Header */}
+          <div onClick={()=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,open:!o.open}))} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
+            <div style={{flex:1,fontSize:13,fontWeight:500,color:oi%2===0?"#fff":C.text}}>{oferta.name}</div>
+            <div style={{fontSize:11,background:oi%2===0?"rgba(255,255,255,0.22)":"rgba(160,132,92,0.15)",color:oi%2===0?"#fff":C.accent,padding:"3px 10px",borderRadius:20}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
+            <div style={{fontSize:11,color:oi%2===0?"rgba(255,255,255,0.7)":C.textMuted}}>{oferta.open?"▾":"▸"}</div>
+          </div>
+
+          {oferta.open&&<div style={{padding:"14px 16px"}}>
+            {/* Data + Valoare */}
+            <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:12,padding:"10px 14px",background:C.bg,borderRadius:10,flexWrap:"wrap"}}>
+              <div style={{fontSize:11,color:C.textMuted}}>Ofertă din: <strong>{fmtD(oferta.data||tday())}</strong></div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto"}}>
+                <span style={{fontSize:12,color:C.textMuted}}>Valoare estimată:</span>
+                <input type="number" value={oferta.valoare||""} onChange={e=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,valoare:e.target.value}))} placeholder="0" style={{width:110,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",background:C.surface}}/>
+                <span style={{fontSize:12,color:C.textMuted}}>RON</span>
+              </div>
+            </div>
+
+            {/* Taskuri */}
+            {(oferta.tasks||[]).map((task,ti)=>{
+              const taskTitle=typeof task==="object"?task.title:task;
+              const taskDate=typeof task==="object"?task.date||"":"";
+              const isDone=(oferta.done||[])[ti];
+              const tg=tagTask(taskTitle);
+              const ov=taskDate&&taskDate<tday();
+              return <div key={ti} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <input type="checkbox" checked={isDone||false} onChange={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const d=[...(o.done||[])];d[ti]=!d[ti];return {...o,done:d};}))} style={{cursor:"pointer",width:15,height:15,flexShrink:0,accentColor:C.accent}}/>
+                  <span style={{flex:1,fontSize:13,color:isDone?C.textMuted:C.text,textDecoration:isDone?"line-through":"none"}}>{taskTitle}</span>
+                  <span style={{fontSize:10,padding:"2px 7px",borderRadius:6,background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
+                  <input type="date" value={taskDate} onChange={e=>{const v=e.target.value;setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];t[ti]=typeof t[ti]==="object"?{...t[ti],date:v}:{title:t[ti],tip:"Comandă",date:v};return {...o,tasks:t};}));}}
+                    style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>
+                  <button onClick={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];const d=[...(o.done||[])];t.splice(ti,1);d.splice(ti,1);return {...o,tasks:t,done:d};}))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
+                </div>
+              </div>;
+            })}
+
+            {/* Add task */}
+            <OfertaAddTask onAdd={(task)=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,tasks:[...(o.tasks||[]),task],done:[...(o.done||[]),false]}))} inp={inp} btnP={btnP} tday={tday}/>
+
+            {/* Actiuni */}
+            <div style={{display:"flex",gap:8,marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`,flexWrap:"wrap"}}>
+              <button onClick={()=>{
+                const taskStrings=(oferta.tasks||[]).map(t=>typeof t==="object"?t.title:t);
+                const taskDates=(oferta.tasks||[]).map(t=>typeof t==="object"?t.date||"":"");
+                const client={id:gid(),name:oferta.name,tasks:taskStrings,done:(oferta.done||[]),dates:taskDates,open:false,motoare:[],valoare:oferta.valoare||""};
+                setClients(p=>[...p,client]);
+                setOferte(p=>p.filter((_,i)=>i!==oi));
+              }} style={{...btnP(),fontSize:12}}>✓ Acceptat — mută în Clienți</button>
+              <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.name}?`)) setOferte(p=>p.filter((_,i)=>i!==oi));}} style={{padding:"8px 16px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C.textMuted,fontWeight:400}}>× Renunțat — șterge</button>
+            </div>
+            {/* Log discuții */}
+            <LogDiscutii id={`oferta_${oferta.id}`} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
+          </div>}
+        </div>;
+      })}
+
+      {/* Ofertă nouă */}
+      <div style={{marginTop:12}}>
+        <AddOfertaForm onAdd={(name)=>setOferte(p=>[...p,{id:gid(),name,tasks:[],done:[],open:true,data:tday()}])} inp={inp} btnP={btnP} btnS={btnS} C={C}/>
+      </div>
+
+      {oferte.filter(o=>!o.renuntat).length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nicio ofertă activă. Adaugă prima ofertă.</div>}
+      </div>}
+    </div>}
+
+    {tab==="motionblinds"&&<div>
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:16}}>Fișe Magazie · Motoare MotionBlinds / Coulisse</div>
+
+      {/* Alerte stoc negativ */}
+      {motoare.filter(m=>stocRamas(m.model)<0).map(m=>(
+        <div key={m.model} style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,borderRadius:10,marginBottom:8,fontSize:13,color:C.danger,fontWeight:500}}>
+          ⚠️ {m.model} — lipsă {Math.abs(stocRamas(m.model))} buc. · De comandat urgent
+        </div>
+      ))}
+
+      {/* Formular intrare centralizată */}
+      <AddFacturaForm motoare={motoare} onAdd={adaugaFactura}/>
+
+      {/* Lista facturi intrare */}
+      {intrari.length>0&&<div style={{marginBottom:20}}>
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>Facturi intrare ({intrari.length})</div>
+        {intrari.map(f=>{
+          const isOpenF=openModel[`f_${f.id}`]!==false&&openModel[`f_${f.id}`]!==undefined?true:false;
+          return <div key={f.id} style={{background:C.surface,border:"1px solid #C8DCC8",borderRadius:10,marginBottom:6,overflow:"hidden"}}>
+            <div onClick={()=>setOpenModel(p=>({...p,[`f_${f.id}`]:!isOpenF}))} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:"#F2F8F2",cursor:"pointer",userSelect:"none"}}>
+              <div style={{flex:1}}>
+                <span style={{fontSize:13,fontWeight:500,color:"#2A4A2A"}}>{f.furnizor}</span>
+                {f.factura&&<span style={{fontSize:12,color:"#5A8A5A",marginLeft:8}}>· {f.factura}</span>}
+                <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {fmtD(f.data)}</span>
+                <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {f.pozitii.reduce((s,p)=>s+p.qty,0)} buc.</span>
+              </div>
+              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,borderRadius:6,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+              <span style={{fontSize:11,color:"#5A8A5A"}}>{isOpenF?"▾":"▸"}</span>
+            </div>
+            {isOpenF&&<div style={{padding:"8px 14px 12px"}}>
+              {f.pozitii.map(pz=><div key={pz.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bg}`}}>
+                <select value={pz.model} onChange={e=>updPozitie(f.id,pz.id,"model",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",background:C.surface,outline:"none",color:C.accent,fontWeight:500}}>
+                  {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
+                </select>
+                <input type="number" min="1" value={pz.qty} onChange={e=>updPozitie(f.id,pz.id,"qty",e.target.value)} style={{width:60,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
+                <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
+                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,borderRadius:6,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+              </div>)}
+            </div>}
+          </div>;
+        })}
+      </div>}
+
+      {/* Fișe per model */}
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Situație stoc per model</div>
+      {motoare.map(m=>{
+        const isOpen=openModel[m.model]!==false;
+        const si=soldInitial(m.model);
+        const ti=totalIntrat(m.model);
+        const alocat=clients.reduce((s,c)=>{const x=(c.motoare||[]).find(x=>x.model===m.model);return s+(x?x.qty:0);},0);
+        const livrate=iesiri.filter(e=>e.model===m.model).reduce((s,e)=>s+e.qty,0);
+        const sf=stocRamas(m.model);
+        const st=sf<0?"lipsa":sf===0&&(alocat+livrate)>0?"exact":"ok";
+        const iesiriFisa=iesiri.filter(e=>e.model===m.model).map(e=>({...e,tip:"iesire",sursa:e.client}));
+        const intrarifisa=intrari.flatMap(f=>f.pozitii.filter(p=>p.model===m.model).map(p=>({id:f.id+p.id,data:f.data,tip:"intrare",sursa:f.furnizor,factura:f.factura,qty:p.qty})));
+        const miscariFisa=[...iesiriFisa,...intrarifisa].sort((a,b)=>a.data>b.data?1:-1);
+
+        return <div key={m.model} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
+          <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:C.bg}}>
+            <div style={{fontSize:14,fontWeight:600,color:C.text,minWidth:70}}>{m.model}</div>
+            <div style={{display:"flex",gap:16,flex:1}}>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold inițial</div><div style={{fontSize:13,fontWeight:500,color:C.textSub}}>{si}</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>+ Intrări</div><div style={{fontSize:13,fontWeight:600,color:"#3A6A3A"}}>{ti}</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>− Ieșiri</div><div style={{fontSize:13,fontWeight:600,color:C.danger}}>{alocat+livrate}</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold final</div><div style={{fontSize:15,fontWeight:700,color:st==="lipsa"?C.danger:C.accent}}>{sf}</div></div>
+            </div>
+            <span style={{fontSize:11,padding:"3px 10px",borderRadius:6,fontWeight:500,background:st==="lipsa"?C.dangerLight:st==="exact"?"#F0EFED":C.accentLight,color:st==="lipsa"?C.danger:st==="exact"?C.textSub:C.accent}}>{st==="lipsa"?`Lipsă ${Math.abs(sf)}`:st==="exact"?"Exact":"OK"}</span>
+            <span style={{fontSize:11,color:C.textMuted}}>{isOpen?"▾":"▸"}</span>
+          </div>
+          {isOpen&&<div style={{padding:"14px 18px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:14,borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Sold inițial:</span>
+              <input type="number" min="0" value={m.stoc} onChange={e=>updStoc(m.model,e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",textAlign:"center"}}/>
+              <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
+            </div>
+            {miscariFisa.length>0&&<div>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Fișă mișcări</div>
+              <div style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
+                <div style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"7px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+                  {["DATA","TIP","SURSĂ","BUC.","FACTURĂ"].map(h=><div key={h} style={{fontSize:9,fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{h}</div>)}
+                </div>
+                {miscariFisa.map(e=><div key={e.id} style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"8px 12px",borderBottom:`1px solid ${C.bg}`,alignItems:"center"}}>
+                  <div style={{fontSize:11,color:C.textSub}}>{fmtD(e.data)}</div>
+                  <div><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:e.tip==="intrare"?"#EAF2EA":"#F5EEEE",color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"↓ IN":"↑ OUT"}</span></div>
+                  <div style={{fontSize:12,color:C.text,fontWeight:500}}>{e.sursa||"—"}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"+":"-"}{e.qty}</div>
+                  <div style={{fontSize:11,color:C.textMuted}}>{e.factura||"—"}</div>
+                </div>)}
+              </div>
+            </div>}
+            {alocat>0&&<div style={{marginTop:12,padding:"10px 14px",background:C.accentLight,borderRadius:8}}>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Alocat clienți activi</div>
+              {clients.filter(c=>(c.motoare||[]).find(x=>x.model===m.model)).map(c=>{const mx=c.motoare.find(x=>x.model===m.model);return <div key={c.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}><span style={{flex:1,fontSize:12,color:C.text}}>{c.name}</span><span style={{fontSize:12,fontWeight:600,color:C.accent}}>{mx.qty} buc.</span></div>;})}
+            </div>}
+            <button onClick={()=>delMotorModel(m.model)} style={{marginTop:12,fontSize:11,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>× șterge model</button>
+          </div>}
+        </div>;
+      })}
+
+      <div style={{marginTop:8}}>
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Adaugă model nou</div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={newMotorModel} onChange={e=>setNewMotorModel(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&addMotorModel()} placeholder="Ex: CM-60" style={{...inp,flex:1}}/>
+          <button style={btnP()} onClick={addMotorModel}>+ Adaugă</button>
+        </div>
+      </div>
+    </div>}
+
+    {tab==="contabilitate"&&<div><div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Contabilitate</div><SimpleTab section="contabilitate" ph="Adaugă sarcină..."/></div>}
+    {tab==="administrativ"&&<div><div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Administrativ</div><SimpleTab section="administrativ" ph="Adaugă sarcină..."/></div>}
+    {tab==="marketing"&&<div><div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Marketing</div><SimpleTab section="marketing" ph="Adaugă sarcină..."/></div>}
+    {tab==="personal"&&<div><div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Personal</div><SimpleTab section="personal" ph="Adaugă sarcină personală..."/></div>}
+
+    {tab==="perdele"&&<div>
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:4}}>Plan Dezvoltare · Perdele & Smart Shading</div>
+      <PBar pct={perdele.reduce((s,e)=>s+e.taskuri.length,0)?Math.round(perdele.reduce((s,e)=>s+e.taskuri.filter(t=>t.done).length,0)/perdele.reduce((s,e)=>s+e.taskuri.length,0)*100):0} color="#4A6070"/>
+      <div style={{marginTop:16}}>
+        {perdele.map((etapa,ei)=>{
+          const dE=etapa.taskuri.filter(t=>t.done).length,tE=etapa.taskuri.length,pE=tE?Math.round(dE/tE*100):0,isOpen=openEtapa[ei];
+          const sorted=[...etapa.taskuri].sort((a,b)=>{if(!a.deadline&&!b.deadline)return 0;if(!a.deadline)return 1;if(!b.deadline)return -1;return a.deadline>b.deadline?1:-1;});
+          return <div key={ei} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:10,overflow:"hidden",background:C.surface}}>
+            <div onClick={()=>setOpenEtapa(p=>({...p,[ei]:!p[ei]}))} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",cursor:"pointer",userSelect:"none"}}>
+              <div style={{width:40,height:40,borderRadius:8,background:etapa.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:13,fontWeight:300,color:"rgba(255,255,255,0.9)"}}>{pE}%</span></div>
+              <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:C.text}}>{etapa.titlu}</div><div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{etapa.period} · {dE}/{tE}</div></div>
+              <div style={{fontSize:11,color:C.textMuted}}>{isOpen?"▾":"▸"}</div>
+            </div>
+            {isOpen&&<div style={{padding:"4px 16px 16px"}}>
+              <div style={{background:C.border,height:"1px",marginBottom:12}}/>
+              {sorted.map(t=>{
+                const ov=t.deadline&&!t.done&&t.deadline<tday();
+                return <div key={t.id} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 0",borderBottom:`1px solid ${C.bg}`,opacity:t.done?0.45:1}}>
+                  <input type="checkbox" checked={t.done} onChange={()=>togP(ei,t.id)} style={{cursor:"pointer",width:15,height:15,marginTop:3,flexShrink:0}}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,color:t.done?C.textMuted:C.text,textDecoration:t.done?"line-through":"none",lineHeight:1.55,marginBottom:8}}>{t.text}</div>
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:11,color:C.textMuted}}>Resp.</span><input value={t.resp||""} onChange={e=>updP(ei,t.id,"resp",e.target.value)} style={{...inp,width:140,padding:"3px 8px",fontSize:12,color:etapa.color,fontWeight:500}}/></div>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontSize:11,color:C.textMuted}}>Termen</span><input type="date" value={t.deadline||""} onChange={e=>updP(ei,t.id,"deadline",e.target.value)} style={{...inp,width:"auto",padding:"3px 8px",fontSize:12,color:ov?C.danger:C.text}}/></div>
+                      {ov&&<span style={{fontSize:11,color:C.danger,fontWeight:500}}>Depășit</span>}
+                    </div>
+                  </div>
+                </div>;
+              })}
+            </div>}
+          </div>;
+        })}
+      </div>
+    </div>}
+
+    {tab==="vopsele"&&<div style={{textAlign:"center",padding:"4rem 1rem"}}>
+      <div style={{fontSize:13,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:12}}>În construcție</div>
+      <div style={{fontSize:20,fontWeight:300,color:C.text,marginBottom:8}}>Plan Dezvoltare Vopsele</div>
+      <div style={{fontSize:13,color:C.textMuted,maxWidth:360,margin:"0 auto",lineHeight:1.7}}>Planul pentru Benjamin Moore — sesiune dedicată.</div>
+    </div>}
+
+    {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
+
+    {tab==="chat"&&<div>
+      <div style={{fontSize:11,color:C.textMuted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.06em"}}>Asistentă · prioritizare · execuție</div>
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,minHeight:280,maxHeight:400,overflowY:"auto",padding:16,marginBottom:12,display:"flex",flexDirection:"column",gap:10}}>
+        {chat.length===0&&<div style={{color:C.textMuted,fontSize:13,textAlign:"center",marginTop:"3rem",lineHeight:1.7}}>Ce faci <strong>mai întâi</strong> azi?<br/><span style={{fontSize:12}}>Sau scrie "bună dimineața" să stabilim top 3 împreună.</span></div>}
+        {chat.map((m,i)=><div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"80%"}}>
+          <div style={{background:m.role==="user"?C.accent:C.bg,color:m.role==="user"?"#fff":C.text,border:m.role==="assistant"?`1px solid ${C.border}`:"none",borderRadius:10,padding:"10px 14px",fontSize:13,lineHeight:1.6}}>{m.content}</div>
+        </div>)}
+        {loading&&<div style={{alignSelf:"flex-start"}}><div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:C.textMuted}}>···</div></div>}
+        <div ref={chatRef}/>
+      </div>
+      <div style={row}>
+        <input style={{...inp,flex:1}} value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendChat()} placeholder="Ce faci acum? Ce te blochează?"/>
+        <button style={btnP()} onClick={sendChat} disabled={loading}>{loading?"···":"Trimite"}</button>
+      </div>
+      <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+        {["Bună dimineața, stabilim top 3","Ce am amânat?","Ce pot delega azi?"].map(s=><button key={s} style={{fontSize:11,padding:"5px 10px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",color:C.textSub}} onClick={()=>setChatInput(s)}>{s}</button>)}
+      </div>
+    </div>}
+
+    </div>
+  </div>;
+}
+
+const container = document.getElementById('root');
+const root = ReactDOM.createRoot(container);
+root.render(<App />);
+</script>
+</body>
+</html>
