@@ -46,6 +46,7 @@ const BLK = "kreativo_bilete_v1";
 const TRK = "kreativo_trezorerie_v1";
 const OFK = "kreativo_oferte_v1";
 const LGK = "kreativo_log_v1";
+const ENK = "kreativo_energie_v1";
 
 const MOTOARE_INIT = [
   {model:"CM-03",stoc:18},{model:"CM-07",stoc:8},{model:"CM-36",stoc:2},
@@ -763,6 +764,7 @@ function App() {
   const [newMotorModel,setNewMotorModel]=useState("");
   const [openModel,setOpenModel]=useState({});
   const [loaded, setLoaded] = useState(false);
+  const [energie, setEnergie] = useState({});
   const chatRef=useRef(null);
   const saveTimer=useRef({});
 
@@ -798,6 +800,7 @@ function App() {
           const of=await sbGet(OFK); if(of) setOferte(of);
           const lg=await sbGet(LGK); if(lg) setLog(lg);
           const tr=await sbGet(TRK); if(tr) setTrezorerie(tr);
+          const en=await sbGet(ENK); if(en) setEnergie(en);
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
@@ -823,6 +826,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(OFK,oferte);},[oferte,loaded]);
   useEffect(()=>{if(loaded) sbSave(LGK,log);},[log,loaded]);
   useEffect(()=>{if(loaded) sbSave(TRK,trezorerie);},[trezorerie,loaded]);
+  useEffect(()=>{if(loaded) sbSave(ENK,energie);},[energie,loaded]);
 
   useEffect(()=>{if(chatRef.current) chatRef.current.scrollIntoView({behavior:"smooth"});},[chat,loading]);
 
@@ -919,12 +923,14 @@ function App() {
 
   const exportDate=()=>{
     const payload={
-      version:1,
+      version:2,
       exportedAt:new Date().toISOString(),
       data:{
         [SK]:data,[CK]:chat,[CLK]:clients,[AK]:admin,
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
-        [RK]:recurente,[MOK]:motoare
+        [RK]:recurente,[MOK]:motoare,
+        [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
+        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -954,7 +960,13 @@ function App() {
         if(d[PLK]) setPlanMaine(d[PLK]);
         if(d[RK]) setRecurente(d[RK]);
         if(d[MOK]) setMotoare(d[MOK]);
-        alert(`✓ Date importate din ${file.name}`);
+        if(d[IEK]) setIesiri(d[IEK]);
+        if(d[INK]) setIntrari(d[INK]);
+        if(d[BLK]) setBilete(d[BLK]);
+        if(d[TRK]) setTrezorerie(d[TRK]);
+        if(d[OFK]) setOferte(d[OFK]);
+        if(d[LGK]) setLog(d[LGK]);
+        alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
     };
     reader.readAsText(file);
@@ -1066,6 +1078,128 @@ function App() {
     <div style={{padding:"20px 24px 0"}}>
 
     {tab==="focus"&&<div>
+
+      {/* CARD ENERGIE ZILNICĂ */}
+      {(()=>{
+        const azi=tday();
+        const eAzi=energie[azi]||{};
+        const completat=eAzi.nivel&&eAzi.mod&&eAzi.contact!==undefined;
+        const [energieOpen,setEnergieOpen]=React.useState(!completat);
+        const updEnergie=(field,val)=>setEnergie(p=>({...p,[azi]:{...(p[azi]||{}), [field]:val}}));
+        const culoareNivel={"1":"#8B3A3A","2":"#8B6914","3":"#3A6A3A"}[eAzi.nivel]||C.textMuted;
+        const emojiNivel={"1":"🔴","2":"🟡","3":"🟢"}[eAzi.nivel]||"·";
+        return <div style={{...card,marginBottom:12,padding:"14px 18px",border:completat?`1px solid ${C.border}`:`1.5px solid ${C.accent}`}}>
+          <div onClick={()=>setEnergieOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",userSelect:"none"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:16}}>{emojiNivel}</span>
+              <div>
+                <div style={{fontSize:11,fontWeight:600,color:completat?culoareNivel:C.accent,textTransform:"uppercase",letterSpacing:"0.08em"}}>
+                  {completat?"Stare zilnică":"Cum ești azi?"}
+                </div>
+                {completat&&<div style={{fontSize:11,color:C.textMuted,marginTop:1}}>
+                  {{"1":"Energie scăzută","2":"Energie medie","3":"Energie ridicată"}[eAzi.nivel]}
+                  {" · "}{eAzi.mod==="blocuri"?"Blocuri mari":"Task-uri mici"}
+                  {" · "}{eAzi.contact?"Deschisă spre contact":"Fără contact extern"}
+                </div>}
+              </div>
+            </div>
+            <span style={{fontSize:11,color:C.textMuted}}>{energieOpen?"▾":"▸"}</span>
+          </div>
+          {energieOpen&&<div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`}}>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Energie</div>
+              <div style={{display:"flex",gap:8}}>
+                {[["1","🔴 Scăzută","#8B3A3A","#F7EFEF"],["2","🟡 Medie","#8B6914","#F7F0E0"],["3","🟢 Ridicată","#3A6A3A","#EEF5EE"]].map(([v,l,col,bg])=>
+                  <button key={v} onClick={()=>updEnergie("nivel",v)}
+                    style={{flex:1,padding:"8px 6px",border:`1.5px solid ${eAzi.nivel===v?col:C.border}`,borderRadius:8,background:eAzi.nivel===v?bg:"transparent",color:eAzi.nivel===v?col:C.textSub,cursor:"pointer",fontSize:12,fontWeight:eAzi.nivel===v?600:400,transition:"all .15s"}}>
+                    {l}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div style={{marginBottom:12}}>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Focalizare posibilă</div>
+              <div style={{display:"flex",gap:8}}>
+                {[["blocuri","Blocuri mari de timp"],["mici","Task-uri mici / rapide"]].map(([v,l])=>
+                  <button key={v} onClick={()=>updEnergie("mod",v)}
+                    style={{flex:1,padding:"8px 10px",border:`1.5px solid ${eAzi.mod===v?C.accent:C.border}`,borderRadius:8,background:eAzi.mod===v?C.accentLight:"transparent",color:eAzi.mod===v?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:eAzi.mod===v?600:400,transition:"all .15s"}}>
+                    {l}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div style={{marginBottom:4}}>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Contact extern</div>
+              <div style={{display:"flex",gap:8}}>
+                {[[true,"Da, sunt deschisă"],[false,"Nu azi"]].map(([v,l])=>
+                  <button key={String(v)} onClick={()=>updEnergie("contact",v)}
+                    style={{flex:1,padding:"8px 10px",border:`1.5px solid ${eAzi.contact===v?C.accent:C.border}`,borderRadius:8,background:eAzi.contact===v?C.accentLight:"transparent",color:eAzi.contact===v?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:eAzi.contact===v?600:400,transition:"all .15s"}}>
+                    {l}
+                  </button>
+                )}
+              </div>
+            </div>
+            {completat&&<button onClick={()=>setEnergieOpen(false)} style={{marginTop:12,width:"100%",padding:"7px",border:"none",borderRadius:6,background:C.accent,color:"#fff",cursor:"pointer",fontSize:11,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>✓ Salvat</button>}
+          </div>}
+        </div>;
+      })()}
+
+      {/* ALERTĂ UNIFICATĂ */}
+      {(()=>{
+        const alerte=[];
+        // Bilete scadente ≤ 7 zile
+        bilete.filter(b=>!b.achitat&&b.scadenta&&daysTo(b.scadenta)<=7&&daysTo(b.scadenta)>=0).forEach(b=>
+          alerte.push({tip:"💳 Bilet",text:`#${b.numar} · ${b.furnizor} · ${Number(b.valoare).toLocaleString("ro-RO")} RON`,urgenta:daysTo(b.scadenta)<=2?"rosie":"galbena",info:daysTo(b.scadenta)===0?"Scadent azi":`În ${daysTo(b.scadenta)} zile`})
+        );
+        // Bilete depășite
+        bilete.filter(b=>!b.achitat&&b.scadenta&&b.scadenta<tday()).forEach(b=>
+          alerte.push({tip:"💳 Bilet",text:`#${b.numar} · ${b.furnizor} · ${Number(b.valoare).toLocaleString("ro-RO")} RON`,urgenta:"rosie",info:"Depășit"})
+        );
+        // Clienți cu termene depășite
+        clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{
+          const d=(c.dates||[])[ti];
+          if(d&&d<tday()&&!(c.done||[])[ti])
+            alerte.push({tip:"👤 Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"rosie",info:"Depășit"});
+        }));
+        // Termene depășite admin
+        ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).filter(t=>!t.done&&t.deadline&&t.deadline<tday()).forEach(t=>
+          alerte.push({tip:`📋 ${s.charAt(0).toUpperCase()+s.slice(1)}`,text:t.title,urgenta:"rosie",info:"Depășit"})
+        ));
+        // Termene apropiate clienți (2 zile)
+        clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{
+          const d=(c.dates||[])[ti];
+          const notif=(c.notifs||[])[ti];
+          if(d&&!d<tday()&&!(c.done||[])[ti]&&daysTo(d)<=2&&daysTo(d)>=0)
+            alerte.push({tip:"👤 Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"galbena",info:daysTo(d)===0?"Azi":daysTo(d)===1?"Mâine":`În ${daysTo(d)} zile`});
+        }));
+        // Sold negativ previzionat
+        const soldAziCalc=(()=>{let s=trezorerie.soldInitial||0;const az=tday();(trezorerie.inregistrari||[]).filter(x=>x.data<=az).forEach(x=>{if(x.tip==="incasare")s+=x.suma;else s-=x.suma;});return s;})();
+        if(soldAziCalc<0) alerte.push({tip:"💰 Cash",text:`Sold negativ: ${soldAziCalc.toLocaleString("ro-RO")} RON`,urgenta:"rosie",info:"Azi"});
+        // Termene depășite tasks principale
+        data.tasks.filter(t=>isOvd(t.deadline,t.done)).forEach(t=>
+          alerte.push({tip:"📌 Task",text:t.title,urgenta:"rosie",info:"Depășit"})
+        );
+
+        if(alerte.length===0) return null;
+        const rosii=alerte.filter(a=>a.urgenta==="rosie");
+        const galbene=alerte.filter(a=>a.urgenta==="galbena");
+        return <div style={{...card,marginBottom:12,padding:"14px 18px",border:`1.5px solid ${rosii.length>0?"#C0A0A0":"#C8A870"}`,background:rosii.length>0?C.dangerLight:C.warnLight}}>
+          <div style={{fontSize:11,fontWeight:600,color:rosii.length>0?C.danger:C.warn,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>
+            ⚠️ {alerte.length} alertă{alerte.length!==1?"e":""} active
+          </div>
+          {rosii.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.5)",borderRadius:7}}>
+            <span style={{fontSize:11,color:C.danger,fontWeight:700,minWidth:80,flexShrink:0}}>{a.info}</span>
+            <span style={{fontSize:11,color:C.textMuted,minWidth:60,flexShrink:0}}>{a.tip}</span>
+            <span style={{fontSize:12,color:C.text,flex:1}}>{a.text}</span>
+          </div>)}
+          {galbene.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.4)",borderRadius:7}}>
+            <span style={{fontSize:11,color:C.warn,fontWeight:700,minWidth:80,flexShrink:0}}>{a.info}</span>
+            <span style={{fontSize:11,color:C.textMuted,minWidth:60,flexShrink:0}}>{a.tip}</span>
+            <span style={{fontSize:12,color:C.text,flex:1}}>{a.text}</span>
+          </div>)}
+        </div>;
+      })()}
+
       {/* MIT - sarcina zilei */}
       <div style={{...card,border:`1.5px solid ${C.accent}`,marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:C.accent,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Ce e cel mai important azi?</div>
@@ -1078,21 +1212,10 @@ function App() {
 
       {/* Notificări active */}
       {(()=>{const notifAlerts=[];clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const d=(c.dates||[])[ti];const notif=(c.notifs||[])[ti];if(notif&&d&&!( c.done||[])[ti]){const days=daysTo(d);if(days<=2&&days>=0)notifAlerts.push({name:c.name,task:typeof task==="object"?task.title:task,data:d,days});}}));
-      if(notifAlerts.length===0) return null;
-      return <div style={{...card,border:`1px solid #C8A870`,background:C.warnLight,marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:600,color:C.warn,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Notificări · {notifAlerts.length}</div>
-        {notifAlerts.map((n,i)=><div key={i} style={{...row,marginBottom:6,fontSize:13}}>
-          <span style={{flex:1,color:C.text}}><strong>{n.name}</strong> · {n.task}</span>
-          <span style={{color:C.warn,fontWeight:500}}>{n.days===0?"Azi":n.days===1?"Mâine":`În ${n.days} zile`}</span>
-        </div>)}
-      </div>;})()} 
+      if(notifAlerts.length===0) return null;return null;})()} 
       {recAzi.length>0&&<div style={{...card,border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{recAzi.length} recurente azi</div>
+        <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{recAzi.length} recurente azi — acționează</div>
         {recAzi.map(r=><div key={r.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{r.title}</span><button style={btnP()} onClick={()=>doneRec(r.id)}>✓</button></div>)}
-      </div>}
-      {ovd.length>0&&<div style={{...card,border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{ovd.length} termene depășite</div>
-        {ovd.slice(0,4).map(t=><div key={t.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{t.title}</span><span style={{fontSize:11,color:C.danger}}>{fmtD(t.deadline)}</span></div>)}
       </div>}
 
       {/* Azi în calendar */}
