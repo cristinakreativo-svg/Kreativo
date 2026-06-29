@@ -1629,8 +1629,10 @@ function App() {
         const intrarifisa=intrari.flatMap(f=>f.pozitii.filter(p=>p.model===m.model).map(p=>({id:f.id+p.id,data:f.data,tip:"intrare",sursa:f.furnizor,factura:f.factura,qty:p.qty})));
         const miscariFisa=[...iesiriFisa,...intrarifisa].sort((a,b)=>a.data>b.data?1:-1);
 
+        const mIdx=motoare.findIndex(x=>x.model===m.model);
+        const bgCard=mIdx%2===0?CC[0]:CC[1];
         return <div key={m.model} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
-          <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:C.bg}}>
+          <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:bgCard}}>
             <div style={{fontSize:14,fontWeight:600,color:C.text,minWidth:70}}>{m.model}</div>
             <div style={{display:"flex",gap:16,flex:1}}>
               <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold inițial</div><div style={{fontSize:13,fontWeight:500,color:C.textSub}}>{si}</div></div>
