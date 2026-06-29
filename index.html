@@ -103,7 +103,7 @@ const PP = [
   ]}
 ];
 
-const CC = ["#A0845C","#C8A878"];
+const CC = ["#B8956A","#D4C9B8"];
 const CC_LIGHT = ["#A0845C","#C4A882"];
 
 function tagTask(task) {
@@ -1304,9 +1304,9 @@ function App() {
         const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
         return <div key={client.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
           <div onClick={()=>togCliOpen(ci)} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
-            <div style={{flex:1,fontSize:13,fontWeight:500,color:fi%2===0?"#fff":C.text,letterSpacing:"0.01em"}}>{client.name}</div>
-            <div style={{fontSize:11,background:fi%2===0?"rgba(255,255,255,0.22)":"rgba(0,0,0,0.1)",color:fi%2===0?"#fff":C.text,padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
-            <div style={{fontSize:11,color:fi%2===0?"rgba(255,255,255,0.7)":C.textSub}}>{client.open?"▾":"▸"}</div>
+            <div style={{flex:1,fontSize:13,fontWeight:500,color:C.text,letterSpacing:"0.01em"}}>{client.name}</div>
+            <div style={{fontSize:11,background:"rgba(0,0,0,0.1)",color:C.text,padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
+            <div style={{fontSize:11,color:C.textSub}}>{client.open?"▾":"▸"}</div>
           </div>
           {client.open&&<div style={{padding:"12px"}}>
             {/* Valoare comandă */}
