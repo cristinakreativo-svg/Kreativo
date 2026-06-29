@@ -15,6 +15,9 @@ input,select,textarea,button{font-family:'Jost',sans-serif;}
 input[type=checkbox]{accent-color:#A0845C;}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:#D4C9B8;border-radius:4px;}
+button{transition:opacity .15s,transform .1s;}
+button:hover{opacity:0.85;}
+button:active{transform:scale(0.98);}
 </style>
 </head>
 <body>
@@ -240,6 +243,19 @@ function ClientMotoare({client,motoare,onAdd,onRemove}) {
       <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
       <button onClick={()=>onAdd(sel||motoare[0]?.model,qty)}
         style={{padding:"4px 12px",border:"none",borderRadius:6,background:C.accent,color:"#fff",cursor:"pointer",fontSize:12}}>+ Adaugă</button>
+    </div>
+  </div>;
+}
+
+function LiveClock({C}){
+  const [time,setTime]=React.useState(new Date());
+  React.useEffect(()=>{const t=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(t);},[]);
+  return <div style={{textAlign:"right"}}>
+    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:42,fontWeight:300,color:C.accent,lineHeight:1,letterSpacing:"-0.02em"}}>
+      {time.toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})}
+    </div>
+    <div style={{fontSize:10,color:C.textMuted,letterSpacing:"0.08em",textTransform:"uppercase",marginTop:2}}>
+      {time.toLocaleTimeString("ro-RO",{second:"2-digit"})}s
     </div>
   </div>;
 }
@@ -711,7 +727,7 @@ function AddFacturaForm({motoare, onAdd}){
 }
 
 function App() {
-  const [tab,setTab]=useState("focus");
+  const [tab,_setTab]=useState("focus");
   const [data,setData]=useState({tasks:[],notes:[],events:[]});
   const [admin,setAdmin]=useState({contabilitate:[],administrativ:[],marketing:[],personal:[]});
   const [clients,setClients]=useState([]);
@@ -861,8 +877,7 @@ function App() {
     const items=[];
     data.events.forEach(e=>items.push({date:e.date,time:e.time||"",title:e.title,source:"Program",loc:e.loc||"",eventId:e.id,id:e.id}));
     clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const date=(c.dates||[])[ti]||"";const taskTitle=typeof task==="object"?task.title:task;if(date&&!(c.done||[])[ti])items.push({date,time:"",title:`${c.name} · ${taskTitle}`,source:"Client",clientName:c.name,ti,id:`${c.id}-${ti}`});}));
-    oferte.forEach((o,oi)=>(o.tasks||[]).forEach((task,ti)=>{
-      const date=typeof task==="object"?task.date:(o.dates||[])[ti]||"";
+    oferte.forEach((o,oi)=>(o.tasks||[]).forEach((task,ti)=>{      const date=typeof task==="object"?task.date:(o.dates||[])[ti]||"";
       if(date&&!(o.done||[])[ti]){
         const title=typeof task==="object"?task.title:task;
         items.push({date,time:"",title:`[Ofertă] ${o.name} · ${title}`,source:"Ofertă",ofertaId:o.id,oi,ti,id:`of-${o.id}-${ti}`});
@@ -872,6 +887,7 @@ function App() {
     data.tasks.filter(t=>!t.done&&t.deadline).forEach(t=>items.push({date:t.deadline,time:"",title:t.title,source:t.cat,id:t.id}));
     perdele.forEach((e,ei)=>e.taskuri.forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.text.slice(0,50),source:"Perdele",id:t.id,ei});}));
     recurente.forEach(r=>{const nd=nxtRecur(r);if(nd)items.push({date:nd,time:"",title:`${r.title} (recurent)`,source:"Recurent",id:r.id,isRecurent:true});});
+    (trezorerie.inregistrari||[]).filter(x=>x.tip==="plata"&&x.data>=tday()).forEach(x=>items.push({date:x.data,time:"",title:`Plată · ${x.descriere||"—"} · ${Number(x.suma).toLocaleString("ro-RO")} RON`,source:"Cash Flow",id:x.id}));
     return items.sort((a,b)=>a.date>b.date?1:-1);
   }
 
@@ -987,7 +1003,7 @@ function App() {
   const btnS={padding:"8px 16px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub,letterSpacing:"0.04em"};
   const lbl={fontSize:10,color:C.textMuted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:500};
   const row={display:"flex",alignItems:"center",gap:10};
-  const PBar=({pct,color})=><div style={{background:C.border,borderRadius:20,height:3,overflow:"hidden",marginBottom:4}}><div style={{width:`${pct}%`,height:3,background:color||C.accent,borderRadius:20,transition:"width .4s"}}/></div>;
+  const PBar=({pct,color})=><div style={{background:C.border,borderRadius:20,height:4,overflow:"hidden",marginBottom:4}}><div style={{width:`${pct}%`,height:4,background:color||`linear-gradient(90deg,${C.accent},#C8A870)`,borderRadius:20,transition:"width .6s ease"}}/></div>;
 
   function SimpleTab({section,ph}){
     const [lv,setLv]=useState("");
@@ -1002,53 +1018,69 @@ function App() {
     </div>;
   }
 
-  const recLabel=(r)=>{if(r.type==="lunar_zi") return `Lunar, ziua ${r.day}`;if(r.type==="lunar_inceput") return "Lunar, prima zi";if(r.type==="lunar_sfarsit") return "Lunar, ultima zi";if(r.type==="saptamanal") return `Săptămânal, ${r.day}`;return "";};
+  const setTab=(t)=>{
+    _setTab(t);
+    if(t==="clients") setClients(p=>p.map(c=>({...c,open:false})));
+    if(t==="motionblinds") setOpenModel({});
+    if(t==="oferte") setOferte(p=>p.map(o=>({...o,open:false})));
+  };
 
+  const recLabel=(r)=>{if(r.type==="lunar_zi") return `Lunar, ziua ${r.day}`;if(r.type==="lunar_inceput") return "Lunar, prima zi";if(r.type==="lunar_sfarsit") return "Lunar, ultima zi";if(r.type==="saptamanal") return `Săptămânal, ${r.day}`;return "";};
   if(!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#F2EFE9",flexDirection:"column",gap:16}}>
     <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:300,color:"#2A2118",letterSpacing:"0.05em"}}>Kreativo Studio</div>
     <div style={{fontSize:11,color:"#A8998A",textTransform:"uppercase",letterSpacing:"0.15em"}}>Se încarcă datele...</div>
   </div>;
 
-  return <div style={{fontFamily:"'Jost',sans-serif",maxWidth:800,margin:"0 auto",background:C.bg,minHeight:"100vh",paddingBottom:"4rem"}}>
-    <div style={{padding:"28px 24px 0",borderBottom:`1px solid ${C.border}`,background:C.surface,boxShadow:"0 1px 12px rgba(42,33,24,0.05)"}}>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:20}}>
-        <div style={{display:"flex",alignItems:"center",gap:16}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{display:"flex",gap:2}}>
-              <div style={{width:2.5,height:34,background:C.text,borderRadius:1}}/>
-              <div style={{width:1,height:34,background:C.text,opacity:0.35,borderRadius:1}}/>
+  return <div style={{fontFamily:"'Jost',sans-serif",maxWidth:820,margin:"0 auto",background:C.bg,minHeight:"100vh",paddingBottom:"4rem"}}>
+    {/* HEADER cu gradient */}
+    <div style={{background:"linear-gradient(135deg, #FAF8F4 0%, #F5F0E8 60%, #EDE4D4 100%)",borderBottom:`1px solid ${C.border}`,boxShadow:"0 2px 20px rgba(160,132,92,0.08)"}}>
+      <div style={{padding:"20px 28px 0"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+          <div style={{display:"flex",alignItems:"center",gap:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{display:"flex",gap:2.5}}>
+                <div style={{width:3,height:38,background:"linear-gradient(180deg,#2A2118,#A0845C)",borderRadius:2}}/>
+                <div style={{width:1,height:38,background:"#A0845C",opacity:0.4,borderRadius:1}}/>
+              </div>
+              <div>
+                <div style={{fontFamily:"'Jost',sans-serif",fontSize:15,fontWeight:500,letterSpacing:"0.16em",color:C.text,lineHeight:1.1}}>KREATIVO</div>
+                <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,fontWeight:300,letterSpacing:"0.32em",color:C.accent,lineHeight:1.1}}>STUDIO</div>
+              </div>
             </div>
+            <div style={{width:1,height:30,background:C.border}}/>
             <div>
-              <div style={{fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:C.text,lineHeight:1.15}}>KREATIVO</div>
-              <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:C.textSub,lineHeight:1.15}}>STUDIO</div>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:1}}>Panou de control</div>
+              <div style={{fontSize:10,color:C.textMuted,fontWeight:300}}>3P Design SRL</div>
             </div>
           </div>
-          <div style={{width:"1px",height:28,background:C.border}}/>
-          <div>
-            <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:2,fontWeight:400}}>Panou de control</div>
-            <div style={{fontSize:10,fontWeight:300,color:C.textMuted,letterSpacing:"0.05em"}}>3P Design SRL</div>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={exportDate} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:10,color:C.textSub,letterSpacing:"0.06em",textTransform:"uppercase",backdropFilter:"blur(4px)"}}>↓ Export</button>
+            <button onClick={()=>importRef.current?.click()} style={{padding:"5px 12px",border:`1px solid ${C.border}`,borderRadius:6,background:"rgba(255,255,255,0.7)",cursor:"pointer",fontSize:10,color:C.textSub,letterSpacing:"0.06em",textTransform:"uppercase",backdropFilter:"blur(4px)"}}>↑ Import</button>
+            <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
           </div>
         </div>
-        <div style={{display:"flex",gap:6,marginTop:4}}>
-          <button onClick={exportDate} style={{padding:"6px 14px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C.textSub,fontWeight:400,letterSpacing:"0.06em",display:"flex",alignItems:"center",gap:5,textTransform:"uppercase"}}>
-            <span>↓</span> Export
-          </button>
-          <button onClick={()=>importRef.current?.click()} style={{padding:"6px 14px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C.textSub,fontWeight:400,letterSpacing:"0.06em",display:"flex",alignItems:"center",gap:5,textTransform:"uppercase"}}>
-            <span>↑</span> Import
-          </button>
-          <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
+        {/* TABS */}
+        <div style={{display:"flex",overflowX:"auto",gap:0,marginLeft:-4}}>
+          {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",cursor:"pointer",border:"none",background:"transparent",borderBottom:tab===t.id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===t.id?C.accent:C.textMuted,fontWeight:tab===t.id?600:400,fontSize:11,whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.05em",textTransform:"uppercase",transition:"all .15s",position:"relative"}}>
+            {t.l}{t.id==="recurente"&&recAzi.length>0?<span style={{marginLeft:4,background:C.danger,color:"#fff",borderRadius:10,fontSize:9,padding:"1px 5px",fontWeight:700}}>{recAzi.length}</span>:null}
+          </button>)}
         </div>
-      </div>
-      <div style={{display:"flex",overflowX:"auto",gap:0}}>
-        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"11px 14px",cursor:"pointer",border:"none",background:tab===t.id?C.accentLight:"transparent",borderBottom:tab===t.id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===t.id?C.accent:C.textSub,fontWeight:tab===t.id?600:400,fontSize:11,whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.05em",textTransform:"uppercase",transition:"color .2s"}}>
-          {t.l}{t.id==="recurente"&&recAzi.length>0?<span style={{marginLeft:4,background:C.danger,color:"#fff",borderRadius:10,fontSize:10,padding:"1px 5px"}}>{recAzi.length}</span>:null}
-        </button>)}
       </div>
     </div>
 
-    <div style={{padding:"24px 24px 0"}}>
+    <div style={{padding:"20px 24px 0"}}>
 
     {tab==="focus"&&<div>
+      {/* Data mare + ora live */}
+      <div style={{...card,background:"linear-gradient(135deg,#FAF8F4,#F0E8DC)",border:`1px solid ${C.border}`,marginBottom:12,padding:"20px 24px"}}>
+        <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between"}}>
+          <div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:36,fontWeight:300,color:C.text,lineHeight:1,letterSpacing:"-0.01em"}}>{new Date().toLocaleDateString("ro-RO",{weekday:"long",day:"numeric",month:"long"})}</div>
+            <div style={{fontSize:11,color:C.textMuted,marginTop:4,letterSpacing:"0.08em",textTransform:"uppercase"}}>{new Date().getFullYear()}</div>
+          </div>
+          <LiveClock C={C}/>
+        </div>
+      </div>
       {/* MIT - sarcina zilei */}
       <div style={{...card,border:`1.5px solid ${C.accent}`,marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:C.accent,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Ce e cel mai important azi?</div>
@@ -1286,8 +1318,8 @@ function App() {
         const ci=clients.indexOf(client);const color=CC[ci%CC.length];const colorLight=CC_LIGHT[ci%CC_LIGHT.length];
         const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
         return <div key={client.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
-          <div onClick={()=>togCliOpen(ci)} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
-            <div style={{flex:1,fontSize:13,fontWeight:500,color:ci%2===0?"#fff":C.text,letterSpacing:"0.01em"}}>{client.name}</div>
+          <div onClick={()=>togCliOpen(ci)} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
+            <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,0.22)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12,fontWeight:600,color:"#fff"}}>{client.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</span></div>
             <div style={{fontSize:11,background:ci%2===0?"rgba(255,255,255,0.22)":"rgba(160,132,92,0.15)",color:ci%2===0?"#fff":C.accent,padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
             <div style={{fontSize:11,color:ci%2===0?"rgba(255,255,255,0.7)":C.textMuted}}>{client.open?"▾":"▸"}</div>
           </div>
