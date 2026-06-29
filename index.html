@@ -1464,7 +1464,7 @@ function App() {
       {intrari.length>0&&<div style={{marginBottom:20}}>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>Facturi intrare ({intrari.length})</div>
         {intrari.map(f=>{
-          const isOpenF=openModel[`f_${f.id}`]!==false&&openModel[`f_${f.id}`]!==undefined?true:false;
+          const isOpenF=openModel[`f_${f.id}`]===true;
           return <div key={f.id} style={{background:C.surface,border:"1px solid #C8DCC8",borderRadius:10,marginBottom:6,overflow:"hidden"}}>
             <div onClick={()=>setOpenModel(p=>({...p,[`f_${f.id}`]:!isOpenF}))} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:"#F2F8F2",cursor:"pointer",userSelect:"none"}}>
               <div style={{flex:1}}>
@@ -1493,7 +1493,7 @@ function App() {
       {/* Fișe per model */}
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Situație stoc per model</div>
       {motoare.map(m=>{
-        const isOpen=openModel[m.model]!==false;
+        const isOpen=openModel[m.model]===true;
         const si=soldInitial(m.model);
         const ti=totalIntrat(m.model);
         const alocat=clients.reduce((s,c)=>{const x=(c.motoare||[]).find(x=>x.model===m.model);return s+(x?x.qty:0);},0);
