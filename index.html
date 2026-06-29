@@ -103,7 +103,7 @@ const PP = [
   ]}
 ];
 
-const CC = ["#B8956A","#D4C9B8"];
+const CC = ["#C4A882","#D4C9B8"];
 const CC_LIGHT = ["#A0845C","#C4A882"];
 
 function tagTask(task) {
@@ -845,7 +845,7 @@ function App() {
   const updCliDate=(ci,ti,v)=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const d=Array.from({length:c.tasks.length},(_,j)=>(c.dates||[])[j]||"");d[ti]=v;return {...c,dates:d};}));
   const delCliTask=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:c.tasks.filter((_,j)=>j!==ti),done:c.done.filter((_,j)=>j!==ti),dates:(c.dates||[]).filter((_,j)=>j!==ti)}));
   const delCli=(ci)=>setClients(p=>p.filter((_,i)=>i!==ci));
-  const addCli=()=>{const n=newCliName.trim();if(!n) return;setClients(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],motoare:[],open:true}]);setNewCliName("");setAddingCli(false);};
+  const addCli=()=>{const n=newCliName.trim();if(!n) return;setClients(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],motoare:[],open:false}]);setNewCliName("");setAddingCli(false);};
 
   const addMotorCli=(ci,model,qty)=>{if(!model||!qty||qty<=0) return;setClients(p=>p.map((c,i)=>{if(i!==ci) return c;const mo=[...(c.motoare||[])];const idx=mo.findIndex(m=>m.model===model);if(idx>=0)mo[idx]={...mo[idx],qty:mo[idx].qty+qty};else mo.push({model,qty});return {...c,motoare:mo};}));};
   const remMotorCli=(ci,model)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,motoare:(c.motoare||[]).filter(m=>m.model!==model)}));
@@ -1388,32 +1388,28 @@ function App() {
         const pending=(oferta.done||[]).filter(d=>!d).length;
         const allDone=(oferta.tasks||[]).length>0&&(oferta.done||[]).every(Boolean);
         return <div key={oferta.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
-          {/* Header */}
           <div onClick={()=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,open:!o.open}))} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
             <div style={{flex:1,fontSize:13,fontWeight:500,color:oi%2===0?"#fff":C.text}}>{oferta.name}</div>
-            <div style={{fontSize:11,background:oi%2===0?"rgba(255,255,255,0.22)":"rgba(160,132,92,0.15)",color:oi%2===0?"#fff":C.accent,padding:"3px 10px",borderRadius:20}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
-            <div style={{fontSize:11,color:oi%2===0?"rgba(255,255,255,0.7)":C.textMuted}}>{oferta.open?"▾":"▸"}</div>
+            <div style={{fontSize:11,background:oi%2===0?"rgba(255,255,255,0.22)":"rgba(0,0,0,0.1)",color:oi%2===0?"#fff":C.text,padding:"3px 10px",borderRadius:20}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
+            <div style={{fontSize:11,color:oi%2===0?"rgba(255,255,255,0.7)":C.textSub}}>{oferta.open?"▾":"▸"}</div>
           </div>
 
-          {oferta.open&&<div style={{padding:"14px 16px"}}>
-            {/* Data + Valoare */}
-            <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:12,padding:"10px 14px",background:C.bg,borderRadius:10,flexWrap:"wrap"}}>
-              <div style={{fontSize:11,color:C.textMuted}}>Ofertă din: <strong>{fmtD(oferta.data||tday())}</strong></div>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginLeft:"auto"}}>
-                <span style={{fontSize:12,color:C.textMuted}}>Valoare estimată:</span>
-                <input type="number" value={oferta.valoare||""} onChange={e=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,valoare:e.target.value}))} placeholder="0" style={{width:110,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",background:C.surface}}/>
-                <span style={{fontSize:12,color:C.textMuted}}>RON</span>
-              </div>
+          {oferta.open&&<div style={{padding:"12px"}}>
+            {/* Valoare — identic cu clienti */}
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg,borderRadius:10}}>
+              <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Valoare estimată:</span>
+              <input type="number" value={oferta.valoare||""} onChange={e=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",outline:"none",background:C.surface}}/>
+              <span style={{fontSize:12,color:C.textMuted}}>RON</span>
             </div>
 
-            {/* Taskuri */}
+            {/* Taskuri — identic cu clienti */}
             {(oferta.tasks||[]).map((task,ti)=>{
               const taskTitle=typeof task==="object"?task.title:task;
               const taskDate=typeof task==="object"?task.date||"":"";
               const isDone=(oferta.done||[])[ti];
               const tg=tagTask(taskTitle);
               const ov=taskDate&&taskDate<tday();
-              return <div key={ti} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+              return <div key={ti} style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <input type="checkbox" checked={isDone||false} onChange={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const d=[...(o.done||[])];d[ti]=!d[ti];return {...o,done:d};}))} style={{cursor:"pointer",width:15,height:15,flexShrink:0,accentColor:C.accent}}/>
                   <span style={{flex:1,fontSize:13,color:isDone?C.textMuted:C.text,textDecoration:isDone?"line-through":"none"}}>{taskTitle}</span>
@@ -1425,10 +1421,8 @@ function App() {
               </div>;
             })}
 
-            {/* Add task */}
             <OfertaAddTask onAdd={(task)=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,tasks:[...(o.tasks||[]),task],done:[...(o.done||[]),false]}))} inp={inp} btnP={btnP} tday={tday}/>
 
-            {/* Actiuni */}
             <div style={{display:"flex",gap:8,marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`,flexWrap:"wrap"}}>
               <button onClick={()=>{
                 const taskStrings=(oferta.tasks||[]).map(t=>typeof t==="object"?t.title:t);
@@ -1437,9 +1431,8 @@ function App() {
                 setClients(p=>[...p,client]);
                 setOferte(p=>p.filter((_,i)=>i!==oi));
               }} style={{...btnP(),fontSize:12}}>✓ Acceptat — mută în Clienți</button>
-              <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.name}?`)) setOferte(p=>p.filter((_,i)=>i!==oi));}} style={{padding:"8px 16px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C.textMuted,fontWeight:400}}>× Renunțat — șterge</button>
+              <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.name}?`)) setOferte(p=>p.filter((_,i)=>i!==oi));}} style={{padding:"8px 16px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C.textMuted}}>× Renunțat — șterge</button>
             </div>
-            {/* Log discuții */}
             <LogDiscutii id={`oferta_${oferta.id}`} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
           </div>}
         </div>;
@@ -1447,7 +1440,7 @@ function App() {
 
       {/* Ofertă nouă */}
       <div style={{marginTop:12}}>
-        <AddOfertaForm onAdd={(name)=>setOferte(p=>[...p,{id:gid(),name,tasks:[],done:[],open:true,data:tday()}])} inp={inp} btnP={btnP} btnS={btnS} C={C}/>
+        <AddOfertaForm onAdd={(name)=>setOferte(p=>[...p,{id:gid(),name,tasks:[],done:[],open:false,data:tday()}])} inp={inp} btnP={btnP} btnS={btnS} C={C}/>
       </div>
 
       {oferte.filter(o=>!o.renuntat).length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nicio ofertă activă. Adaugă prima ofertă.</div>}
