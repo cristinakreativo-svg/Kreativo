@@ -492,7 +492,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                   <button onClick={()=>salveazaEdit(m.id)} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
                   <button onClick={()=>setEditId(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
                 </div>:
-                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#F5FBF5",borderRadius:8,gap:8}}>
+                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",gap:8,borderBottom:"1px dashed #C0DCC0"}}>
                   <span style={{flex:1,fontSize:13,color:"#2A4A2A"}}>{m.descriere||"—"}</span>
                   <span style={{fontSize:14,fontWeight:700,color:"#2A6A2A",minWidth:140,textAlign:"right"}}>+{m.suma.toLocaleString("ro-RO")} RON</span>
                   <button onClick={()=>{setEditId(m.id);setEditData({descriere:m.descriere,suma:m.suma,data:m.data});}} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:12,width:16}}>✎</button>
@@ -505,7 +505,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
               <div style={{display:"flex",gap:6,alignItems:"center",padding:"8px 10px",background:"#F2F8F2",borderRadius:8,marginTop:4}}>
                 <input autoFocus value={formData.descriere} onChange={e=>setFormData(x=>({...x,descriere:e.target.value}))} placeholder="Client / descriere" style={{...inpS,flex:2}}/>
                 <input type="number" value={formData.suma} onChange={e=>setFormData(x=>({...x,suma:e.target.value}))} placeholder="Sumă" style={{...inpS,width:100}}/>
-                <button onClick={()=>adaugaInreg(z.data,"incasare")} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
+                <button onClick={()=>{adaugaInreg(z.data,"incasare");setShowForm(null);}} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
                 <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
               </div>:
               <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",borderRadius:6,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
@@ -525,7 +525,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                   <button onClick={()=>salveazaEdit(m.id)} style={{...btnP(C.danger),fontSize:11,padding:"5px 12px"}}>✓</button>
                   <button onClick={()=>setEditId(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
                 </div>:
-                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",borderRadius:8,gap:8}}>
+                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",gap:8,borderBottom:"1px dashed #DDB8B8"}}>
                   <span style={{flex:1,fontSize:13,color:"#4A2A2A"}}>{m.descriere||"—"}</span>
                   <span style={{fontSize:14,fontWeight:700,color:C.danger,minWidth:140,textAlign:"right"}}>-{m.suma.toLocaleString("ro-RO")} RON</span>
                   <button onClick={()=>{setEditId(m.id);setEditData({descriere:m.descriere,suma:m.suma,data:m.data});}} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:12,width:16}}>✎</button>
@@ -578,7 +578,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                   <input type="number" value={formData.suma} onChange={e=>setFormData(x=>({...x,suma:e.target.value}))} placeholder="Sumă" style={{...inpS,width:100}}/>
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>adaugaInreg(z.data,"plata")} style={{...btnP(C.danger),fontSize:11,padding:"5px 12px"}}>✓ Salvează</button>
+                  <button onClick={()=>{adaugaInreg(z.data,"plata");setShowForm(null);}} style={{...btnP(C.danger),fontSize:11,padding:"5px 12px"}}>✓ Salvează</button>
                   <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>Anulează</button>
                 </div>
               </div>:
@@ -1629,10 +1629,8 @@ function App() {
         const intrarifisa=intrari.flatMap(f=>f.pozitii.filter(p=>p.model===m.model).map(p=>({id:f.id+p.id,data:f.data,tip:"intrare",sursa:f.furnizor,factura:f.factura,qty:p.qty})));
         const miscariFisa=[...iesiriFisa,...intrarifisa].sort((a,b)=>a.data>b.data?1:-1);
 
-        const mIdx=motoare.findIndex(x=>x.model===m.model);
-        const bgCard=mIdx%2===0?CC[0]:CC[1];
         return <div key={m.model} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
-          <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:bgCard}}>
+          <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:CC[1]}}>
             <div style={{fontSize:14,fontWeight:600,color:C.text,minWidth:70}}>{m.model}</div>
             <div style={{display:"flex",gap:16,flex:1}}>
               <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold inițial</div><div style={{fontSize:13,fontWeight:500,color:C.textSub}}>{si}</div></div>
