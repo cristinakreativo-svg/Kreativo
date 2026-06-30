@@ -1218,23 +1218,14 @@ function App() {
         })()}
       </div>
 
-      {/* AZI ÎN CALENDAR - toate sursele */}
+      {/* AZI ÎN CALENDAR - toate sursele, identic cu Calendar, dar doar azi */}
       {(()=>{
         const azi=tday();
-        const azItems=[];
-        todayItems.forEach(item=>azItems.push({title:item.title,sursa:item.source,time:item.time||""}));
-        bilete.filter(b=>!b.achitat&&b.scadenta===azi).forEach(b=>azItems.push({title:`${b.furnizor} · ${Number(b.valoare).toLocaleString("ro-RO")} RON`,sursa:"Bilet scadent",time:""}));
-        clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{const d=(c.dates||[])[ti];if(d===azi&&!(c.done||[])[ti])azItems.push({title:`${c.name} · ${typeof task==="object"?task.title:task}`,sursa:"Client",time:""});}));
-        recAzi.forEach(r=>azItems.push({title:r.title,sursa:"Recurent",time:""}));
-        ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).filter(t=>!t.done&&t.deadline===azi).forEach(t=>azItems.push({title:t.title,sursa:s.charAt(0).toUpperCase()+s.slice(1),time:""})));
-        azItems.sort((a,b)=>(a.title||"").localeCompare(b.title||"","ro"));
+        const azItems=calItems.filter(i=>i.date===azi).sort((a,b)=>(a.title||"").localeCompare(b.title||"","ro"));
         if(azItems.length===0) return null;
         return <div style={{...card,marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:600,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Azi · {fmtD(azi)} ({azItems.length})</div>
-          {azItems.map((item,i)=><div key={i} style={{...row,marginBottom:6,padding:"7px 10px",background:C.bg,borderRadius:8}}>
-            {item.time&&<span style={{fontSize:12,fontWeight:500,color:C.accent,minWidth:42}}>{item.time}</span>}
-            <div style={{flex:1}}><div style={{fontSize:13,color:C.text}}>{item.title}</div><div style={{fontSize:11,color:C.textMuted}}>{item.sursa}</div></div>
-          </div>)}
+          {azItems.map((item,i)=><CalItem key={item.id||i} item={item} onComplete={()=>compCal(item)} onReschedule={nd=>reschedCal(item,nd)}/>)}
         </div>;
       })()}
 
