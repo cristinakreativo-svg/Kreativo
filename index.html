@@ -809,7 +809,7 @@ function App() {
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
   const [loading,setLoading]=useState(false);
-  const [mit,setMit]=useState({task:"",date:tday(),done:false});
+  const [mit,setMit]=useState({tasks:["","",""],done:[false,false,false],date:tday()});
   const [jurnal,setJurnal]=useState({});
   const [planMaine,setPlanMaine]=useState({});
   const [recurente,setRecurente]=useState([]);
@@ -1069,8 +1069,7 @@ function App() {
     {id:"contabilitate",l:"Contabilitate"},{id:"administrativ",l:"Administrativ"},
     {id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"},
     {id:"perdele",l:"Perdele"},{id:"vopsele",l:"Vopsele"},
-    {id:"trezorerie",l:"Cash Flow"},
-    {id:"chat",l:"Chat"}
+    {id:"trezorerie",l:"Cash Flow"}
   ];
 
   const inp={padding:"9px 14px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:13,width:"100%",background:C.surface,color:C.text,outline:"none",letterSpacing:"0.01em"};
@@ -1143,9 +1142,6 @@ function App() {
 
     {tab==="focus"&&<div>
 
-      {/* CARD ENERGIE ZILNICĂ */}
-      <EnergieCard energie={energie} setEnergie={setEnergie} C={C} card={card} tday={tday}/>
-
       {/* ALERTĂ UNIFICATĂ */}
       {(()=>{
         const alerte=[];
@@ -1202,15 +1198,45 @@ function App() {
         </div>;
       })()}
 
-      {/* MIT - sarcina zilei */}
+      {/* TOP 3 OBIECTIVE - sarcina zilei */}
       <div style={{...card,border:`1.5px solid ${C.accent}`,marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:600,color:C.accent,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Ce e cel mai important azi?</div>
-        {mit.date===tday()&&mit.task?<div style={row}>
-          <input type="checkbox" checked={mit.done} onChange={()=>{if(!mit.done)addJurnal(mit.task,"MIT");setMit(m=>({...m,done:!m.done}));}} style={{cursor:"pointer",width:17,height:17,flexShrink:0}}/>
-          <span style={{flex:1,fontSize:15,color:mit.done?C.textMuted:C.text,textDecoration:mit.done?"line-through":"none",fontWeight:500}}>{mit.task}</span>
-          <button onClick={()=>setMit({task:"",date:tday(),done:false})} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
-        </div>:<input style={{...inp,fontSize:14}} placeholder="Un singur lucru..." onKeyDown={e=>{if(e.key==="Enter"&&e.target.value.trim()){setMit({task:e.target.value.trim(),date:tday(),done:false});e.target.value="";}}}/>}
+        <div style={{fontSize:11,fontWeight:600,color:C.accent,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Top 3 obiective azi</div>
+        {(()=>{
+          const azi=tday();
+          const m=mit.date===azi?mit:{tasks:["","",""],done:[false,false,false],date:azi};
+          const updTask=(i,val)=>setMit(p=>{const t=p.date===azi?p:{tasks:["","",""],done:[false,false,false],date:azi};const tasks=[...t.tasks];tasks[i]=val;return {...t,tasks,date:azi};});
+          const toggleDone=(i)=>setMit(p=>{const t=p.date===azi?p:{tasks:["","",""],done:[false,false,false],date:azi};const done=[...t.done];const wasDone=done[i];done[i]=!done[i];if(!wasDone&&t.tasks[i]&&t.tasks[i].trim())addJurnal(t.tasks[i],"Obiectiv");return {...t,done,date:azi};});
+          return <div>
+            {[0,1,2].map(i=>
+              <div key={i} style={{...row,marginBottom:8}}>
+                <input type="checkbox" checked={m.done[i]||false} disabled={!m.tasks[i]?.trim()} onChange={()=>toggleDone(i)} style={{cursor:m.tasks[i]?.trim()?"pointer":"default",width:17,height:17,flexShrink:0}}/>
+                <input value={m.tasks[i]||""} onChange={e=>updTask(i,e.target.value)} placeholder={`Obiectiv ${i+1}...`}
+                  style={{flex:1,fontSize:14,color:m.done[i]?C.textMuted:C.text,textDecoration:m.done[i]?"line-through":"none",border:"none",borderBottom:`1px solid ${C.border}`,padding:"6px 2px",outline:"none",background:"transparent"}}/>
+              </div>
+            )}
+          </div>;
+        })()}
       </div>
+
+      {/* AZI ÎN CALENDAR - toate sursele */}
+      {(()=>{
+        const azi=tday();
+        const azItems=[];
+        todayItems.forEach(item=>azItems.push({title:item.title,sursa:item.source,time:item.time||""}));
+        bilete.filter(b=>!b.achitat&&b.scadenta===azi).forEach(b=>azItems.push({title:`${b.furnizor} · ${Number(b.valoare).toLocaleString("ro-RO")} RON`,sursa:"Bilet scadent",time:""}));
+        clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{const d=(c.dates||[])[ti];if(d===azi&&!(c.done||[])[ti])azItems.push({title:`${c.name} · ${typeof task==="object"?task.title:task}`,sursa:"Client",time:""});}));
+        recAzi.forEach(r=>azItems.push({title:r.title,sursa:"Recurent",time:""}));
+        ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).filter(t=>!t.done&&t.deadline===azi).forEach(t=>azItems.push({title:t.title,sursa:s.charAt(0).toUpperCase()+s.slice(1),time:""})));
+        azItems.sort((a,b)=>(a.title||"").localeCompare(b.title||"","ro"));
+        if(azItems.length===0) return null;
+        return <div style={{...card,marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:600,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Azi · {fmtD(azi)} ({azItems.length})</div>
+          {azItems.map((item,i)=><div key={i} style={{...row,marginBottom:6,padding:"7px 10px",background:C.bg,borderRadius:8}}>
+            {item.time&&<span style={{fontSize:12,fontWeight:500,color:C.accent,minWidth:42}}>{item.time}</span>}
+            <div style={{flex:1}}><div style={{fontSize:13,color:C.text}}>{item.title}</div><div style={{fontSize:11,color:C.textMuted}}>{item.sursa}</div></div>
+          </div>)}
+        </div>;
+      })()}
 
       {/* Notificări active */}
       {(()=>{const notifAlerts=[];clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const d=(c.dates||[])[ti];const notif=(c.notifs||[])[ti];if(notif&&d&&!( c.done||[])[ti]){const days=daysTo(d);if(days<=2&&days>=0)notifAlerts.push({name:c.name,task:typeof task==="object"?task.title:task,data:d,days});}}));
@@ -1218,15 +1244,6 @@ function App() {
       {recAzi.length>0&&<div style={{...card,border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{recAzi.length} recurente azi — acționează</div>
         {recAzi.map(r=><div key={r.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{r.title}</span><button style={btnP()} onClick={()=>doneRec(r.id)}>✓</button></div>)}
-      </div>}
-
-      {/* Azi în calendar */}
-      {todayItems.length>0&&<div style={{...card,marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:600,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Azi · {fmtD(tday())}</div>
-        {todayItems.map((item,i)=><div key={i} style={{...row,marginBottom:6,padding:"7px 10px",background:C.bg,borderRadius:8}}>
-          {item.time&&<span style={{fontSize:12,fontWeight:500,color:C.accent,minWidth:42}}>{item.time}</span>}
-          <div style={{flex:1}}><div style={{fontSize:13,color:C.text}}>{item.title}</div><div style={{fontSize:11,color:C.textMuted}}>{item.source}</div></div>
-        </div>)}
       </div>}
 
       {/* Realizat azi */}
@@ -1336,6 +1353,7 @@ function App() {
       </div>}
       {calItems.length===0&&<div style={{color:C.textMuted,textAlign:"center",padding:"3rem",fontSize:13}}>Nicio dată setată.</div>}
       {(()=>{const g={};calItems.forEach(i=>{if(!g[i.date])g[i.date]=[];g[i.date].push(i);});
+        Object.values(g).forEach(arr=>arr.sort((a,b)=>(a.title||"").localeCompare(b.title||"","ro")));
         return Object.entries(g).map(([date,items])=>{
           const isPast=date<tday(),isT=isToday(date),days=daysTo(date);
           return <div key={date} style={{marginBottom:16,opacity:isPast?0.6:1}}>
