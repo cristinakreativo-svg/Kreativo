@@ -839,21 +839,29 @@ function App() {
   const chatRef=useRef(null);
   const saveTimer=useRef({});
 
+  const lsGet=(key)=>{try{const v=localStorage.getItem("kr_"+key);return v?JSON.parse(v):null;}catch{return null;}};
+  const lsSet=(key,value)=>{try{localStorage.setItem("kr_"+key,JSON.stringify(value));}catch{}};
+
   const sbGet=async(key)=>{
-    try{const{data}=await sb.from("kreativo_data").select("value").eq("key",key).single();return data?.value?JSON.parse(data.value):null;}catch{return null;}
+    try{const{data}=await sb.from("kreativo_data").select("value").eq("key",key).single();
+      if(data?.value){const parsed=JSON.parse(data.value);lsSet(key,parsed);return parsed;}
+      return lsGet(key);
+    }catch{return lsGet(key);}
   };
   const sbSet=async(key,value)=>{
-    try{await sb.from("kreativo_data").upsert({key,value:JSON.stringify(value)},{onConflict:"key"});}catch(e){console.log(e);}
+    lsSet(key,value);
+    try{await sb.from("kreativo_data").upsert({key,value:JSON.stringify(value)},{onConflict:"key"});}catch(e){console.log("Supabase save error (date salvate local):",e);}
   };
   const sbSave=(key,value)=>{
     if(saveTimer.current[key]) clearTimeout(saveTimer.current[key]);
     saveTimer.current[key]=setTimeout(()=>sbSet(key,value),800);
   };
 
+  const [supabaseOk,setSupabaseOk]=useState(true);
   useEffect(()=>{
     async function load(){
       try{
-        const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),12000));
+        const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),6000));
         const loadData = async()=>{
           const d=await sbGet(SK); if(d) setData(d);
           const cl=await sbGet(CLK);
@@ -877,7 +885,12 @@ function App() {
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
-        console.log("Load error:",e);
+        console.log("Supabase indisponibil, încarc din localStorage:",e);
+        setSupabaseOk(false);
+        // Încarc din localStorage
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK];
+        const setters=[setData,setClients,(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista];
+        keys.forEach((k,i)=>{const v=lsGet(k);if(v)setters[i](v);});
       }
       setLoaded(true);
     }
@@ -1148,6 +1161,7 @@ function App() {
           <div>
             <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:2,fontWeight:400}}>Panou de control</div>
             <div style={{fontSize:10,fontWeight:300,color:C.textMuted,letterSpacing:"0.05em"}}>3P Design SRL</div>
+            {!supabaseOk&&<div style={{fontSize:9,fontWeight:600,color:"#8B6914",background:"#FFF3CD",border:"1px solid #C8A870",borderRadius:4,padding:"2px 7px",marginTop:3,letterSpacing:"0.05em"}}>⚠ Offline · date locale</div>}
           </div>
         </div>
         <div style={{display:"flex",gap:6}}>
