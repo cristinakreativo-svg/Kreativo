@@ -853,35 +853,39 @@ function App() {
     try{await sb.from("kreativo_data").upsert({key,value:JSON.stringify(value)},{onConflict:"key"});}catch(e){console.log("Supabase save error (date salvate local):",e);}
   };
   const sbSave=(key,value)=>{
+    if(protectRef.current){console.warn("Salvare blocată (mod protejat):",key);return;}
     if(saveTimer.current[key]) clearTimeout(saveTimer.current[key]);
     saveTimer.current[key]=setTimeout(()=>sbSet(key,value),800);
   };
 
   const [supabaseOk,setSupabaseOk]=useState(true);
+  const [protectMode,setProtectMode]=useState(false);
+  const protectRef=useRef(false);
   useEffect(()=>{
     async function load(){
+      let gotAnyData=false;
       try{
         const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),6000));
         const loadData = async()=>{
-          const d=await sbGet(SK); if(d) setData(d);
+          const d=await sbGet(SK); if(d){setData(d);gotAnyData=true;}
           const cl=await sbGet(CLK);
-          if(cl) setClients(cl);
-          const ad=await sbGet(AK); if(ad) setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...ad});
-          const pe=await sbGet(PK); if(pe) setPerdele(pe);
-          const m=await sbGet(MIK); if(m) setMit(m);
-          const j=await sbGet(JK); if(j) setJurnal(j);
-          const pl=await sbGet(PLK); if(pl) setPlanMaine(pl);
-          const r=await sbGet(RK); if(r) setRecurente(r);
-          const mo=await sbGet(MOK); if(mo) setMotoare(mo);
-          const ie=await sbGet(IEK); if(ie) setIesiri(ie);
-          const intr=await sbGet(INK); if(intr) setIntrari(intr);
-          const bl=await sbGet(BLK); if(bl) setBilete(bl);
-          const of=await sbGet(OFK); if(of) setOferte(of);
-          const lg=await sbGet(LGK); if(lg) setLog(lg);
-          const tr=await sbGet(TRK); if(tr) setTrezorerie(tr);
-          const en=await sbGet(ENK); if(en) setEnergie(en);
-          const pr=await sbGet(PRK); if(pr) setProiecte(pr);
-          const fl=await sbGet(FLK); if(fl) setFurnizoriLista(fl);
+          if(cl){setClients(cl.map(c=>({...c,open:false})));gotAnyData=true;}
+          const ad=await sbGet(AK); if(ad){setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...ad});gotAnyData=true;}
+          const pe=await sbGet(PK); if(pe){setPerdele(pe);gotAnyData=true;}
+          const m=await sbGet(MIK); if(m){setMit(m);gotAnyData=true;}
+          const j=await sbGet(JK); if(j){setJurnal(j);gotAnyData=true;}
+          const pl=await sbGet(PLK); if(pl){setPlanMaine(pl);gotAnyData=true;}
+          const r=await sbGet(RK); if(r){setRecurente(r);gotAnyData=true;}
+          const mo=await sbGet(MOK); if(mo){setMotoare(mo);gotAnyData=true;}
+          const ie=await sbGet(IEK); if(ie){setIesiri(ie);gotAnyData=true;}
+          const intr=await sbGet(INK); if(intr){setIntrari(intr);gotAnyData=true;}
+          const bl=await sbGet(BLK); if(bl){setBilete(bl);gotAnyData=true;}
+          const of=await sbGet(OFK); if(of){setOferte(of);gotAnyData=true;}
+          const lg=await sbGet(LGK); if(lg){setLog(lg);gotAnyData=true;}
+          const tr=await sbGet(TRK); if(tr){setTrezorerie(tr);gotAnyData=true;}
+          const en=await sbGet(ENK); if(en){setEnergie(en);gotAnyData=true;}
+          const pr=await sbGet(PRK); if(pr){setProiecte(pr);gotAnyData=true;}
+          const fl=await sbGet(FLK); if(fl){setFurnizoriLista(fl);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
@@ -889,8 +893,15 @@ function App() {
         setSupabaseOk(false);
         // Încarc din localStorage
         const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK];
-        const setters=[setData,setClients,(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista];
-        keys.forEach((k,i)=>{const v=lsGet(k);if(v)setters[i](v);});
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista];
+        keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
+      }
+      // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
+      // blochez complet salvarea ca să nu suprascriu datele din cloud cu stări goale.
+      if(!gotAnyData){
+        protectRef.current=true;
+        setProtectMode(true);
+        console.warn("MOD PROTEJAT: nicio dată încărcată — salvarea este blocată pentru a proteja datele din cloud.");
       }
       setLoaded(true);
     }
@@ -932,7 +943,7 @@ function App() {
   const updAdmin=(s,id,f,v)=>setAdmin(a=>({...a,[s]:a[s].map(t=>t.id===id?{...t,[f]:v}:t)}));
 
   const togCli=(ci,ti)=>{const c=clients[ci];if(c&&!c.done[ti])addJurnal(`${c.name} · ${c.tasks[ti]}`,"Client");setClients(p=>p.map((c,i)=>i!==ci?c:{...c,done:c.done.map((d,j)=>j===ti?!d:d)}));};
-  const togCliOpen=(ci)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,open:!c.open}));
+  const togCliOpen=(ci)=>setClients(p=>p.map((c,i)=>i!==ci?{...c,open:false}:{...c,open:!c.open}));
   const addCliTask=(ci)=>{const v=(newTask[ci]||"").trim();if(!v) return;setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:[...c.tasks,v],done:[...c.done,false],dates:[...(c.dates||[]),""],motoare:[...(c.motoare||[])]}));setNewTask(p=>({...p,[ci]:""}));setAddingTo(null);};
   const updCliDate=(ci,ti,v)=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const d=Array.from({length:c.tasks.length},(_,j)=>(c.dates||[])[j]||"");d[ti]=v;return {...c,dates:d};}));
   const delCliTask=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:c.tasks.filter((_,j)=>j!==ti),done:c.done.filter((_,j)=>j!==ti),dates:(c.dates||[]).filter((_,j)=>j!==ti)}));
@@ -1161,7 +1172,8 @@ function App() {
           <div>
             <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:2,fontWeight:400}}>Panou de control</div>
             <div style={{fontSize:10,fontWeight:300,color:C.textMuted,letterSpacing:"0.05em"}}>3P Design SRL</div>
-            {!supabaseOk&&<div style={{fontSize:9,fontWeight:600,color:"#8B6914",background:"#FFF3CD",border:"1px solid #C8A870",borderRadius:4,padding:"2px 7px",marginTop:3,letterSpacing:"0.05em"}}>⚠ Offline · date locale</div>}
+            {protectMode?<div style={{fontSize:9,fontWeight:700,color:"#fff",background:"#8B3A3A",borderRadius:4,padding:"3px 8px",marginTop:3,letterSpacing:"0.05em"}}>🛑 MOD PROTEJAT · nicio dată încărcată · salvare blocată · reîncarcă pagina când revine conexiunea</div>:
+            !supabaseOk&&<div style={{fontSize:9,fontWeight:600,color:"#8B6914",background:"#FFF3CD",border:"1px solid #C8A870",borderRadius:4,padding:"2px 7px",marginTop:3,letterSpacing:"0.05em"}}>⚠ Offline · date locale</div>}
           </div>
         </div>
         <div style={{display:"flex",gap:6}}>
@@ -1471,14 +1483,17 @@ function App() {
           {["all","pending","done"].map(f=><button key={f} onClick={()=>setCliFilter(f)} style={{...btnS,fontSize:11,padding:"5px 12px",background:cliFilter===f?C.accent:"transparent",color:cliFilter===f?"#fff":C.textSub,border:cliFilter===f?"none":`1px solid ${C.border}`}}>{f==="all"?"Toți":f==="pending"?"Cu sarcini":"Finalizați"}</button>)}
         </div>
       </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,alignItems:"start"}}>
       {filtCl.map((client,fi)=>{
         const ci=clients.indexOf(client);const color=CC[fi%CC.length];
         const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
-        return <div key={client.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
-          <div onClick={()=>togCliOpen(ci)} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
-            <div style={{flex:1,fontSize:13,fontWeight:500,color:C.text,letterSpacing:"0.01em"}}>{client.name}</div>
-            <div style={{fontSize:11,background:"rgba(0,0,0,0.1)",color:C.text,padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
-            <div style={{fontSize:11,color:C.textSub}}>{client.open?"▾":"▸"}</div>
+        return <div key={client.id} style={{border:`1px solid ${C.border}`,borderRadius:12,background:C.surface,overflow:"hidden",gridColumn:client.open?"1 / -1":"auto",aspectRatio:client.open?"auto":"1 / 1"}}>
+          <div onClick={()=>togCliOpen(ci)} style={client.open?
+            {display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}:
+            {display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,height:"100%",padding:"12px",background:color,cursor:"pointer",userSelect:"none",textAlign:"center"}}>
+            <div style={{flex:client.open?1:"none",fontSize:client.open?13:14,fontWeight:500,color:C.text,letterSpacing:"0.01em",overflow:"hidden",textOverflow:"ellipsis",wordBreak:"break-word",whiteSpace:client.open?"normal":"normal",maxHeight:client.open?"none":"3.6em"}}>{client.name}</div>
+            {(client.tasks.length>0)&&<div style={{fontSize:client.open?10:11,background:"rgba(0,0,0,0.1)",color:C.text,padding:"3px 10px",borderRadius:20,fontWeight:400,whiteSpace:"nowrap",flexShrink:0}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>}
+            {client.open&&<div style={{fontSize:11,color:C.textSub,flexShrink:0}}>▾</div>}
           </div>
           {client.open&&<div style={{padding:"12px"}}>
             {/* Valoare comandă */}
@@ -1506,6 +1521,7 @@ function App() {
           </div>}
         </div>;
       })}
+      </div>
       <div style={{marginTop:12}}>
         {addingCli?<div style={row}>
           <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder="Nume client nou..." style={{...inp,flex:1}}/>
