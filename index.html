@@ -300,11 +300,16 @@ function ClientDocumente({client,ci,setClients,C,sb,tday,fmtD}){
     <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>
       Documente {fisiere.length>0&&<span style={{background:C.accentLight,color:C.accent,padding:"1px 6px",fontSize:10,marginLeft:4}}>{fisiere.length}</span>}
     </div>
-    {fisiere.map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
-      <a href={f.url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📎 {f.nume}</a>
-      <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
-      <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
-    </div>)}
+    {fisiere.map((f,i)=>{
+      const ext=(f.nume.split(".").pop()||"").toLowerCase();
+      const office=["xlsx","xls","doc","docx","ppt","pptx","csv"].includes(ext);
+      const openUrl=office?`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(f.url)}`:f.url;
+      return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
+        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📎 {f.nume}</a>
+        <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
+        <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
+      </div>;
+    })}
     <input ref={inputRef} type="file" accept=".pdf,image/*,.xlsx,.xls,.csv,.doc,.docx" style={{display:"none"}} onChange={handleUpload}/>
     <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document (PDF, Excel, Word, imagine)"}</button>
   </div>;
