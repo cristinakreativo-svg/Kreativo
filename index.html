@@ -39,6 +39,7 @@ const TCK = "kreativo_tudor_contacte_v1";
 const ZBK = "kreativo_zile_blocate_v1";
 const OBK = "kreativo_obiective_v1";
 const PRK = "kreativo_proiecte_personale_v1";
+const OMK = "kreativo_obiective_mari_v1";
 const FLK = "kreativo_furnizori_lista_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
@@ -1523,6 +1524,7 @@ function App() {
   const [zileBlocate,setZileBlocate]=useState({nico:[],dan:[],tudor:[]});
   const [obiective,setObiective]=useState([]);
   const [proiecte,setProiecte]=useState([]);
+  const [obiectiveMari,setObiectiveMari]=useState([]);
   const [perdele,setPerdele]=useState(PP);
   const [motoare,setMotoare]=useState(MOTOARE_INIT.map(m=>({...m})));
   const [iesiri,setIesiri]=useState([]);
@@ -1550,6 +1552,11 @@ function App() {
   const [cliFilter,setCliFilter]=useState("all");
   const [cliCalMonth,setCliCalMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [calGridMonth,setCalGridMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
+  const [addingObMare,setAddingObMare]=useState(false);
+  const [newObMareName,setNewObMareName]=useState("");
+  const [newSubObText,setNewSubObText]=useState({});
+  const [expandedTaskJurnal,setExpandedTaskJurnal]=useState(null);
+  const [newTaskJurnalItemText,setNewTaskJurnalItemText]=useState("");
   const [addingCli,setAddingCli]=useState(false);
   const [contactOpen,setContactOpen]=useState({});
   const [newCliName,setNewCliName]=useState("");
@@ -1629,14 +1636,15 @@ function App() {
           const ob=await sbGet(OBK); if(ob){setObiective(ob);gotAnyData=true;}
           const tc=await sbGet(TCK); if(tc){setTudorContacte(tc);gotAnyData=true;}
           const zb=await sbGet(ZBK); if(zb){setZileBlocate({nico:[],dan:[],tudor:[],...zb});gotAnyData=true;}
+          const om=await sbGet(OMK); if(om){setObiectiveMari(om.map(o=>({...o,open:false})));gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v})];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false})))];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -1656,6 +1664,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(TDK,tudor);},[tudor,loaded]);
   useEffect(()=>{if(loaded) sbSave(TCK,tudorContacte);},[tudorContacte,loaded]);
   useEffect(()=>{if(loaded) sbSave(ZBK,zileBlocate);},[zileBlocate,loaded]);
+  useEffect(()=>{if(loaded) sbSave(OMK,obiectiveMari);},[obiectiveMari,loaded]);
   useEffect(()=>{if(loaded) sbSave(OBK,obiective);},[obiective,loaded]);
   useEffect(()=>{if(loaded) sbSave(PRK,proiecte);},[proiecte,loaded]);
   useEffect(()=>{if(loaded) sbSave(FLK,furnizoriLista);},[furnizoriLista,loaded]);
@@ -1725,6 +1734,14 @@ function App() {
   const addContact=(categorie,nume)=>{const n=(nume||"").trim();if(!n) return;setTudorContacte(p=>[...p,{id:gid(),categorie,nume:n,firma:"",adresa:"",telefon:"",website:"",istoric:[],open:false}]);};
 
   const addZiBlocata=(cal,dataStart,dataEnd,motiv)=>{if(!dataStart) return;const end=dataEnd||dataStart;setZileBlocate(p=>({...p,[cal]:[...(p[cal]||[]),{id:gid(),dataStart,dataEnd:end,motiv:(motiv||"").trim()}]}));};
+
+  const addObMare=(nume)=>{const n=(nume||"").trim();if(!n) return;setObiectiveMari(p=>[...p,{id:gid(),nume:n,descriere:"",subobiective:[],open:false}]);};
+  const delObMare=(id)=>setObiectiveMari(p=>p.filter(o=>o.id!==id));
+  const togObMareOpen=(id)=>setObiectiveMari(p=>p.map(o=>o.id===id?{...o,open:!o.open}:{...o,open:false}));
+  const setObMareDescriere=(id,val)=>setObiectiveMari(p=>p.map(o=>o.id!==id?o:{...o,descriere:val}));
+  const addSubOb=(id,text)=>{const t=(text||"").trim();if(!t) return;setObiectiveMari(p=>p.map(o=>o.id!==id?o:{...o,subobiective:[...(o.subobiective||[]),{id:gid(),text:t,termen:"",done:false}]}));};
+  const updSubOb=(id,subId,field,val)=>setObiectiveMari(p=>p.map(o=>o.id!==id?o:{...o,subobiective:(o.subobiective||[]).map(s=>s.id!==subId?s:{...s,[field]:val})}));
+  const delSubOb=(id,subId)=>setObiectiveMari(p=>p.map(o=>o.id!==id?o:{...o,subobiective:(o.subobiective||[]).filter(s=>s.id!==subId)}));
   const delZiBlocata=(cal,id)=>setZileBlocate(p=>({...p,[cal]:(p[cal]||[]).filter(z=>z.id!==id)}));
   const delContact=(id)=>setTudorContacte(p=>p.filter(c=>c.id!==id));
   const updContact=(id,field,val)=>setTudorContacte(p=>p.map(c=>c.id!==id?c:{...c,[field]:val}));
@@ -1744,6 +1761,11 @@ function App() {
   const delPrTask=(pi,ti)=>setProiecte(p=>p.map((x,i)=>i!==pi?x:{...x,tasks:x.tasks.filter((_,j)=>j!==ti),done:x.done.filter((_,j)=>j!==ti),dates:(x.dates||[]).filter((_,j)=>j!==ti)}));
   const delPr=(pi)=>setProiecte(p=>p.filter((_,i)=>i!==pi));
   const addPr=()=>{const n=newPrName.trim();if(!n) return;setProiecte(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],open:false}]);setNewPrName("");setAddingPr(false);};
+
+  const setTaskJurnalDescriere=(pi,ti,val)=>setProiecte(p=>p.map((pr,i)=>{if(i!==pi)return pr;const tj=Array.from({length:pr.tasks.length},(_,j)=>(pr.taskJurnal||[])[j]||{descriere:"",itemi:[]});tj[ti]={...tj[ti],descriere:val};return {...pr,taskJurnal:tj};}));
+  const addTaskJurnalItem=(pi,ti,text)=>{const t=(text||"").trim();if(!t) return;setProiecte(p=>p.map((pr,i)=>{if(i!==pi)return pr;const tj=Array.from({length:pr.tasks.length},(_,j)=>(pr.taskJurnal||[])[j]||{descriere:"",itemi:[]});tj[ti]={...tj[ti],itemi:[...(tj[ti].itemi||[]),{id:gid(),text:t,link:"",nota:"",bifat:false}]};return {...pr,taskJurnal:tj};}));};
+  const updTaskJurnalItem=(pi,ti,itemId,field,val)=>setProiecte(p=>p.map((pr,i)=>{if(i!==pi)return pr;const tj=Array.from({length:pr.tasks.length},(_,j)=>(pr.taskJurnal||[])[j]||{descriere:"",itemi:[]});tj[ti]={...tj[ti],itemi:(tj[ti].itemi||[]).map(it=>it.id!==itemId?it:{...it,[field]:val})};return {...pr,taskJurnal:tj};}));
+  const delTaskJurnalItem=(pi,ti,itemId)=>setProiecte(p=>p.map((pr,i)=>{if(i!==pi)return pr;const tj=Array.from({length:pr.tasks.length},(_,j)=>(pr.taskJurnal||[])[j]||{descriere:"",itemi:[]});tj[ti]={...tj[ti],itemi:(tj[ti].itemi||[]).filter(it=>it.id!==itemId)};return {...pr,taskJurnal:tj};}));
 
   const addMotorCli=(ci,model,qty)=>{if(!model||!qty||qty<=0) return;setClients(p=>p.map((c,i)=>{if(i!==ci) return c;const mo=[...(c.motoare||[])];const idx=mo.findIndex(m=>m.model===model);if(idx>=0)mo[idx]={...mo[idx],qty:mo[idx].qty+qty};else mo.push({model,qty});return {...c,motoare:mo};}));};
   const remMotorCli=(ci,model)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,motoare:(c.motoare||[]).filter(m=>m.model!==model)}));
@@ -1827,7 +1849,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate
+        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -1868,6 +1890,7 @@ function App() {
         if(d[TDK]) setTudor(d[TDK]);
         if(d[TCK]) setTudorContacte(d[TCK]);
         if(d[ZBK]) setZileBlocate({nico:[],dan:[],tudor:[],...d[ZBK]});
+        if(d[OMK]) setObiectiveMari(d[OMK]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -2166,6 +2189,45 @@ function App() {
           {jurnal[date].map((item,i)=><div key={i} style={{...row,marginBottom:4}}><span style={{fontSize:10,color:C.accent}}>✓</span><span style={{flex:1,fontSize:12,color:C.textSub}}>{item.title}</span><span style={{fontSize:11,color:C.textMuted}}>{item.source}</span></div>)}
         </div>
       ))}
+
+      <div style={{height:1,background:C.border,margin:"28px 0 20px"}}/>
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:4}}>Plan pe termen lung</div>
+      <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Obiective mari, defalcate în obiective mici cu termene.</div>
+
+      {obiectiveMari.map(o=>{
+        const done=(o.subobiective||[]).filter(s=>s.done).length;
+        const total=(o.subobiective||[]).length;
+        const pct=total?Math.round(done/total*100):0;
+        return <div key={o.id} style={{border:`1px solid ${C.border}`,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+          <div onClick={()=>togObMareOpen(o.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:C.accentLight,cursor:"pointer",userSelect:"none"}}>
+            <div style={{flex:1,fontSize:13,fontWeight:500,color:C.text}}>{o.nume}</div>
+            {total>0&&<div style={{fontSize:11,background:"rgba(0,0,0,0.08)",color:C.text,padding:"3px 10px"}}>{done}/{total} · {pct}%</div>}
+            <div style={{fontSize:11,color:C.textSub}}>{o.open?"▾":"▸"}</div>
+          </div>
+          {o.open&&<div style={{padding:"14px 16px"}}>
+            <textarea value={o.descriere||""} onChange={e=>setObMareDescriere(o.id,e.target.value)} placeholder="Descriere / de ce contează obiectivul ăsta..." rows={2} style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",boxSizing:"border-box",resize:"vertical",marginBottom:14,fontFamily:"inherit"}}/>
+            <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Defalcare în obiective mici</div>
+            {(o.subobiective||[]).map(s=><div key={s.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,background:C.bg,padding:"8px 10px"}}>
+              <input type="checkbox" checked={s.done} onChange={e=>updSubOb(o.id,s.id,"done",e.target.checked)} style={{cursor:"pointer",width:14,height:14,flexShrink:0}}/>
+              <input value={s.text} onChange={e=>updSubOb(o.id,s.id,"text",e.target.value)} style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 8px",background:C.surface,outline:"none",textDecoration:s.done?"line-through":"none",color:s.done?C.textMuted:C.text}}/>
+              <input type="date" value={s.termen||""} onChange={e=>updSubOb(o.id,s.id,"termen",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"5px 6px",background:C.surface,outline:"none",flexShrink:0}}/>
+              <button onClick={()=>delSubOb(o.id,s.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14,flexShrink:0}}>×</button>
+            </div>)}
+            <div style={{display:"flex",gap:8,marginTop:8,marginBottom:10}}>
+              <input value={newSubObText[o.id]||""} onChange={e=>setNewSubObText(p=>({...p,[o.id]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){addSubOb(o.id,newSubObText[o.id]);setNewSubObText(p=>({...p,[o.id]:""}));}}} placeholder="Obiectiv mic nou..." style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"}}/>
+              <button onClick={()=>{addSubOb(o.id,newSubObText[o.id]);setNewSubObText(p=>({...p,[o.id]:""}));}} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
+            </div>
+            <button onClick={()=>delObMare(o.id)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge obiectiv mare</button>
+          </div>}
+        </div>;
+      })}
+      <div style={{marginTop:12}}>
+        {addingObMare?<div style={row}>
+          <input autoFocus value={newObMareName} onChange={e=>setNewObMareName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){addObMare(newObMareName);setNewObMareName("");setAddingObMare(false);}if(e.key==="Escape")setAddingObMare(false);}} placeholder="Obiectiv mare nou (ex: Extindere pe alt oraș)..." style={{...inp,flex:1}}/>
+          <button onClick={()=>{addObMare(newObMareName);setNewObMareName("");setAddingObMare(false);}} style={btnP()}>Adaugă</button>
+          <button onClick={()=>setAddingObMare(false)} style={btnS}>✕</button>
+        </div>:<button onClick={()=>setAddingObMare(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ obiectiv mare nou</button>}
+      </div>
     </div>}
 
     {tab==="recurente"&&<div>
@@ -2829,7 +2891,33 @@ function App() {
           {proiect.open&&<div style={{padding:"12px"}}>
             {proiect.tasks.map((task,ti)=>{
               if(proiect.done[ti]) return null;
-              return <ClientTaskRow key={`${proiect.id}-${ti}`} task={task} date={(proiect.dates||[])[ti]||""} notif={false} onToggle={()=>togPr(pi,ti)} onDelete={()=>delPrTask(pi,ti)} onDateChange={v=>updPrDate(pi,ti,v)} onNotifChange={()=>{}}/>;
+              const tjKey=`${pi}-${ti}`;
+              const tj=(proiect.taskJurnal||[])[ti]||{descriere:"",itemi:[]};
+              return <div key={`${proiect.id}-${ti}`}>
+                <ClientTaskRow task={task} date={(proiect.dates||[])[ti]||""} notif={false} onToggle={()=>togPr(pi,ti)} onDelete={()=>delPrTask(pi,ti)} onDateChange={v=>updPrDate(pi,ti,v)} onNotifChange={()=>{}}/>
+                <button onClick={()=>setExpandedTaskJurnal(expandedTaskJurnal===tjKey?null:tjKey)} style={{fontSize:11,color:C.accent,background:"none",border:"none",cursor:"pointer",marginTop:-6,marginBottom:8,padding:0}}>
+                  {expandedTaskJurnal===tjKey?"▾":"▸"} jurnal{tj.itemi&&tj.itemi.length>0?` (${tj.itemi.length})`:""}
+                </button>
+                {expandedTaskJurnal===tjKey&&<div style={{background:C.bg,padding:"12px",marginBottom:10}}>
+                  <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:6}}>Ce vreau de la asta</div>
+                  <textarea value={tj.descriere||""} onChange={e=>setTaskJurnalDescriere(pi,ti,e.target.value)} placeholder="Ex: 20 de pagini pe zi..." rows={2} style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.surface,outline:"none",boxSizing:"border-box",resize:"vertical",marginBottom:12,fontFamily:"inherit"}}/>
+                  <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Listă (cărți, subiecte, orice)</div>
+                  {(tj.itemi||[]).map(it=><div key={it.id} style={{background:C.surface,padding:"10px 12px",marginBottom:8}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <input type="checkbox" checked={it.bifat} onChange={e=>updTaskJurnalItem(pi,ti,it.id,"bifat",e.target.checked)} style={{cursor:"pointer",width:14,height:14,flexShrink:0}}/>
+                      <input value={it.text} onChange={e=>updTaskJurnalItem(pi,ti,it.id,"text",e.target.value)} placeholder="Titlu / subiect" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 8px",background:C.bg,outline:"none",textDecoration:it.bifat?"line-through":"none",color:it.bifat?C.textMuted:C.text}}/>
+                      <button onClick={()=>delTaskJurnalItem(pi,ti,it.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14,flexShrink:0}}>×</button>
+                    </div>
+                    <input value={it.link||""} onChange={e=>updTaskJurnalItem(pi,ti,it.id,"link",e.target.value)} placeholder="Link" style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"5px 8px",background:C.bg,outline:"none",marginBottom:6,boxSizing:"border-box"}}/>
+                    {it.link&&<a href={it.link.startsWith("http")?it.link:`https://${it.link}`} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.accent,display:"inline-block",marginBottom:6}}>Deschide link →</a>}
+                    <input value={it.nota||""} onChange={e=>updTaskJurnalItem(pi,ti,it.id,"nota",e.target.value)} placeholder="Ce mi-a plăcut / observații" style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"5px 8px",background:C.bg,outline:"none",boxSizing:"border-box"}}/>
+                  </div>)}
+                  <div style={{display:"flex",gap:8}}>
+                    <input value={newTaskJurnalItemText} onChange={e=>setNewTaskJurnalItemText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){addTaskJurnalItem(pi,ti,newTaskJurnalItemText);setNewTaskJurnalItemText("");}}} placeholder="Titlu nou..." style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"}}/>
+                    <button onClick={()=>{addTaskJurnalItem(pi,ti,newTaskJurnalItemText);setNewTaskJurnalItemText("");}} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
+                  </div>
+                </div>}
+              </div>;
             })}
             {addingToPr===pi?<div style={{...row,marginTop:8}}>
               <input autoFocus value={newTaskPr[pi]||""} onChange={e=>setNewTaskPr(p=>({...p,[pi]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addPrTask(pi);if(e.key==="Escape")setAddingToPr(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
