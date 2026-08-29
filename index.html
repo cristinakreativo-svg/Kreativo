@@ -531,7 +531,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
           cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
             <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
             {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
-             !isWeekend&&nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
+             nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
           </div>);
         }
         return cells;
@@ -677,7 +677,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
             <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
             {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
-             !isWeekend&&nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
+             nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
           </div>);
         }
         return cells;
@@ -2209,7 +2209,7 @@ function App() {
                 if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
                 cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
                   <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
-                  {!isWeekend&&items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.time} {it.title}</div>)}
+                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.time} {it.title}</div>)}
                 </div>);
               }
               return cells;
@@ -2303,7 +2303,7 @@ function App() {
                 if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
                 cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
                   <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
-                  {!isWeekend&&items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.ora} {it.text}</div>)}
+                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.ora} {it.text}</div>)}
                 </div>);
               }
               return cells;
@@ -2758,7 +2758,7 @@ function App() {
                 cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
                   <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
                   {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
-                   !isWeekend&&items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
+                   items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
                 </div>);
               }
               return cells;
