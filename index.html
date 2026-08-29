@@ -36,6 +36,7 @@ const CK = "asistenta_chat_v1";
 const CLK = "kreativo_clienti_v2";
 const TDK = "kreativo_tudor_v1";
 const TCK = "kreativo_tudor_contacte_v1";
+const ZBK = "kreativo_zile_blocate_v1";
 const OBK = "kreativo_obiective_v1";
 const PRK = "kreativo_proiecte_personale_v1";
 const FLK = "kreativo_furnizori_lista_v1";
@@ -168,9 +169,10 @@ function impactScore(task,cat,prio) {
 
 const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#2A2118",dangerLight:"#FAF8F4",warn:"#4A3F30",warnLight:"#FAF8F4"};
 
-function ClientTaskRow({task,date,notif,achiz,material,furnizor,cantitate,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
+function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onOraChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
   const [d,setD]=useState(date||"");
+  const [o,setO]=useState(ora||"");
   const [mat,setMat]=useState(material||"");
   const [furn,setFurn]=useState(furnizor||"");
   const [cant,setCant]=useState(cantitate||"");
@@ -185,6 +187,8 @@ function ClientTaskRow({task,date,notif,achiz,material,furnizor,cantitate,furniz
       <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
         style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
+      <input type="time" value={o} onChange={e=>{const v=e.target.value;setO(v);onOraChange&&onOraChange(v);}} title="Ora (dacă e o programare/întâlnire)"
+        style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 5px",background:C.surface,color:C.textSub,outline:"none",flexShrink:0,width:72}}/>
       {onAchizChange&&<button title={achiz?"Marcat pt. achiziție":"Necesită achiziție material"} onClick={()=>onAchizChange(!achiz)} style={{background:"none",border:`1px solid ${achiz?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:achiz?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>achiz</button>}
       <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
@@ -427,7 +431,31 @@ function ComenziNico({client,ci,setClients,C,sb,tday,fmtD}){
   </div>;
 }
 
-function TabNico({clients,setClients,sb,tday,fmtD,C}){
+function BlocareZi({blocate,onAdd,onDel,C,fmtD}){
+  const [start,setStart]=React.useState("");
+  const [end,setEnd]=React.useState("");
+  const [motiv,setMotiv]=React.useState("");
+  const sorted=(blocate||[]).slice().sort((a,b)=>a.dataStart<b.dataStart?-1:1);
+  return <div style={{marginTop:20}}>
+    <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Blocare perioadă</div>
+    <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+      <input type="date" value={start} onChange={e=>{setStart(e.target.value);if(!end||end<e.target.value)setEnd(e.target.value);}} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+      <span style={{fontSize:12,color:C.textMuted}}>→</span>
+      <input type="date" value={end} onChange={e=>setEnd(e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+      <input value={motiv} onChange={e=>setMotiv(e.target.value)} placeholder="Motiv (ex: concediu)" style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none",minWidth:120}}/>
+      <button onClick={()=>{if(!start) return; onAdd(start,end||start,motiv); setStart(""); setEnd(""); setMotiv("");}} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"6px 14px",cursor:"pointer"}}>Blochează perioada</button>
+    </div>
+    {sorted.length>0&&<div>
+      {sorted.map(z=><div key={z.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:C.bg,marginBottom:4}}>
+        <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:150}}>{fmtD(z.dataStart)}{z.dataEnd&&z.dataEnd!==z.dataStart?` → ${fmtD(z.dataEnd)}`:""}</span>
+        <span style={{fontSize:12,color:C.textSub,flex:1}}>{z.motiv||"—"}</span>
+        <button onClick={()=>onDel(z.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14}}>×</button>
+      </div>)}
+    </div>}
+  </div>;
+}
+
+function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat}){
   const [openId,setOpenId]=React.useState(null);
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
@@ -494,16 +522,25 @@ function TabNico({clients,setClients,sb,tday,fmtD,C}){
           const key=keyFor(calMonth.y,calMonth.m,day);
           const isToday=key===todayKey;
           const nume=productieByDay[key]||[];
-          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?"#5C6B65":C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
-            <div style={{fontSize:11,fontWeight:isToday?700:400,color:nume.length?"rgba(255,255,255,0.75)":C.textMuted,marginBottom:2}}>{day}</div>
-            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
+          const dow=new Date(calMonth.y,calMonth.m,day).getDay();
+          const isWeekend=dow===0||dow===6;
+          const blocat=(blocate||[]).find(z=>key>=z.dataStart&&key<=(z.dataEnd||z.dataStart));
+          let bg=nume.length?"#5C6B65":C.bg, textCol=nume.length?"rgba(255,255,255,0.75)":C.textMuted;
+          if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
+          if(blocat){bg="#B8A88F";textCol="#fff";}
+          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+            <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
+            {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
+             !isWeekend&&nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
           </div>);
         }
         return cells;
       })()}
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
+    <BlocareZi blocate={blocate} onAdd={onAddBlocat} onDel={onDelBlocat} C={C} fmtD={fmtD}/>
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16,marginTop:20}}>
       {nicoClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
       </div>)}
@@ -594,7 +631,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat}){
   const [openId,setOpenId]=React.useState(null);
   const [contactOpen,setContactOpen]=React.useState({});
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
@@ -631,16 +668,25 @@ function TabDan({clients,setClients,sb,tday,fmtD,C}){
           const key=keyFor(calMonth.y,calMonth.m,day);
           const isToday=key===todayKey;
           const nume=montajeByDay[key]||[];
-          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?"#5C6B65":C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
-            <div style={{fontSize:11,fontWeight:isToday?700:400,color:nume.length?"rgba(255,255,255,0.75)":C.textMuted,marginBottom:2}}>{day}</div>
-            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
+          const dow=new Date(calMonth.y,calMonth.m,day).getDay();
+          const isWeekend=dow===0||dow===6;
+          const blocat=(blocate||[]).find(z=>key>=z.dataStart&&key<=(z.dataEnd||z.dataStart));
+          let bg=nume.length?"#5C6B65":C.bg, textCol=nume.length?"rgba(255,255,255,0.75)":C.textMuted;
+          if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
+          if(blocat){bg="#B8A88F";textCol="#fff";}
+          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+            <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
+            {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
+             !isWeekend&&nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
           </div>);
         }
         return cells;
       })()}
     </div>
 
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
+    <BlocareZi blocate={blocate} onAdd={onAddBlocat} onDel={onDelBlocat} C={C} fmtD={fmtD}/>
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16,marginTop:20}}>
       {danClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
       </div>)}
@@ -1437,6 +1483,7 @@ function App() {
   const [clients,setClients]=useState([]);
   const [tudor,setTudor]=useState([]);
   const [tudorContacte,setTudorContacte]=useState([]);
+  const [zileBlocate,setZileBlocate]=useState({nico:[],dan:[],tudor:[]});
   const [obiective,setObiective]=useState([]);
   const [proiecte,setProiecte]=useState([]);
   const [perdele,setPerdele]=useState(PP);
@@ -1464,6 +1511,8 @@ function App() {
   const [addingTo,setAddingTo]=useState(null);
   const [search,setSearch]=useState("");
   const [cliFilter,setCliFilter]=useState("all");
+  const [cliCalMonth,setCliCalMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
+  const [calGridMonth,setCalGridMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [addingCli,setAddingCli]=useState(false);
   const [contactOpen,setContactOpen]=useState({});
   const [newCliName,setNewCliName]=useState("");
@@ -1542,14 +1591,15 @@ function App() {
           const td=await sbGet(TDK); if(td){setTudor(td.map(t=>({...t,open:false})));gotAnyData=true;}
           const ob=await sbGet(OBK); if(ob){setObiective(ob);gotAnyData=true;}
           const tc=await sbGet(TCK); if(tc){setTudorContacte(tc);gotAnyData=true;}
+          const zb=await sbGet(ZBK); if(zb){setZileBlocate({nico:[],dan:[],tudor:[],...zb});gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v})];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -1568,6 +1618,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CLK,clients);},[clients,loaded]);
   useEffect(()=>{if(loaded) sbSave(TDK,tudor);},[tudor,loaded]);
   useEffect(()=>{if(loaded) sbSave(TCK,tudorContacte);},[tudorContacte,loaded]);
+  useEffect(()=>{if(loaded) sbSave(ZBK,zileBlocate);},[zileBlocate,loaded]);
   useEffect(()=>{if(loaded) sbSave(OBK,obiective);},[obiective,loaded]);
   useEffect(()=>{if(loaded) sbSave(PRK,proiecte);},[proiecte,loaded]);
   useEffect(()=>{if(loaded) sbSave(FLK,furnizoriLista);},[furnizoriLista,loaded]);
@@ -1618,6 +1669,9 @@ function App() {
   const addTudor=()=>{const n=newTudorName.trim();if(!n) return;setTudor(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],obs:[],open:false}]);setNewTudorName("");setAddingTudor(false);};
 
   const addContact=(categorie,nume)=>{const n=(nume||"").trim();if(!n) return;setTudorContacte(p=>[...p,{id:gid(),categorie,nume:n,firma:"",adresa:"",telefon:"",website:"",istoric:[],open:false}]);};
+
+  const addZiBlocata=(cal,dataStart,dataEnd,motiv)=>{if(!dataStart) return;const end=dataEnd||dataStart;setZileBlocate(p=>({...p,[cal]:[...(p[cal]||[]),{id:gid(),dataStart,dataEnd:end,motiv:(motiv||"").trim()}]}));};
+  const delZiBlocata=(cal,id)=>setZileBlocate(p=>({...p,[cal]:(p[cal]||[]).filter(z=>z.id!==id)}));
   const delContact=(id)=>setTudorContacte(p=>p.filter(c=>c.id!==id));
   const updContact=(id,field,val)=>setTudorContacte(p=>p.map(c=>c.id!==id?c:{...c,[field]:val}));
   const addIstoric=(id)=>setTudorContacte(p=>p.map(c=>c.id!==id?c:{...c,istoric:[{id:gid(),data:tday(),continut:"",deFacut:"",termen:"",bifat:false},...(c.istoric||[])]}));
@@ -1666,7 +1720,7 @@ function App() {
   function buildCal() {
     const items=[];
     data.events.forEach(e=>items.push({date:e.date,time:e.time||"",title:e.title,source:"Program",loc:e.loc||"",eventId:e.id,id:e.id}));
-    clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const date=(c.dates||[])[ti]||"";const taskTitle=typeof task==="object"?task.title:task;if(date&&!(c.done||[])[ti])items.push({date,time:"",title:`${c.name} · ${taskTitle}`,source:"Client",clientName:c.name,ti,id:`${c.id}-${ti}`});}));
+    clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const date=(c.dates||[])[ti]||"";const taskTitle=typeof task==="object"?task.title:task;if(date&&!(c.done||[])[ti])items.push({date,time:(c.oraTask||[])[ti]||"",title:`${c.name} · ${taskTitle}`,source:"Client",clientName:c.name,ti,id:`${c.id}-${ti}`});}));
     proiecte.forEach((p,pi)=>(p.tasks||[]).forEach((task,ti)=>{const date=(p.dates||[])[ti]||"";if(date&&!(p.done||[])[ti])items.push({date,time:"",title:`${p.name} · ${task}`,source:"Personal",proiectName:p.name,ti,id:`pr-${p.id}-${ti}`});}));
     oferte.forEach((o,oi)=>(o.tasks||[]).forEach((task,ti)=>{      const date=typeof task==="object"?task.date:(o.dates||[])[ti]||"";
       if(date&&!(o.done||[])[ti]){
@@ -1719,7 +1773,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte
+        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -1759,6 +1813,7 @@ function App() {
         if(d[FLK]) setFurnizoriLista(d[FLK]);
         if(d[TDK]) setTudor(d[TDK]);
         if(d[TCK]) setTudorContacte(d[TCK]);
+        if(d[ZBK]) setZileBlocate({nico:[],dan:[],tudor:[],...d[ZBK]});
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -1852,7 +1907,7 @@ function App() {
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Nico</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Croitorie · Kreativo Studio</div>
       </div>
-      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C}/>
+      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)}/>
     </div>;
   }
 
@@ -1867,7 +1922,7 @@ function App() {
         <button onClick={()=>setDanView("dan")} style={{padding:"7px 14px",border:`1px solid ${danView==="dan"?C.accent:C.border}`,background:danView==="dan"?C.accentLight:"transparent",color:danView==="dan"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="dan"?500:400}}>Montaje</button>
         <button onClick={()=>setDanView("mb")} style={{padding:"7px 14px",border:`1px solid ${danView==="mb"?C.accent:C.border}`,background:danView==="mb"?C.accentLight:"transparent",color:danView==="mb"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="mb"?500:400}}>MotionBlinds</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)}/>:
       <TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
     </div>;
   }
@@ -2101,6 +2156,52 @@ function App() {
         <div style={{flex:1,fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Calendar centralizat</div>
         <button style={btnP()} onClick={()=>setShowEvForm(!showEvForm)}>+ Programare</button>
       </div>
+
+      {(()=>{
+        const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+        const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
+        const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
+        const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const todayKey=new Date().toISOString().slice(0,10);
+        const byDay={};
+        calItems.filter(i=>i.time).forEach(i=>(byDay[i.date]=byDay[i.date]||[]).push(i));
+        Object.values(byDay).forEach(arr=>arr.sort((a,b)=>a.time<b.time?-1:1));
+        return <div style={{marginBottom:24}}>
+          <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>Programări cu oră · dintr-o privire</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
+            <button onClick={()=>setCalGridMonth(p=>{const m=p.m-1;return m<0?{y:p.y-1,m:11}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
+            <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[calGridMonth.m]} {calGridMonth.y}</div>
+            <button onClick={()=>setCalGridMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:4}}>
+            {ZILE_SCURT.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
+            {(()=>{
+              const first=new Date(calGridMonth.y,calGridMonth.m,1);
+              const offset=(first.getDay()+6)%7;
+              const total=daysInM(calGridMonth.y,calGridMonth.m);
+              const cells=[];
+              for(let i=0;i<offset;i++) cells.push(<div key={`e${i}`}/>);
+              for(let day=1;day<=total;day++){
+                const key=keyFor(calGridMonth.y,calGridMonth.m,day);
+                const isToday=key===todayKey;
+                const dow=new Date(calGridMonth.y,calGridMonth.m,day).getDay();
+                const isWeekend=dow===0||dow===6;
+                const items=byDay[key]||[];
+                let bg=items.length?"#5C6B65":C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
+                if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
+                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
+                  {!isWeekend&&items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.time} {it.title}</div>)}
+                </div>);
+              }
+              return cells;
+            })()}
+          </div>
+        </div>;
+      })()}
+
       {showEvForm&&<div style={{...card,marginBottom:16}}>
         <div style={{display:"grid",gap:10}}>
           <div><label style={lbl}>Titlu *</label><input style={inp} value={evForm.title} onChange={e=>setEvForm(f=>({...f,title:e.target.value}))} placeholder="Programare, întâlnire..."/></div>
@@ -2133,11 +2234,63 @@ function App() {
     {tab==="clients"&&<div>
       {/* Subtaburi */}
       <div style={{display:"flex",gap:6,marginBottom:14}}>
-        {[["lista","Clienți"],["valori","Valori comenzi"]].map(([id,l])=>{
-          const activeCliTab=cliFilter==="valori"?"valori":"lista";
-          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
+        {[["lista","Clienți"],["valori","Valori comenzi"],["calendar","Calendar"]].map(([id,l])=>{
+          const activeCliTab=cliFilter==="valori"?"valori":cliFilter==="calendar"?"calendar":"lista";
+          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":id==="calendar"?"calendar":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
         })}
       </div>
+
+      {cliFilter==="calendar"&&(()=>{
+        const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+        const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
+        const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
+        const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const todayKey=new Date().toISOString().slice(0,10);
+        const byDay={};
+        clients.forEach(c=>{
+          (c.tasks||[]).forEach((task,ti)=>{
+            const d=(c.dates||[])[ti], ora=(c.oraTask||[])[ti];
+            if(d&&ora&&!(c.done||[])[ti]){
+              (byDay[d]=byDay[d]||[]).push({ora,text:`${c.name}: ${typeof task==="object"?task.title:task}`});
+            }
+          });
+        });
+        Object.values(byDay).forEach(arr=>arr.sort((a,b)=>a.ora<b.ora?-1:1));
+        return <div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
+            <button onClick={()=>setCliCalMonth(p=>{const m=p.m-1;return m<0?{y:p.y-1,m:11}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
+            <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[cliCalMonth.m]} {cliCalMonth.y}</div>
+            <button onClick={()=>setCliCalMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
+          </div>
+          <div style={{fontSize:11,color:C.textMuted,textAlign:"center",marginBottom:10}}>Doar sarcinile cu oră setată apar aici (întâlniri/programări) — taskurile fără oră rămân în lista de Clienți.</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:4}}>
+            {ZILE_SCURT.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:20}}>
+            {(()=>{
+              const first=new Date(cliCalMonth.y,cliCalMonth.m,1);
+              const offset=(first.getDay()+6)%7;
+              const total=daysInM(cliCalMonth.y,cliCalMonth.m);
+              const cells=[];
+              for(let i=0;i<offset;i++) cells.push(<div key={`e${i}`}/>);
+              for(let day=1;day<=total;day++){
+                const key=keyFor(cliCalMonth.y,cliCalMonth.m,day);
+                const isToday=key===todayKey;
+                const dow=new Date(cliCalMonth.y,cliCalMonth.m,day).getDay();
+                const isWeekend=dow===0||dow===6;
+                const items=byDay[key]||[];
+                let bg=items.length?"#5C6B65":C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
+                if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
+                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
+                  {!isWeekend&&items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.ora} {it.text}</div>)}
+                </div>);
+              }
+              return cells;
+            })()}
+          </div>
+        </div>;
+      })()}
 
       {/* Tab Valori */}
       {cliFilter==="valori"&&<div>
@@ -2191,7 +2344,7 @@ function App() {
       </div>}
 
       {/* Tab Lista clienți */}
-      {cliFilter!=="valori"&&<div>
+      {cliFilter!=="valori"&&cliFilter!=="calendar"&&<div>
       <div style={{marginBottom:16}}>
         <div style={{...row,marginBottom:6}}>
           <span style={{fontSize:11,color:C.textMuted,flex:1}}>{donCl} din {totCl} · {pct}%</span>
@@ -2266,7 +2419,7 @@ function App() {
             </>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
-              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
+              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} ora={(client.oraTask||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onOraChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const o=Array.from({length:c.tasks.length},(_,j)=>(c.oraTask||[])[j]||"");o[ti]=v;return {...c,oraTask:o};}))} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
             })}
             {addingTo===ci?<div style={{...row,marginTop:8}}>
               <input autoFocus value={newTask[ci]||""} onChange={e=>setNewTask(p=>({...p,[ci]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addCliTask(ci);if(e.key==="Escape")setAddingTo(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
@@ -2401,11 +2554,11 @@ function App() {
     </div>}
 
     {tab==="nico"&&<div>
-      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C}/>
+      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)}/>
     </div>}
 
     {tab==="dan"&&<div>
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C}/>
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)}/>
     </div>}
 
     {tab==="achizitii"&&<div>
@@ -2576,14 +2729,22 @@ function App() {
                 const key=keyFor(tudorCalMonth.y,tudorCalMonth.m,day);
                 const isToday=key===todayKey;
                 const items=byDay[key]||[];
-                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:items.length?"#5C6B65":C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
-                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:items.length?"rgba(255,255,255,0.75)":C.textMuted,marginBottom:2}}>{day}</div>
-                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
+                const dow=new Date(tudorCalMonth.y,tudorCalMonth.m,day).getDay();
+                const isWeekend=dow===0||dow===6;
+                const blocat=(zileBlocate.tudor||[]).find(z=>key>=z.dataStart&&key<=(z.dataEnd||z.dataStart));
+                let bg=items.length?"#5C6B65":C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
+                if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
+                if(blocat){bg="#B8A88F";textCol="#fff";}
+                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
+                  {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
+                   !isWeekend&&items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
                 </div>);
               }
               return cells;
             })()}
           </div>
+          <BlocareZi blocate={zileBlocate.tudor} onAdd={(s,e,m)=>addZiBlocata("tudor",s,e,m)} onDel={id=>delZiBlocata("tudor",id)} C={C} fmtD={fmtD}/>
         </div>;
       })()}
     </div>}
