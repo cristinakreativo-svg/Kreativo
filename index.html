@@ -128,31 +128,49 @@ function tagTask(task) {
 }
 
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
-const tday=()=>new Date().toISOString().slice(0,10);
-const tmrw=()=>{const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10);};
+const tday=()=>{const f=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Bucharest",year:"numeric",month:"2-digit",day:"2-digit"});return f.format(new Date());};
+const dateToKey=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const tmrw=()=>{const d=new Date();d.setDate(d.getDate()+1);return dateToKey(d);};
 const fmtD=s=>{if(!s)return"";const[y,m,d]=s.split("-");return`${d}.${m}.${y}`;};
 const isOvd=(dl,done)=>!!(dl&&!done&&dl<tday());
 const isToday=s=>s===tday();
 const daysTo=s=>{if(!s)return null;return Math.ceil((new Date(s)-new Date(tday()))/86400000);};
 
 function nxtRecur(r) {
-  const now=new Date(),t=tday();
+  const now=new Date();
+  const lastDone=r.lastDone||"";
+  const dayOccurrence=(y,m,day)=>{
+    let d=new Date(y,m,day);
+    if(d.getMonth()!==((m%12)+12)%12) d=new Date(y,m+1,0); // depășire lună -> ultima zi a lunii
+    return d;
+  };
   if(r.type==="lunar_zi"){
     const day=parseInt(r.day);
-    // Incearca luna curenta
-    let d=new Date(now.getFullYear(),now.getMonth(),day);
-    // Daca ziua a depasit luna (ex: ziua 31 in feb), JavaScript o muta automat - normalizam
-    if(d.getMonth()!==now.getMonth()) d=new Date(now.getFullYear(),now.getMonth()+1,0); // ultima zi a lunii
-    if(d.toISOString().slice(0,10)<=t){
-      // Trecem la luna urmatoare
-      d=new Date(now.getFullYear(),now.getMonth()+1,day);
-      if(d.getMonth()!==now.getMonth()+1&&d.getMonth()!==0) d=new Date(now.getFullYear(),now.getMonth()+2,0);
-    }
-    return d.toISOString().slice(0,10);
+    let y=now.getFullYear(), m=now.getMonth();
+    let d=dayOccurrence(y,m,day), ds=dateToKey(d);
+    while(lastDone && lastDone>=ds){ m+=1; if(m>11){m=0;y+=1;} d=dayOccurrence(y,m,day); ds=dateToKey(d); }
+    return ds;
   }
-  if(r.type==="lunar_inceput"){let d=new Date(now.getFullYear(),now.getMonth(),1);if(d.toISOString().slice(0,10)<=t)d=new Date(now.getFullYear(),now.getMonth()+1,1);return d.toISOString().slice(0,10);}
-  if(r.type==="lunar_sfarsit"){let d=new Date(now.getFullYear(),now.getMonth()+1,0);if(d.toISOString().slice(0,10)<=t)d=new Date(now.getFullYear(),now.getMonth()+2,0);return d.toISOString().slice(0,10);}
-  if(r.type==="saptamanal"){const dm={"Luni":1,"Marți":2,"Miercuri":3,"Joi":4,"Vineri":5,"Sâmbătă":6,"Duminică":0};const target=dm[r.day]??1;let d=new Date(now);d.setDate(d.getDate()+((target-d.getDay()+7)%7||7));return d.toISOString().slice(0,10);}
+  if(r.type==="lunar_inceput"){
+    let y=now.getFullYear(), m=now.getMonth();
+    let d=new Date(y,m,1), ds=dateToKey(d);
+    while(lastDone && lastDone>=ds){ m+=1; if(m>11){m=0;y+=1;} d=new Date(y,m,1); ds=dateToKey(d); }
+    return ds;
+  }
+  if(r.type==="lunar_sfarsit"){
+    let y=now.getFullYear(), m=now.getMonth();
+    let d=new Date(y,m+1,0), ds=dateToKey(d);
+    while(lastDone && lastDone>=ds){ m+=1; d=new Date(y,m+1,0); ds=dateToKey(d); }
+    return ds;
+  }
+  if(r.type==="saptamanal"){
+    const dm={"Luni":1,"Marți":2,"Miercuri":3,"Joi":4,"Vineri":5,"Sâmbătă":6,"Duminică":0};
+    const target=dm[r.day]??1;
+    let d=new Date(now); d.setDate(d.getDate()+((target-d.getDay()+7)%7));
+    let ds=dateToKey(d);
+    while(lastDone && lastDone>=ds){ d.setDate(d.getDate()+7); ds=dateToKey(d); }
+    return ds;
+  }
   return tmrw();
 }
 
@@ -463,7 +481,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
   const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
   const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-  const todayKey=new Date().toISOString().slice(0,10);
+  const todayKey=tday();
 
   const nicoClients=clients.filter(c=>c.alocatNico).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
   const client=clients.find(c=>c.id===openId);
@@ -640,7 +658,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
   const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
   const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
   const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-  const todayKey=new Date().toISOString().slice(0,10);
+  const todayKey=tday();
   const danClients=clients.filter(c=>c.alocatDan).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
   const client=clients.find(c=>c.id===openId);
   const ci=client?clients.indexOf(client):-1;
@@ -736,17 +754,18 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
   const [expandedOi,setExpandedOi]=React.useState(null);
   const [newItemText,setNewItemText]=React.useState("");
   const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
-  const todayKey=new Date().toISOString().slice(0,10);
+  const todayKey=tday();
   const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
   const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
   const total=daysInM(obMonth.y,obMonth.m);
   const days=Array.from({length:total},(_,i)=>i+1);
 
+  const dKey=(d)=>keyFor(d.getFullYear(),d.getMonth(),d.getDate());
   const calcStreak=(ob)=>{
     let streak=0;let d=new Date();
-    const tk=d.toISOString().slice(0,10);
+    const tk=dKey(d);
     if(!ob.zile[tk]) d.setDate(d.getDate()-1);
-    while(true){const k=d.toISOString().slice(0,10);if(ob.zile[k]){streak++;d.setDate(d.getDate()-1);}else break;}
+    while(true){const k=dKey(d);if(ob.zile[k]){streak++;d.setDate(d.getDate()-1);}else break;}
     return streak;
   };
   const calcPercent=(ob,y,m)=>{
@@ -759,7 +778,7 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
   const missedTwice=(ob)=>{
     const d1=new Date();d1.setDate(d1.getDate()-1);
     const d2=new Date();d2.setDate(d2.getDate()-2);
-    return !ob.zile[d1.toISOString().slice(0,10)] && !ob.zile[d2.toISOString().slice(0,10)];
+    return !ob.zile[dKey(d1)] && !ob.zile[dKey(d2)];
   };
   const addNota=(oi)=>{
     const v=window.prompt("Notiță pentru azi ("+todayKey+"):","");
@@ -1131,7 +1150,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
     let sold=soldInit;
     for(let i=-3;i<90;i++){
       const d=new Date();d.setDate(d.getDate()+i);
-      const ds=d.toISOString().slice(0,10);
+      const ds=dateToKey(d);
       const zi=d.getDate();
       const soldZiStart=sold;
       const incasariZi=inreg.filter(x=>x.data===ds&&x.tip==="incasare");
@@ -1409,7 +1428,7 @@ function AddFacturaForm({motoare, onAdd}){
   const [open,setOpen]=React.useState(false);
   const [furnizor,setFurnizor]=React.useState("");
   const [factura,setFactura]=React.useState("");
-  const [data,setData]=React.useState(new Date().toISOString().slice(0,10));
+  const [data,setData]=React.useState(tday());
   const [pozitii,setPozitii]=React.useState([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
   const C2={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textMuted:"#A8998A"};
   const addPoz=()=>setPozitii(p=>[...p,{id:Date.now().toString(),model:motoare[0]?.model||"",qty:1}]);
@@ -1418,7 +1437,7 @@ function AddFacturaForm({motoare, onAdd}){
   const handleSave=()=>{
     if(pozitii.length===0) return;
     onAdd({furnizor:furnizor||"Furnizor necunoscut",factura,data,pozitii:[...pozitii]});
-    setFurnizor("");setFactura("");setData(new Date().toISOString().slice(0,10));
+    setFurnizor("");setFactura("");setData(tday());
     setPozitii([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
     setOpen(false);
   };
@@ -1787,7 +1806,7 @@ function App() {
   const updP=(ei,id,f,v)=>setPerdele(p=>p.map((e,i)=>i!==ei?e:{...e,taskuri:e.taskuri.map(t=>t.id===id?{...t,[f]:v}:t)}));
 
   const saveRec=()=>{if(!recForm.title.trim()) return;setRecurente(p=>[...p,{id:gid(),...recForm,lastDone:"",nextDate:nxtRecur(recForm)}]);setRecForm({title:"",type:"lunar_zi",day:"25",cat:"Contabilitate"});setShowRecForm(false);};
-  const doneRec=(id)=>{addJurnal(recurente.find(r=>r.id===id)?.title||"","Recurent");setRecurente(p=>p.map(r=>r.id===id?{...r,lastDone:tday(),nextDate:nxtRecur(r)}:r));};
+  const doneRec=(id)=>{addJurnal(recurente.find(r=>r.id===id)?.title||"","Recurent");setRecurente(p=>p.map(r=>{if(r.id!==id)return r;const updated={...r,lastDone:tday()};return {...updated,nextDate:nxtRecur(updated)};}));};
   const delRec=(id)=>setRecurente(p=>p.filter(r=>r.id!==id));
   const tmPlan=planMaine[tmrw()]||[];
   const addPlanTask=()=>{if(!newPlan.trim()) return;const tm=tmrw();setPlanMaine(p=>({...p,[tm]:[...(p[tm]||[]),{id:gid(),text:newPlan.trim(),done:false}]}));setNewPlan("");};
@@ -2066,7 +2085,7 @@ function App() {
         clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{
           const d=(c.dates||[])[ti];
           const notif=(c.notifs||[])[ti];
-          if(d&&!d<tday()&&!(c.done||[])[ti]&&daysTo(d)<=2&&daysTo(d)>=0)
+          if(d&&!(c.done||[])[ti]&&daysTo(d)<=2&&daysTo(d)>=0)
             alerte.push({tip:"Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"galbena",info:daysTo(d)===0?"Azi":daysTo(d)===1?"Mâine":`În ${daysTo(d)} zile`});
         }));
         // Sold negativ previzionat
@@ -2133,7 +2152,12 @@ function App() {
 
       {/* Notificări active */}
       {(()=>{const notifAlerts=[];clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const d=(c.dates||[])[ti];const notif=(c.notifs||[])[ti];if(notif&&d&&!( c.done||[])[ti]){const days=daysTo(d);if(days<=2&&days>=0)notifAlerts.push({name:c.name,task:typeof task==="object"?task.title:task,data:d,days});}}));
-      if(notifAlerts.length===0) return null;return null;})()} 
+      if(notifAlerts.length===0) return null;
+      return <div style={{...card,border:`1px solid ${C.border}`,background:C.accentLight,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.accent,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>🔔 {notifAlerts.length} notificări active</div>
+        {notifAlerts.map((n,i)=><div key={i} style={{...row,marginBottom:4}}><span style={{flex:1,fontSize:13,color:C.text}}>{n.name} · {n.task}</span><span style={{fontSize:11,color:C.textMuted}}>{n.days===0?"Azi":n.days===1?"Mâine":`În ${n.days} zile`}</span></div>)}
+      </div>;
+      })()}
       {recAzi.length>0&&<div style={{...card,border:`1px solid #C9BCA6`,background:C.dangerLight,marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{recAzi.length} recurente azi — acționează</div>
         {recAzi.map(r=><div key={r.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{r.title}</span><button style={btnP()} onClick={()=>doneRec(r.id)}>✓</button></div>)}
@@ -2277,7 +2301,7 @@ function App() {
         const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
         const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
         const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-        const todayKey=new Date().toISOString().slice(0,10);
+        const todayKey=tday();
         const byDay={};
         calItems.filter(i=>i.time).forEach(i=>(byDay[i.date]=byDay[i.date]||[]).push(i));
         Object.values(byDay).forEach(arr=>arr.sort((a,b)=>a.time<b.time?-1:1));
@@ -2364,7 +2388,7 @@ function App() {
         const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
         const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
         const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-        const todayKey=new Date().toISOString().slice(0,10);
+        const todayKey=tday();
         const byDay={};
         clients.forEach(c=>{
           (c.tasks||[]).forEach((task,ti)=>{
@@ -2824,7 +2848,7 @@ function App() {
         const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
         const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
         const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-        const todayKey=new Date().toISOString().slice(0,10);
+        const todayKey=tday();
         const byDay={};
         tudor.forEach(t=>{(t.tasks||[]).forEach((task,si)=>{const d=(t.dates||[])[si];if(d&&!t.done[si]) (byDay[d]=byDay[d]||[]).push(`${t.name}: ${task}`);});});
         tudorContacte.forEach(c=>{(c.istoric||[]).forEach(h=>{if(h.termen&&!h.bifat) (byDay[h.termen]=byDay[h.termen]||[]).push(`${c.nume}${c.firma?" ("+c.firma+")":""}: ${h.deFacut||"follow-up"}`);});});
