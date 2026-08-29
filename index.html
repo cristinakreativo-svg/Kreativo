@@ -167,14 +167,16 @@ function impactScore(task,cat,prio) {
 
 const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#2A2118",dangerLight:"#FAF8F4",warn:"#4A3F30",warnLight:"#FAF8F4"};
 
-function ClientTaskRow({task,date,notif,achiz,material,furnizor,onToggle,onDelete,onDateChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange}) {
+function ClientTaskRow({task,date,notif,achiz,material,furnizor,cantitate,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
   const [d,setD]=useState(date||"");
   const [mat,setMat]=useState(material||"");
   const [furn,setFurn]=useState(furnizor||"");
+  const [cant,setCant]=useState(cantitate||"");
   const tg=tagTask(taskTitle);
   const ov=d&&d<tday();
   const soon=d&&!ov&&daysTo(d)<=2&&daysTo(d)>=0;
+  const dlId="furnizori-"+(taskTitle||"").replace(/\W+/g,"");
   return <div style={{background:C.surface,border:`1px solid ${ov?"#C9BCA6":soon?"#C9BCA6":C.border}`,padding:"10px 14px",marginBottom:8}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
       <input type="checkbox" checked={false} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
@@ -188,7 +190,9 @@ function ClientTaskRow({task,date,notif,achiz,material,furnizor,onToggle,onDelet
     </div>
     {achiz&&<div style={{display:"flex",gap:8,marginTop:8}}>
       <input value={mat} onChange={e=>{const v=e.target.value;setMat(v);onMaterialChange&&onMaterialChange(v);}} placeholder="Material (ex: material blackout gri)" style={{flex:2,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.bg,outline:"none"}}/>
-      <input value={furn} onChange={e=>{const v=e.target.value;setFurn(v);onFurnizorChange&&onFurnizorChange(v);}} placeholder="Furnizor (ex: Twinbru)" style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.bg,outline:"none"}}/>
+      <input value={cant} onChange={e=>{const v=e.target.value;setCant(v);onCantitateChange&&onCantitateChange(v);}} placeholder="Cantitate" style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.bg,outline:"none"}}/>
+      <input list={dlId} value={furn} onChange={e=>{const v=e.target.value;setFurn(v);onFurnizorChange&&onFurnizorChange(v);}} placeholder="Furnizor (ex: Twinbru)" style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.bg,outline:"none"}}/>
+      <datalist id={dlId}>{(furnizoriCunoscuti||[]).map(f=><option key={f} value={f}/>)}</datalist>
     </div>}
   </div>;
 }
@@ -530,6 +534,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD}){
 
 function TabDan({clients,setClients,sb,tday,fmtD,C}){
   const [openId,setOpenId]=React.useState(null);
+  const [contactOpen,setContactOpen]=React.useState({});
   const danClients=clients.filter(c=>c.alocatDan).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
   const client=clients.find(c=>c.id===openId);
   const ci=client?clients.indexOf(client):-1;
@@ -551,6 +556,20 @@ function TabDan({clients,setClients,sb,tday,fmtD,C}){
           <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Data montaj:</span>
           <span style={{fontSize:13,color:C.text,fontWeight:500}}>{client.dataMontaj?fmtD(client.dataMontaj):"— nesetată —"}</span>
         </div>
+        <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:14,padding:"10px 14px",background:C.bg,border:"none",cursor:"pointer",textAlign:"left"}}>
+          <span style={{fontSize:12,color:C.textSub,fontWeight:500,flex:1}}>📇 Date de contact (telefon, adresă)</span>
+          <span style={{fontSize:11,color:C.textMuted}}>{contactOpen[client.id]?"▾":"▸"}</span>
+        </button>
+        {contactOpen[client.id]&&<>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:0,padding:"10px 14px",background:C.bg}}>
+            <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Telefon:</span>
+            {client.telefon?<a href={`tel:${client.telefon.replace(/\s+/g,"")}`} style={{fontSize:13,color:C.accent,fontWeight:500,textDecoration:"none"}}>{client.telefon} 📞</a>:<span style={{fontSize:13,color:C.textMuted}}>— nesetat —</span>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 14px",background:C.bg}}>
+            <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Adresă:</span>
+            {client.adresa?<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.adresa)}`} target="_blank" rel="noopener noreferrer" style={{fontSize:13,color:C.accent,fontWeight:500,textDecoration:"none"}}>{client.adresa} 📍</a>:<span style={{fontSize:13,color:C.textMuted}}>— nesetată —</span>}
+          </div>
+        </>}
         <div>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi șină / poze montaj</div>
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD}/>
@@ -1219,6 +1238,7 @@ function App() {
   const [search,setSearch]=useState("");
   const [cliFilter,setCliFilter]=useState("all");
   const [addingCli,setAddingCli]=useState(false);
+  const [contactOpen,setContactOpen]=useState({});
   const [newCliName,setNewCliName]=useState("");
   const [newTudorTask,setNewTudorTask]=useState({});
   const [addingToTudor,setAddingToTudor]=useState(null);
@@ -1605,6 +1625,8 @@ function App() {
     </div>;
   }
 
+  const furnizoriCunoscuti=[...new Set(clients.flatMap(c=>(c.achizFurnizor||[]).filter(Boolean)))].sort((a,b)=>a.localeCompare(b,"ro"));
+
   return <div style={{fontFamily:"'Jost',sans-serif",display:"flex",background:C.bg,minHeight:"100vh"}}>
     {/* SIDEBAR */}
     <div style={{width:210,flexShrink:0,background:"#D4C9B8",borderRight:"1px solid #C4B8A4",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
@@ -1969,24 +1991,38 @@ function App() {
               <input type="number" value={client.valoare||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
               <span style={{fontSize:12,color:C.textMuted}}>RON</span>
             </div>
-            {/* Data montaj */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg}}>
-              <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Data montaj:</span>
-              <input type="date" value={client.dataMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,dataMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
+            {/* Data montaj + Contact + Nico + Dan, toate pe un rând */}
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:contactOpen[client.id]?0:12,padding:"10px 14px",background:C.bg,flexWrap:"wrap"}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:12,color:C.textMuted}}>Montaj:</span>
+                <input type="date" value={client.dataMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,dataMontaj:e.target.value}))} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",background:C.surface}}/>
+              </div>
+              <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",padding:0}}>
+                <span style={{fontSize:12,color:C.textSub,fontWeight:500}}>📇 Contact</span>
+                <span style={{fontSize:10,color:C.textMuted}}>{contactOpen[client.id]?"▾":"▸"}</span>
+              </button>
+              <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+                <input type="checkbox" checked={!!client.alocatNico} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,alocatNico:e.target.checked}))}/>
+                <span style={{fontSize:12,color:C.textSub}}>Nico</span>
+              </label>
+              <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+                <input type="checkbox" checked={!!client.alocatDan} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,alocatDan:e.target.checked}))}/>
+                <span style={{fontSize:12,color:C.textSub}}>Dan</span>
+              </label>
             </div>
-            {/* Alocă la Nico */}
-            <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,padding:"10px 14px",background:C.bg,cursor:"pointer"}}>
-              <input type="checkbox" checked={!!client.alocatNico} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,alocatNico:e.target.checked}))}/>
-              <span style={{fontSize:12,color:C.textSub}}>Alocă la Nico (croitorie)</span>
-            </label>
-            {/* Alocă la Dan */}
-            <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,padding:"10px 14px",background:C.bg,cursor:"pointer"}}>
-              <input type="checkbox" checked={!!client.alocatDan} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,alocatDan:e.target.checked}))}/>
-              <span style={{fontSize:12,color:C.textSub}}>Alocă la Dan (montaj)</span>
-            </label>
+            {contactOpen[client.id]&&<>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:0,padding:"10px 14px",background:C.bg}}>
+                <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Telefon:</span>
+                <input type="tel" value={client.telefon||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,telefon:e.target.value}))} placeholder="07xx xxx xxx" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg}}>
+                <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Adresă:</span>
+                <input value={client.adresa||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,adresa:e.target.value}))} placeholder="Stradă, nr, oraș" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
+              </div>
+            </>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
-              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))}/>;
+              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
             })}
             {addingTo===ci?<div style={{...row,marginTop:8}}>
               <input autoFocus value={newTask[ci]||""} onChange={e=>setNewTask(p=>({...p,[ci]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addCliTask(ci);if(e.key==="Escape")setAddingTo(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
@@ -2135,7 +2171,7 @@ function App() {
         clients.forEach((c,ci)=>{
           (c.tasks||[]).forEach((task,ti)=>{
             if((c.achizitii||[])[ti]&&!(c.done||[])[ti]){
-              rows.push({ci,ti,client:c.name,task:typeof task==="object"?task.title:task,date:(c.dates||[])[ti]||"",material:(c.achizMaterial||[])[ti]||"",furnizor:(c.achizFurnizor||[])[ti]||""});
+              rows.push({ci,ti,client:c.name,task:typeof task==="object"?task.title:task,date:(c.dates||[])[ti]||"",material:(c.achizMaterial||[])[ti]||"",furnizor:(c.achizFurnizor||[])[ti]||"",cantitate:(c.achizCantitate||[])[ti]||""});
             }
           });
         });
@@ -2149,6 +2185,7 @@ function App() {
             <input type="checkbox" checked={false} onChange={()=>setClients(p=>p.map((c,ci2)=>{if(ci2!==r.ci)return c;const a=[...(c.achizitii||[])];a[r.ti]=false;return {...c,achizitii:a};}))} style={{cursor:"pointer",width:15,height:15,flexShrink:0}} title="Marchează ca achiziționat"/>
             <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{r.client}</span>
             <span style={{flex:1,fontSize:13,color:C.text}}>{r.material||r.task}</span>
+            {r.cantitate&&<span style={{fontSize:12,color:C.textSub,fontWeight:500,flexShrink:0,background:C.bg,padding:"2px 8px"}}>{r.cantitate}</span>}
             {r.date&&<span style={{fontSize:11,color:C.textMuted,flexShrink:0}}>{fmtD(r.date)}</span>}
           </div>)}
         </div>);
