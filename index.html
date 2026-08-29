@@ -428,6 +428,14 @@ function ComenziNico({client,ci,setClients,C,sb,tday,fmtD}){
 
 function TabNico({clients,setClients,sb,tday,fmtD,C}){
   const [openId,setOpenId]=React.useState(null);
+  const [ganttMonth,setGanttMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
+  const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+  const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
+  const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const todayKey=new Date().toISOString().slice(0,10);
+  const total=daysInM(ganttMonth.y,ganttMonth.m);
+  const days=Array.from({length:total},(_,i)=>i+1);
+
   const nicoClients=clients.filter(c=>c.alocatNico).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
   const client=clients.find(c=>c.id===openId);
   const ci=client?clients.indexOf(client):-1;
@@ -453,6 +461,39 @@ function TabNico({clients,setClients,sb,tday,fmtD,C}){
   };
 
   return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10,fontWeight:600}}>Alocare producție · pe zile</div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
+      <button onClick={()=>setGanttMonth(p=>{const m=p.m-1;return m<0?{y:p.y-1,m:11}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
+      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[ganttMonth.m]} {ganttMonth.y}</div>
+      <button onClick={()=>setGanttMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
+    </div>
+    {nicoClients.length>0?<div style={{overflowX:"auto",marginBottom:20,border:`1px solid ${C.border}`}}>
+      <table style={{borderCollapse:"collapse",width:"100%"}}>
+        <thead>
+          <tr>
+            <th style={{position:"sticky",left:0,background:C.surface,padding:"6px 10px",fontSize:10,color:C.textMuted,textAlign:"left",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>Client</th>
+            {days.map(day=>{
+              const isToday=keyFor(ganttMonth.y,ganttMonth.m,day)===todayKey;
+              return <th key={day} style={{fontSize:10,color:isToday?C.text:C.textMuted,fontWeight:isToday?700:400,padding:"6px 2px",borderBottom:`1px solid ${C.border}`,minWidth:22}}>{day}</th>;
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {nicoClients.map(c=>{
+            const start=c.prodStart||"", end=c.prodEnd||start;
+            return <tr key={c.id}>
+              <td style={{position:"sticky",left:0,background:C.surface,padding:"6px 10px",fontSize:12,fontWeight:500,color:C.text,whiteSpace:"nowrap"}}>{c.name}</td>
+              {days.map(day=>{
+                const key=keyFor(ganttMonth.y,ganttMonth.m,day);
+                const inRange=start&&end&&key>=start&&key<=end;
+                return <td key={day} style={{padding:1,textAlign:"center"}}><div style={{width:18,height:18,margin:"0 auto",background:inRange?C.accent:"transparent",border:inRange?"none":`1px solid ${C.bg}`}}/></td>;
+              })}
+            </tr>;
+          })}
+        </tbody>
+      </table>
+    </div>:<div style={{fontSize:13,color:C.textMuted,padding:"10px 0",marginBottom:16}}>Niciun client alocat la Nico încă.</div>}
+
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
       {nicoClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
@@ -468,6 +509,12 @@ function TabNico({clients,setClients,sb,tday,fmtD,C}){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 14px",background:C.bg}}>
           <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Data montaj:</span>
           <span style={{fontSize:13,color:C.text,fontWeight:500}}>{client.dataMontaj?fmtD(client.dataMontaj):"— nesetată —"}</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,padding:"10px 14px",background:C.bg,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:C.textMuted}}>Producție:</span>
+          <input type="date" value={client.prodStart||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,prodStart:e.target.value}))} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",background:C.surface}}/>
+          <span style={{fontSize:12,color:C.textMuted}}>→</span>
+          <input type="date" value={client.prodEnd||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,prodEnd:e.target.value}))} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",background:C.surface}}/>
         </div>
 
         <div style={{marginBottom:16}}>
@@ -491,20 +538,20 @@ function TabNico({clients,setClients,sb,tday,fmtD,C}){
   </div>;
 }
 
-function ComenziDan({client,ci,setClients,C,sb,tday,fmtD}){
+function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,buttonLabel,onlyImages}){
   const [uploading,setUploading]=React.useState(false);
   const inputRef=React.useRef(null);
-  const fisiere=client.comenziDan||[];
+  const fisiere=client[field]||[];
   const handleUpload=async(e)=>{
     const file=e.target.files[0];
     if(!file) return;
     setUploading(true);
     try{
-      const path=`comenzi-dan/${client.id}/${Date.now()}_${file.name}`;
+      const path=`${folder}/${client.id}/${Date.now()}_${file.name}`;
       const {error}=await sb.storage.from("oferte-clienti").upload(path,file);
       if(error){ alert("Eroare la încărcare: "+error.message); setUploading(false); return; }
       const {data}=sb.storage.from("oferte-clienti").getPublicUrl(path);
-      setClients(p=>p.map((c,i)=>i!==ci?c:{...c,comenziDan:[...(c.comenziDan||[]),{nume:file.name,url:data.publicUrl,path,data:tday()}]}));
+      setClients(p=>p.map((c,i)=>i!==ci?c:{...c,[field]:[...(c[field]||[]),{nume:file.name,url:data.publicUrl,path,data:tday()}]}));
     }catch(err){ alert("Eroare: "+err.message); }
     setUploading(false);
     if(inputRef.current) inputRef.current.value="";
@@ -512,7 +559,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD}){
   const handleDelete=async(f)=>{
     if(!window.confirm(`Ștergi fișierul "${f.nume}"?`)) return;
     try{ await sb.storage.from("oferte-clienti").remove([f.path]); }catch{}
-    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,comenziDan:(c.comenziDan||[]).filter(x=>x.path!==f.path)}));
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,[field]:(c[field]||[]).filter(x=>x.path!==f.path)}));
   };
   return <div>
     {fisiere.map((f,i)=>{
@@ -527,19 +574,57 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD}){
         <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
       </div>;
     })}
-    <input ref={inputRef} type="file" accept="image/*,.pdf,.doc,.docx,.xlsx,.xls,.csv" style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă poză / fișier"}</button>
+    <input ref={inputRef} type="file" accept={accept} style={{display:"none"}} onChange={handleUpload}/>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":buttonLabel}</button>
   </div>;
 }
 
 function TabDan({clients,setClients,sb,tday,fmtD,C}){
   const [openId,setOpenId]=React.useState(null);
   const [contactOpen,setContactOpen]=React.useState({});
+  const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
+  const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+  const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
+  const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
+  const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const todayKey=new Date().toISOString().slice(0,10);
   const danClients=clients.filter(c=>c.alocatDan).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
   const client=clients.find(c=>c.id===openId);
   const ci=client?clients.indexOf(client):-1;
 
+  const montajeByDay={};
+  danClients.forEach(c=>{if(c.dataMontaj) (montajeByDay[c.dataMontaj]=montajeByDay[c.dataMontaj]||[]).push(c.name);});
+
   return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10,fontWeight:600}}>Programare montaje</div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
+      <button onClick={()=>setCalMonth(p=>{const m=p.m-1;return m<0?{y:p.y-1,m:11}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
+      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[calMonth.m]} {calMonth.y}</div>
+      <button onClick={()=>setCalMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:4}}>
+      {ZILE_SCURT.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:20}}>
+      {(()=>{
+        const first=new Date(calMonth.y,calMonth.m,1);
+        const offset=(first.getDay()+6)%7;
+        const total=daysInM(calMonth.y,calMonth.m);
+        const cells=[];
+        for(let i=0;i<offset;i++) cells.push(<div key={`e${i}`}/>);
+        for(let day=1;day<=total;day++){
+          const key=keyFor(calMonth.y,calMonth.m,day);
+          const isToday=key===todayKey;
+          const nume=montajeByDay[key]||[];
+          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?C.accentLight:C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+            <div style={{fontSize:11,fontWeight:isToday?700:400,color:C.textMuted,marginBottom:2}}>{day}</div>
+            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:C.accent,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
+          </div>);
+        }
+        return cells;
+      })()}
+    </div>
+
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
       {danClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
@@ -570,9 +655,13 @@ function TabDan({clients,setClients,sb,tday,fmtD,C}){
             {client.adresa?<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.adresa)}`} target="_blank" rel="noopener noreferrer" style={{fontSize:13,color:C.accent,fontWeight:500,textDecoration:"none"}}>{client.adresa} 📍</a>:<span style={{fontSize:13,color:C.textMuted}}>— nesetată —</span>}
           </div>
         </>}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Poze și măsurători</div>
+          <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danPoze" folder="dan-poze" accept="image/*,.pdf" buttonLabel="+ fă poză / adaugă măsurătoare"/>
+        </div>
         <div>
-          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi șină / poze montaj</div>
-          <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD}/>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi șină / sisteme de produs</div>
+          <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>
       </div>
     </div>}
@@ -671,6 +760,127 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
         <button onClick={()=>setAddingOb(false)} style={{padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub}}>✕</button>
       </div>:<button onClick={()=>setAddingOb(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ obiectiv nou</button>}
     </div>
+  </div>;
+}
+
+function TabMotionBlinds({motoare,clients,iesiri,intrari,openModel,setOpenModel,stocRamas,soldInitial,totalIntrat,updStoc,delMotorModel,addMotorModel,newMotorModel,setNewMotorModel,adaugaFactura,updPozitie,stergeFactura,stergePozitie,card,C,fmtD,inp,btnP}){
+  return <div>
+            <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:16}}>Fișe Magazie · Motoare MotionBlinds / Coulisse</div>
+
+      {/* Listă achiziții necesare */}
+      {(()=>{
+        const lipsa=motoare.filter(m=>stocRamas(m.model)<0);
+        if(lipsa.length===0) return null;
+        const totalBuc=lipsa.reduce((s,m)=>s+Math.abs(stocRamas(m.model)),0);
+        return <div style={{...card,marginBottom:16,padding:"16px 20px"}}>
+          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:600,color:C.text,textTransform:"uppercase",letterSpacing:"0.08em"}}>Listă achiziții necesare</div>
+            <div style={{fontSize:11,color:C.textMuted}}>{lipsa.length} poziții · {totalBuc} buc.</div>
+          </div>
+          {lipsa.map(m=><div key={m.model} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+            <span style={{fontSize:13,fontWeight:500,color:C.text,minWidth:70}}>{m.model}</span>
+            <span style={{fontSize:12,color:C.textMuted,flex:1}}>de comandat</span>
+            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{Math.abs(stocRamas(m.model))} buc.</span>
+          </div>)}
+        </div>;
+      })()}
+
+      {/* Formular intrare centralizată */}
+      <AddFacturaForm motoare={motoare} onAdd={adaugaFactura}/>
+
+      {/* Lista facturi intrare */}
+      {intrari.length>0&&<div style={{marginBottom:20}}>
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>Facturi intrare ({intrari.length})</div>
+        {intrari.map(f=>{
+          const isOpenF=openModel[`f_${f.id}`]===true;
+          return <div key={f.id} style={{background:C.surface,border:"1px solid #C8DCC8",marginBottom:6,overflow:"hidden"}}>
+            <div onClick={()=>setOpenModel(p=>({...p,[`f_${f.id}`]:!isOpenF}))} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:"#F2F8F2",cursor:"pointer",userSelect:"none"}}>
+              <div style={{flex:1}}>
+                <span style={{fontSize:13,fontWeight:500,color:"#2A4A2A"}}>{f.furnizor}</span>
+                {f.factura&&<span style={{fontSize:12,color:"#5A8A5A",marginLeft:8}}>· {f.factura}</span>}
+                <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {fmtD(f.data)}</span>
+                <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {f.pozitii.reduce((s,p)=>s+p.qty,0)} buc.</span>
+              </div>
+              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+              <span style={{fontSize:11,color:"#5A8A5A"}}>{isOpenF?"▾":"▸"}</span>
+            </div>
+            {isOpenF&&<div style={{padding:"8px 14px 12px"}}>
+              {f.pozitii.map(pz=><div key={pz.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bg}`}}>
+                <select value={pz.model} onChange={e=>updPozitie(f.id,pz.id,"model",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",background:C.surface,outline:"none",color:C.accent,fontWeight:500}}>
+                  {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
+                </select>
+                <input type="number" min="1" value={pz.qty} onChange={e=>updPozitie(f.id,pz.id,"qty",e.target.value)} style={{width:60,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
+                <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
+                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+              </div>)}
+            </div>}
+          </div>;
+        })}
+      </div>}
+
+      {/* Fișe per model */}
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Situație stoc per model</div>
+      {motoare.map(m=>{
+        const isOpen=openModel[m.model]===true;
+        const si=soldInitial(m.model);
+        const ti=totalIntrat(m.model);
+        const alocat=clients.reduce((s,c)=>{const x=(c.motoare||[]).find(x=>x.model===m.model);return s+(x?x.qty:0);},0);
+        const livrate=iesiri.filter(e=>e.model===m.model).reduce((s,e)=>s+e.qty,0);
+        const sf=stocRamas(m.model);
+        const st=sf<0?"lipsa":sf===0&&(alocat+livrate)>0?"exact":"ok";
+        const iesiriFisa=iesiri.filter(e=>e.model===m.model).map(e=>({...e,tip:"iesire",sursa:e.client}));
+        const intrarifisa=intrari.flatMap(f=>f.pozitii.filter(p=>p.model===m.model).map(p=>({id:f.id+p.id,data:f.data,tip:"intrare",sursa:f.furnizor,factura:f.factura,qty:p.qty})));
+        const miscariFisa=[...iesiriFisa,...intrarifisa].sort((a,b)=>a.data>b.data?1:-1);
+
+        return <div key={m.model} style={{background:C.surface,border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden"}}>
+          <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:CC[1]}}>
+            <div style={{fontSize:14,fontWeight:500,color:C.text,minWidth:70,letterSpacing:"0.03em"}}>{m.model}</div>
+            <div style={{display:"flex",gap:16,flex:1}}>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold inițial</div><div style={{fontSize:13,fontWeight:500,color:C.textSub}}>{si}</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>+ Intrări</div><div style={{fontSize:13,fontWeight:600,color:"#3A6A3A"}}>{ti}</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>− Ieșiri</div><div style={{fontSize:13,fontWeight:600,color:C.danger}}>{alocat+livrate}</div></div>
+              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold final</div><div style={{fontSize:15,fontWeight:700,color:st==="lipsa"?C.danger:C.accent}}>{sf}</div></div>
+            </div>
+            <span style={{fontSize:11,padding:"3px 10px",fontWeight:500,background:st==="lipsa"?C.dangerLight:st==="exact"?"#F0EFED":C.accentLight,color:st==="lipsa"?C.danger:st==="exact"?C.textSub:C.accent}}>{st==="lipsa"?`Lipsă ${Math.abs(sf)}`:st==="exact"?"Exact":"OK"}</span>
+            <span style={{fontSize:11,color:C.textMuted}}>{isOpen?"▾":"▸"}</span>
+          </div>
+          {isOpen&&<div style={{padding:"14px 18px"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:14,borderBottom:`1px solid ${C.border}`}}>
+              <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Sold inițial:</span>
+              <input type="number" min="0" value={m.stoc} onChange={e=>updStoc(m.model,e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 8px",outline:"none",textAlign:"center"}}/>
+              <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
+            </div>
+            {miscariFisa.length>0&&<div>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Fișă mișcări</div>
+              <div style={{border:`1px solid ${C.border}`,overflow:"hidden"}}>
+                <div style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"7px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+                  {["DATA","TIP","SURSĂ","BUC.","FACTURĂ"].map(h=><div key={h} style={{fontSize:9,fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{h}</div>)}
+                </div>
+                {miscariFisa.map(e=><div key={e.id} style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"8px 12px",borderBottom:`1px solid ${C.bg}`,alignItems:"center"}}>
+                  <div style={{fontSize:11,color:C.textSub}}>{fmtD(e.data)}</div>
+                  <div><span style={{padding:"2px 7px",fontSize:10,fontWeight:600,background:e.tip==="intrare"?"#EAF2EA":"#F5EEEE",color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"↓ IN":"↑ OUT"}</span></div>
+                  <div style={{fontSize:12,color:C.text,fontWeight:500}}>{e.sursa||"—"}</div>
+                  <div style={{fontSize:13,fontWeight:600,color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"+":"-"}{e.qty}</div>
+                  <div style={{fontSize:11,color:C.textMuted}}>{e.factura||"—"}</div>
+                </div>)}
+              </div>
+            </div>}
+            {alocat>0&&<div style={{marginTop:12,padding:"10px 14px",background:C.accentLight}}>
+              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Alocat clienți activi</div>
+              {clients.filter(c=>(c.motoare||[]).find(x=>x.model===m.model)).map(c=>{const mx=c.motoare.find(x=>x.model===m.model);return <div key={c.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}><span style={{flex:1,fontSize:12,color:C.text}}>{c.name}</span><span style={{fontSize:12,fontWeight:600,color:C.accent}}>{mx.qty} buc.</span></div>;})}
+            </div>}
+            <button onClick={()=>delMotorModel(m.model)} style={{marginTop:12,fontSize:11,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>× șterge model</button>
+          </div>}
+        </div>;
+      })}
+
+      <div style={{marginTop:8}}>
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Adaugă model nou</div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={newMotorModel} onChange={e=>setNewMotorModel(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&addMotorModel()} placeholder="Ex: CM-60" style={{...inp,flex:1}}/>
+          <button style={btnP()} onClick={addMotorModel}>+ Adaugă</button>
+        </div>
+      </div>
   </div>;
 }
 
@@ -1247,6 +1457,7 @@ function App() {
   const [addingOb,setAddingOb]=useState(false);
   const [newObName,setNewObName]=useState("");
   const [obMonth,setObMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
+  const [danView,setDanView]=useState("dan");
   const [newTaskPr,setNewTaskPr]=useState({});
   const [addingToPr,setAddingToPr]=useState(null);
   const [addingPr,setAddingPr]=useState(false);
@@ -1621,7 +1832,12 @@ function App() {
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Dan</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Montaj · Kreativo Studio</div>
       </div>
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C}/>
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        <button onClick={()=>setDanView("dan")} style={{padding:"7px 14px",border:`1px solid ${danView==="dan"?C.accent:C.border}`,background:danView==="dan"?C.accentLight:"transparent",color:danView==="dan"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="dan"?500:400}}>Montaje</button>
+        <button onClick={()=>setDanView("mb")} style={{padding:"7px 14px",border:`1px solid ${danView==="mb"?C.accent:C.border}`,background:danView==="mb"?C.accentLight:"transparent",color:danView==="mb"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="mb"?500:400}}>MotionBlinds</button>
+      </div>
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C}/>:
+      <TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
     </div>;
   }
 
@@ -2243,124 +2459,7 @@ function App() {
       </div>
     </div>}
 
-    {tab==="motionblinds"&&<div>
-      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:16}}>Fișe Magazie · Motoare MotionBlinds / Coulisse</div>
-
-      {/* Listă achiziții necesare */}
-      {(()=>{
-        const lipsa=motoare.filter(m=>stocRamas(m.model)<0);
-        if(lipsa.length===0) return null;
-        const totalBuc=lipsa.reduce((s,m)=>s+Math.abs(stocRamas(m.model)),0);
-        return <div style={{...card,marginBottom:16,padding:"16px 20px"}}>
-          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:12}}>
-            <div style={{fontSize:12,fontWeight:600,color:C.text,textTransform:"uppercase",letterSpacing:"0.08em"}}>Listă achiziții necesare</div>
-            <div style={{fontSize:11,color:C.textMuted}}>{lipsa.length} poziții · {totalBuc} buc.</div>
-          </div>
-          {lipsa.map(m=><div key={m.model} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
-            <span style={{fontSize:13,fontWeight:500,color:C.text,minWidth:70}}>{m.model}</span>
-            <span style={{fontSize:12,color:C.textMuted,flex:1}}>de comandat</span>
-            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{Math.abs(stocRamas(m.model))} buc.</span>
-          </div>)}
-        </div>;
-      })()}
-
-      {/* Formular intrare centralizată */}
-      <AddFacturaForm motoare={motoare} onAdd={adaugaFactura}/>
-
-      {/* Lista facturi intrare */}
-      {intrari.length>0&&<div style={{marginBottom:20}}>
-        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>Facturi intrare ({intrari.length})</div>
-        {intrari.map(f=>{
-          const isOpenF=openModel[`f_${f.id}`]===true;
-          return <div key={f.id} style={{background:C.surface,border:"1px solid #C8DCC8",marginBottom:6,overflow:"hidden"}}>
-            <div onClick={()=>setOpenModel(p=>({...p,[`f_${f.id}`]:!isOpenF}))} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:"#F2F8F2",cursor:"pointer",userSelect:"none"}}>
-              <div style={{flex:1}}>
-                <span style={{fontSize:13,fontWeight:500,color:"#2A4A2A"}}>{f.furnizor}</span>
-                {f.factura&&<span style={{fontSize:12,color:"#5A8A5A",marginLeft:8}}>· {f.factura}</span>}
-                <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {fmtD(f.data)}</span>
-                <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {f.pozitii.reduce((s,p)=>s+p.qty,0)} buc.</span>
-              </div>
-              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
-              <span style={{fontSize:11,color:"#5A8A5A"}}>{isOpenF?"▾":"▸"}</span>
-            </div>
-            {isOpenF&&<div style={{padding:"8px 14px 12px"}}>
-              {f.pozitii.map(pz=><div key={pz.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bg}`}}>
-                <select value={pz.model} onChange={e=>updPozitie(f.id,pz.id,"model",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",background:C.surface,outline:"none",color:C.accent,fontWeight:500}}>
-                  {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
-                </select>
-                <input type="number" min="1" value={pz.qty} onChange={e=>updPozitie(f.id,pz.id,"qty",e.target.value)} style={{width:60,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
-                <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
-                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
-              </div>)}
-            </div>}
-          </div>;
-        })}
-      </div>}
-
-      {/* Fișe per model */}
-      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Situație stoc per model</div>
-      {motoare.map(m=>{
-        const isOpen=openModel[m.model]===true;
-        const si=soldInitial(m.model);
-        const ti=totalIntrat(m.model);
-        const alocat=clients.reduce((s,c)=>{const x=(c.motoare||[]).find(x=>x.model===m.model);return s+(x?x.qty:0);},0);
-        const livrate=iesiri.filter(e=>e.model===m.model).reduce((s,e)=>s+e.qty,0);
-        const sf=stocRamas(m.model);
-        const st=sf<0?"lipsa":sf===0&&(alocat+livrate)>0?"exact":"ok";
-        const iesiriFisa=iesiri.filter(e=>e.model===m.model).map(e=>({...e,tip:"iesire",sursa:e.client}));
-        const intrarifisa=intrari.flatMap(f=>f.pozitii.filter(p=>p.model===m.model).map(p=>({id:f.id+p.id,data:f.data,tip:"intrare",sursa:f.furnizor,factura:f.factura,qty:p.qty})));
-        const miscariFisa=[...iesiriFisa,...intrarifisa].sort((a,b)=>a.data>b.data?1:-1);
-
-        return <div key={m.model} style={{background:C.surface,border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden"}}>
-          <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:CC[1]}}>
-            <div style={{fontSize:14,fontWeight:500,color:C.text,minWidth:70,letterSpacing:"0.03em"}}>{m.model}</div>
-            <div style={{display:"flex",gap:16,flex:1}}>
-              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold inițial</div><div style={{fontSize:13,fontWeight:500,color:C.textSub}}>{si}</div></div>
-              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>+ Intrări</div><div style={{fontSize:13,fontWeight:600,color:"#3A6A3A"}}>{ti}</div></div>
-              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>− Ieșiri</div><div style={{fontSize:13,fontWeight:600,color:C.danger}}>{alocat+livrate}</div></div>
-              <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold final</div><div style={{fontSize:15,fontWeight:700,color:st==="lipsa"?C.danger:C.accent}}>{sf}</div></div>
-            </div>
-            <span style={{fontSize:11,padding:"3px 10px",fontWeight:500,background:st==="lipsa"?C.dangerLight:st==="exact"?"#F0EFED":C.accentLight,color:st==="lipsa"?C.danger:st==="exact"?C.textSub:C.accent}}>{st==="lipsa"?`Lipsă ${Math.abs(sf)}`:st==="exact"?"Exact":"OK"}</span>
-            <span style={{fontSize:11,color:C.textMuted}}>{isOpen?"▾":"▸"}</span>
-          </div>
-          {isOpen&&<div style={{padding:"14px 18px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:14,borderBottom:`1px solid ${C.border}`}}>
-              <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Sold inițial:</span>
-              <input type="number" min="0" value={m.stoc} onChange={e=>updStoc(m.model,e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 8px",outline:"none",textAlign:"center"}}/>
-              <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
-            </div>
-            {miscariFisa.length>0&&<div>
-              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Fișă mișcări</div>
-              <div style={{border:`1px solid ${C.border}`,overflow:"hidden"}}>
-                <div style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"7px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
-                  {["DATA","TIP","SURSĂ","BUC.","FACTURĂ"].map(h=><div key={h} style={{fontSize:9,fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{h}</div>)}
-                </div>
-                {miscariFisa.map(e=><div key={e.id} style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"8px 12px",borderBottom:`1px solid ${C.bg}`,alignItems:"center"}}>
-                  <div style={{fontSize:11,color:C.textSub}}>{fmtD(e.data)}</div>
-                  <div><span style={{padding:"2px 7px",fontSize:10,fontWeight:600,background:e.tip==="intrare"?"#EAF2EA":"#F5EEEE",color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"↓ IN":"↑ OUT"}</span></div>
-                  <div style={{fontSize:12,color:C.text,fontWeight:500}}>{e.sursa||"—"}</div>
-                  <div style={{fontSize:13,fontWeight:600,color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"+":"-"}{e.qty}</div>
-                  <div style={{fontSize:11,color:C.textMuted}}>{e.factura||"—"}</div>
-                </div>)}
-              </div>
-            </div>}
-            {alocat>0&&<div style={{marginTop:12,padding:"10px 14px",background:C.accentLight}}>
-              <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Alocat clienți activi</div>
-              {clients.filter(c=>(c.motoare||[]).find(x=>x.model===m.model)).map(c=>{const mx=c.motoare.find(x=>x.model===m.model);return <div key={c.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}><span style={{flex:1,fontSize:12,color:C.text}}>{c.name}</span><span style={{fontSize:12,fontWeight:600,color:C.accent}}>{mx.qty} buc.</span></div>;})}
-            </div>}
-            <button onClick={()=>delMotorModel(m.model)} style={{marginTop:12,fontSize:11,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>× șterge model</button>
-          </div>}
-        </div>;
-      })}
-
-      <div style={{marginTop:8}}>
-        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Adaugă model nou</div>
-        <div style={{display:"flex",gap:8}}>
-          <input value={newMotorModel} onChange={e=>setNewMotorModel(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&addMotorModel()} placeholder="Ex: CM-60" style={{...inp,flex:1}}/>
-          <button style={btnP()} onClick={addMotorModel}>+ Adaugă</button>
-        </div>
-      </div>
-    </div>}
+    {tab==="motionblinds"&&<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
 
     {tab==="contabilitate"&&<div><div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Contabilitate</div><SimpleTab section="contabilitate" ph="Adaugă sarcină..."/></div>}
     {tab==="administrativ"&&<div><div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Administrativ</div><SimpleTab section="administrativ" ph="Adaugă sarcină..."/></div>}
