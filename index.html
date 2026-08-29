@@ -34,6 +34,7 @@ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 const SK = "asistenta_kreativo_v1";
 const CK = "asistenta_chat_v1";
 const CLK = "kreativo_clienti_v2";
+const TDK = "kreativo_tudor_v1";
 const PRK = "kreativo_proiecte_personale_v1";
 const FLK = "kreativo_furnizori_lista_v1";
 const AK = "kreativo_admin_v1";
@@ -181,6 +182,23 @@ function ClientTaskRow({task,date,notif,onToggle,onDelete,onDateChange,onNotifCh
       <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
     </div>
+  </div>;
+}
+
+function TudorTaskRow({task,date,obs,onToggle,onDelete,onDateChange,onObsChange}) {
+  const [d,setD]=useState(date||"");
+  const [o,setO]=useState(obs||"");
+  const ov=d&&d<tday();
+  const soon=d&&!ov&&daysTo(d)<=2&&daysTo(d)>=0;
+  return <div style={{background:C.surface,border:`1px solid ${ov?"#C9BCA6":soon?"#C9BCA6":C.border}`,padding:"10px 14px",marginBottom:8}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+      <input type="checkbox" checked={false} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
+      <span style={{flex:1,fontSize:13,color:C.text}}>{task}</span>
+      <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
+        style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
+      <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
+    </div>
+    <input value={o} onChange={e=>{const v=e.target.value;setO(v);onObsChange(v);}} placeholder="Observații..." style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.bg,outline:"none",boxSizing:"border-box"}}/>
   </div>;
 }
 
@@ -954,6 +972,7 @@ function App() {
   const [data,setData]=useState({tasks:[],notes:[],events:[]});
   const [admin,setAdmin]=useState({contabilitate:[],administrativ:[],marketing:[],personal:[]});
   const [clients,setClients]=useState([]);
+  const [tudor,setTudor]=useState([]);
   const [proiecte,setProiecte]=useState([]);
   const [perdele,setPerdele]=useState(PP);
   const [motoare,setMotoare]=useState(MOTOARE_INIT.map(m=>({...m})));
@@ -982,6 +1001,10 @@ function App() {
   const [cliFilter,setCliFilter]=useState("all");
   const [addingCli,setAddingCli]=useState(false);
   const [newCliName,setNewCliName]=useState("");
+  const [newTudorTask,setNewTudorTask]=useState({});
+  const [addingToTudor,setAddingToTudor]=useState(null);
+  const [addingTudor,setAddingTudor]=useState(false);
+  const [newTudorName,setNewTudorName]=useState("");
   const [newTaskPr,setNewTaskPr]=useState({});
   const [addingToPr,setAddingToPr]=useState(null);
   const [addingPr,setAddingPr]=useState(false);
@@ -1042,14 +1065,15 @@ function App() {
           const en=await sbGet(ENK); if(en){setEnergie(en);gotAnyData=true;}
           const pr=await sbGet(PRK); if(pr){setProiecte(pr);gotAnyData=true;}
           const fl=await sbGet(FLK); if(fl){setFurnizoriLista(fl);gotAnyData=true;}
+          const td=await sbGet(TDK); if(td){setTudor(td.map(t=>({...t,open:false})));gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false})))];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -1066,6 +1090,7 @@ function App() {
 
   useEffect(()=>{if(loaded) sbSave(SK,data);},[data,loaded]);
   useEffect(()=>{if(loaded) sbSave(CLK,clients);},[clients,loaded]);
+  useEffect(()=>{if(loaded) sbSave(TDK,tudor);},[tudor,loaded]);
   useEffect(()=>{if(loaded) sbSave(PRK,proiecte);},[proiecte,loaded]);
   useEffect(()=>{if(loaded) sbSave(FLK,furnizoriLista);},[furnizoriLista,loaded]);
   useEffect(()=>{if(loaded) sbSave(AK,admin);},[admin,loaded]);
@@ -1105,6 +1130,14 @@ function App() {
   const delCliTask=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:c.tasks.filter((_,j)=>j!==ti),done:c.done.filter((_,j)=>j!==ti),dates:(c.dates||[]).filter((_,j)=>j!==ti)}));
   const delCli=(ci)=>setClients(p=>p.filter((_,i)=>i!==ci));
   const addCli=()=>{const n=newCliName.trim();if(!n) return;setClients(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],motoare:[],open:false}]);setNewCliName("");setAddingCli(false);};
+
+  const togTudor=(ti_,si)=>{setTudor(p=>p.map((t,i)=>i!==ti_?t:{...t,done:t.done.map((d,j)=>j===si?!d:d)}));};
+  const addTudorTask=(ti_)=>{const v=(newTudorTask[ti_]||"").trim();if(!v) return;setTudor(p=>p.map((t,i)=>i!==ti_?t:{...t,tasks:[...t.tasks,v],done:[...t.done,false],dates:[...(t.dates||[]),""],obs:[...(t.obs||[]),""]}));setNewTudorTask(p=>({...p,[ti_]:""}));setAddingToTudor(null);};
+  const updTudorDate=(ti_,si,v)=>setTudor(p=>p.map((t,i)=>{if(i!==ti_)return t;const d=Array.from({length:t.tasks.length},(_,j)=>(t.dates||[])[j]||"");d[si]=v;return {...t,dates:d};}));
+  const updTudorObs=(ti_,si,v)=>setTudor(p=>p.map((t,i)=>{if(i!==ti_)return t;const o=Array.from({length:t.tasks.length},(_,j)=>(t.obs||[])[j]||"");o[si]=v;return {...t,obs:o};}));
+  const delTudorTask=(ti_,si)=>setTudor(p=>p.map((t,i)=>i!==ti_?t:{...t,tasks:t.tasks.filter((_,j)=>j!==si),done:t.done.filter((_,j)=>j!==si),dates:(t.dates||[]).filter((_,j)=>j!==si),obs:(t.obs||[]).filter((_,j)=>j!==si)}));
+  const delTudor=(ti_)=>setTudor(p=>p.filter((_,i)=>i!==ti_));
+  const addTudor=()=>{const n=newTudorName.trim();if(!n) return;setTudor(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],obs:[],open:false}]);setNewTudorName("");setAddingTudor(false);};
 
   const togPr=(pi,ti)=>{const p2=proiecte[pi];if(p2&&!p2.done[ti])addJurnal(`${p2.name} · ${p2.tasks[ti]}`,"Personal");setProiecte(p=>p.map((x,i)=>i!==pi?x:{...x,done:x.done.map((d,j)=>j===ti?!d:d)}));};
   const togPrOpen=(pi)=>setProiecte(p=>p.map((x,i)=>i!==pi?x:{...x,open:!x.open}));
@@ -1196,7 +1229,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista
+        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -1234,6 +1267,7 @@ function App() {
         if(d[LGK]) setLog(d[LGK]);
         if(d[PRK]) setProiecte(d[PRK]);
         if(d[FLK]) setFurnizoriLista(d[FLK]);
+        if(d[TDK]) setTudor(d[TDK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
     };
@@ -1300,6 +1334,7 @@ function App() {
   const setTab=(t)=>{
     _setTab(t);
     if(t==="clients") setClients(p=>p.map(c=>({...c,open:false})));
+    if(t==="tudor") setTudor(p=>p.map(t2=>({...t2,open:false})));
     if(t==="motionblinds") setOpenModel({});
     if(t==="oferte") setOferte(p=>p.map(o=>({...o,open:false})));
   };
@@ -1312,7 +1347,7 @@ function App() {
 
   const GRUPURI=[
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
-    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"}]},
+    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"tudor",l:"Tudor"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"perdele",l:"Perdele"},{id:"vopsele",l:"Vopsele"},{id:"recurente",l:"Recurente"},{id:"nico",l:"Nico"}]},
     {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
@@ -1841,6 +1876,57 @@ function App() {
 
     {tab==="nico"&&<div>
       <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C}/>
+    </div>}
+
+    {tab==="tudor"&&<div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
+      {tudor.slice().sort((a,b)=>a.name.localeCompare(b.name,"ro")).map((t,fi)=>{
+        const ti_=tudor.indexOf(t);
+        const pending=t.done.filter(d=>!d).length;const allDone=t.tasks.length>0&&t.done.every(Boolean);
+        const activ=t.open;
+        return <div key={t.id} onClick={()=>setTudor(p=>p.map((x,i)=>({...x,open:i===ti_?!x.open:false})))} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,aspectRatio:"1 / 1",padding:"8px",cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:activ?"2px solid #2A2118":"1px solid transparent",transition:"border-color .1s"}}>
+          <span style={{fontSize:12,fontWeight:500,color:C.text,overflow:"hidden",wordBreak:"break-word",maxHeight:"3em",letterSpacing:"0.01em"}}>{t.name}</span>
+          {allDone?<span style={{fontSize:10,color:"#3A6A3A",flexShrink:0,fontWeight:600}}>✓</span>:
+           pending>0?<span style={{fontSize:10,fontWeight:600,color:C.text,flexShrink:0,background:"rgba(255,255,255,0.55)",padding:"1px 7px"}}>{pending}</span>:null}
+        </div>;
+      })}
+      </div>
+
+      {(()=>{
+        const t=tudor.find(x=>x.open);
+        if(!t) return null;
+        const ti_=tudor.indexOf(t);
+        const pending=t.done.filter(d=>!d).length;const allDone=t.tasks.length>0&&t.done.every(Boolean);
+        return <div style={{border:`1px solid ${C.border}`,background:C.surface}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
+            <div style={{flex:1,fontSize:14,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>{t.name}</div>
+            {(t.tasks.length>0)&&<div style={{fontSize:10,background:"#FFFFFF",color:C.textSub,padding:"3px 10px"}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>}
+            <button onClick={()=>setTudor(p=>p.map(x=>({...x,open:false})))} style={{background:"none",border:"none",cursor:"pointer",color:C.textSub,fontSize:15}}>×</button>
+          </div>
+          <div style={{padding:"12px 16px"}}>
+            {t.tasks.map((task,si)=>{
+              if(t.done[si]) return null;
+              return <TudorTaskRow key={`${t.id}-${si}`} task={task} date={(t.dates||[])[si]||""} obs={(t.obs||[])[si]||""} onToggle={()=>togTudor(ti_,si)} onDelete={()=>delTudorTask(ti_,si)} onDateChange={v=>updTudorDate(ti_,si,v)} onObsChange={v=>updTudorObs(ti_,si,v)}/>;
+            })}
+            {addingToTudor===ti_?<div style={{...row,marginTop:8}}>
+              <input autoFocus value={newTudorTask[ti_]||""} onChange={e=>setNewTudorTask(p=>({...p,[ti_]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addTudorTask(ti_);if(e.key==="Escape")setAddingToTudor(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
+              <button onClick={()=>addTudorTask(ti_)} style={btnP()}>OK</button>
+              <button onClick={()=>setAddingToTudor(null)} style={btnS}>✕</button>
+            </div>:<div style={{...row,justifyContent:"space-between",marginTop:8,marginBottom:8}}>
+              <button onClick={()=>setAddingToTudor(ti_)} style={{...btnS,fontSize:12,padding:"4px 12px"}}>+ sarcină</button>
+              <button onClick={()=>delTudor(ti_)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge task</button>
+            </div>}
+          </div>
+        </div>;
+      })()}
+
+      <div style={{marginTop:12}}>
+        {addingTudor?<div style={row}>
+          <input autoFocus value={newTudorName} onChange={e=>setNewTudorName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addTudor();if(e.key==="Escape")setAddingTudor(false);}} placeholder="Nume task nou..." style={{...inp,flex:1}}/>
+          <button onClick={addTudor} style={btnP()}>Adaugă</button>
+          <button onClick={()=>setAddingTudor(false)} style={btnS}>✕</button>
+        </div>:<button onClick={()=>setAddingTudor(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ task nou</button>}
+      </div>
     </div>}
 
     {tab==="motionblinds"&&<div>
