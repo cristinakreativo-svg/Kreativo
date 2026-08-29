@@ -187,7 +187,7 @@ function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,fu
       <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
         style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
-      <input type="time" value={o} onChange={e=>{const v=e.target.value;setO(v);onOraChange&&onOraChange(v);}} title="Ora (dacă e o programare/întâlnire)"
+      <input type="time" lang="ro" value={o} onChange={e=>{const v=e.target.value;setO(v);onOraChange&&onOraChange(v);}} title="Ora (dacă e o programare/întâlnire)"
         style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 5px",background:C.surface,color:C.textSub,outline:"none",flexShrink:0,width:72}}/>
       {onAchizChange&&<button title={achiz?"Marcat pt. achiziție":"Necesită achiziție material"} onClick={()=>onAchizChange(!achiz)} style={{background:"none",border:`1px solid ${achiz?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:achiz?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>achiz</button>}
       <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
@@ -292,7 +292,7 @@ function CalItem({item,onComplete,onReschedule}) {
       <div style={{display:"flex",gap:4,alignItems:"center"}}>
         <input type="date" autoFocus defaultValue={item.date} onChange={e=>setNd(e.target.value)}
           style={{fontSize:12,border:`1px solid ${C.accent}`,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>
-        {item.source==="Program"&&<input type="time" defaultValue={item.time||""} onChange={e=>setNt(e.target.value)}
+        {item.source==="Program"&&<input type="time" lang="ro" defaultValue={item.time||""} onChange={e=>setNt(e.target.value)}
           style={{fontSize:12,border:`1px solid ${C.accent}`,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>}
         <button onClick={()=>{onReschedule(nd||item.date,item.source==="Program"?(nt!==null?nt:item.time):undefined);setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",cursor:"pointer"}}>✓</button>
         <button onClick={()=>{setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 8px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",color:C.textSub}}>✕</button>
@@ -702,7 +702,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Data montaj:</span>
           <input type="date" value={client.dataMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,dataMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
           <span style={{fontSize:12,color:C.textMuted,marginLeft:8}}>Ora:</span>
-          <input type="time" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
+          <input type="time" lang="ro" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
         </div>
         <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:14,padding:"10px 14px",background:C.bg,border:"none",cursor:"pointer",textAlign:"left"}}>
           <span style={{fontSize:12,color:C.textSub,fontWeight:500,flex:1}}>📇 Date de contact (telefon, adresă)</span>
@@ -2154,7 +2154,6 @@ function App() {
     {tab==="calendar"&&<div>
       <div style={{...row,marginBottom:16}}>
         <div style={{flex:1,fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Calendar centralizat</div>
-        <button style={btnP()} onClick={()=>setShowEvForm(!showEvForm)}>+ Programare</button>
       </div>
 
       {(()=>{
@@ -2202,12 +2201,16 @@ function App() {
         </div>;
       })()}
 
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
+        <button style={btnP()} onClick={()=>setShowEvForm(!showEvForm)}>+ Programare</button>
+      </div>
+
       {showEvForm&&<div style={{...card,marginBottom:16}}>
         <div style={{display:"grid",gap:10}}>
           <div><label style={lbl}>Titlu *</label><input style={inp} value={evForm.title} onChange={e=>setEvForm(f=>({...f,title:e.target.value}))} placeholder="Programare, întâlnire..."/></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
             <div><label style={lbl}>Data</label><input type="date" style={inp} value={evForm.date} onChange={e=>setEvForm(f=>({...f,date:e.target.value}))}/></div>
-            <div><label style={lbl}>Ora</label><input type="time" style={inp} value={evForm.time} onChange={e=>setEvForm(f=>({...f,time:e.target.value}))}/></div>
+            <div><label style={lbl}>Ora</label><input type="time" lang="ro" style={inp} value={evForm.time} onChange={e=>setEvForm(f=>({...f,time:e.target.value}))}/></div>
             <div><label style={lbl}>Locație</label><input style={inp} value={evForm.loc} onChange={e=>setEvForm(f=>({...f,loc:e.target.value}))} placeholder="Showroom..."/></div>
           </div>
           <div style={row}><button style={btnP()} onClick={saveEv}>Salvează</button><button style={btnS} onClick={()=>setShowEvForm(false)}>Anulează</button></div>
