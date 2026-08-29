@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;}
 body{background:#F2EFE9;margin:0;font-family:'Jost',sans-serif;}
@@ -15,7 +15,7 @@ body{background:#F2EFE9;margin:0;font-family:'Jost',sans-serif;}
 input,select,textarea,button{font-family:'Jost',sans-serif;}
 input[type=checkbox]{accent-color:#A0845C;}
 ::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-thumb{background:#D4C9B8;border-radius:4px;}
+::-webkit-scrollbar-thumb{background:#D4C9B8;}
 button{transition:opacity .15s,transform .1s;}
 button:hover{opacity:0.85;}
 button:active{transform:scale(0.98);}
@@ -108,7 +108,8 @@ const PP = [
 ];
 
 const CC = ["#C4A882","#D4C9B8"];
-const CC_LIGHT = ["#A0845C","#C4A882"];
+const TC=[["#FBEAD9","#EEC9A3"],["#E4EEF8","#B6D2EC"],["#E5F3E9","#B8DCC5"],["#F8EAEE","#E9C3CE"],["#EEEAF8","#CFC5EC"],["#FAF2DB","#EBDCA6"],["#E8F2F2","#BBD9D9"],["#F4EBE2","#DCC8B4"]];
+const CC_LIGHT = ["#C4A882","#D4C9B8"];
 
 function tagTask(task) {
   const t=(typeof task==="object"?task.title:task).toLowerCase();
@@ -162,7 +163,7 @@ function impactScore(task,cat,prio) {
   return s;
 }
 
-const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#6B5E4E",textMuted:"#A8998A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#8B3A3A",dangerLight:"#F7EFEF",warn:"#8B6914",warnLight:"#F7F0E0"};
+const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#8B3A3A",dangerLight:"#F7EFEF",warn:"#8B6914",warnLight:"#F7F0E0"};
 
 function ClientTaskRow({task,date,notif,onToggle,onDelete,onDateChange,onNotifChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
@@ -170,14 +171,14 @@ function ClientTaskRow({task,date,notif,onToggle,onDelete,onDateChange,onNotifCh
   const tg=tagTask(taskTitle);
   const ov=d&&d<tday();
   const soon=d&&!ov&&daysTo(d)<=2&&daysTo(d)>=0;
-  return <div style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":soon?"#C8A870":C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+  return <div style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":soon?"#C8A870":C.border}`,padding:"10px 14px",marginBottom:8}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
       <input type="checkbox" checked={false} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
       <span style={{flex:1,fontSize:13,color:C.text}}>{taskTitle}</span>
-      <span style={{fontSize:10,padding:"2px 7px",borderRadius:6,background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
+      <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
-        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
-      <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,borderRadius:4,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
+        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
+      <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
     </div>
   </div>;
@@ -187,14 +188,14 @@ function AdminTaskRow({task,onToggle,onDelete,onRespChange,onDateChange}) {
   const [lr,setLr]=useState(task.resp||"Cristina");
   const [ld,setLd]=useState(task.deadline||"");
   const ov=ld&&!task.done&&ld<tday();
-  return <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+  return <div style={{background:C.surface,border:`1px solid ${C.border}`,padding:"10px 14px",marginBottom:8}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
       <input type="checkbox" checked={task.done} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
       <span style={{flex:1,fontSize:13,color:task.done?C.textMuted:C.text,textDecoration:task.done?"line-through":"none"}}>{task.title}</span>
       {!task.done&&<input value={lr} onChange={e=>{setLr(e.target.value);onRespChange(e.target.value);}} placeholder="Resp."
-        style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:C.textSub,outline:"none",width:100,flexShrink:0}}/>}
+        style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 7px",background:C.surface,color:C.textSub,outline:"none",width:100,flexShrink:0}}/>}
       {!task.done&&<input type="date" value={ld} onChange={e=>{setLd(e.target.value);onDateChange(e.target.value);}}
-        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>}
+        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>}
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
     </div>
   </div>;
@@ -202,16 +203,24 @@ function AdminTaskRow({task,onToggle,onDelete,onRespChange,onDateChange}) {
 
 function CalItem({item,onComplete,onReschedule}) {
   const [ed,setEd]=useState(false);
-  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.surface,border:`1px solid ${item.isRecurent?"#D4B88A":C.border}`,borderRadius:10,marginBottom:6}}>
+  const [nd,setNd]=useState("");
+  const [nt,setNt]=useState(null);
+  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.surface,border:`1px solid ${item.isRecurent?"#D4B88A":C.border}`,marginBottom:6}}>
     <input type="checkbox" checked={false} onChange={onComplete} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
     <div style={{flex:1}}>
       <div style={{fontSize:13,color:C.text}}>{item.title}</div>
       <div style={{fontSize:11,color:C.textMuted}}>{item.source}{item.loc?` · ${item.loc}`:""}{item.time?` · ${item.time}`:""}</div>
     </div>
     {!item.isRecurent&&(ed?
-      <input type="date" autoFocus defaultValue={item.date} onChange={e=>{if(e.target.value){onReschedule(e.target.value);setEd(false);}}} onBlur={()=>setEd(false)}
-        style={{fontSize:12,border:`1px solid ${C.accent}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>:
-      <button onClick={()=>setEd(true)} style={{fontSize:11,color:C.textMuted,border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 8px",background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Mută</button>
+      <div style={{display:"flex",gap:4,alignItems:"center"}}>
+        <input type="date" autoFocus defaultValue={item.date} onChange={e=>setNd(e.target.value)}
+          style={{fontSize:12,border:`1px solid ${C.accent}`,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>
+        {item.source==="Program"&&<input type="time" defaultValue={item.time||""} onChange={e=>setNt(e.target.value)}
+          style={{fontSize:12,border:`1px solid ${C.accent}`,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>}
+        <button onClick={()=>{onReschedule(nd||item.date,item.source==="Program"?(nt!==null?nt:item.time):undefined);setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",cursor:"pointer"}}>✓</button>
+        <button onClick={()=>{setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 8px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",color:C.textSub}}>✕</button>
+      </div>:
+      <button onClick={()=>setEd(true)} style={{fontSize:11,color:C.textMuted,border:`1px solid ${C.border}`,padding:"3px 8px",background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Mută</button>
     )}
   </div>;
 }
@@ -219,10 +228,10 @@ function CalItem({item,onComplete,onReschedule}) {
 function ManualInput({onAdd}) {
   const [v,setV]=useState("");
   return <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-    <input style={{padding:"9px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,flex:1,background:C.surface,color:C.text,outline:"none"}}
+    <input style={{padding:"9px 12px",border:`1px solid ${C.border}`,fontSize:13,flex:1,background:C.surface,color:C.text,outline:"none"}}
       value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&v.trim()){onAdd(v.trim());setV("");}}}
       placeholder="Adaugă ce ai făcut neprogramat..."/>
-    <button style={{padding:"8px 16px",border:"none",borderRadius:8,background:C.accent,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,whiteSpace:"nowrap"}}
+    <button style={{padding:"8px 16px",border:"none",background:C.accent,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:500,whiteSpace:"nowrap"}}
       onClick={()=>{if(v.trim()){onAdd(v.trim());setV("");}}}>+ Adaugă</button>
   </div>;
 }
@@ -232,21 +241,21 @@ function ClientMotoare({client,motoare,onAdd,onRemove}) {
   const [qty,setQty]=useState(1);
   return <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.bg}`}}>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:500,marginBottom:8}}>Motoare necesare</div>
-    {(client.motoare||[]).map(m=><div key={m.model} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"5px 10px",background:C.accentLight,borderRadius:7}}>
+    {(client.motoare||[]).map(m=><div key={m.model} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,padding:"5px 10px",background:C.accentLight}}>
       <span style={{fontSize:12,fontWeight:500,color:C.accent,minWidth:55}}>{m.model}</span>
       <span style={{fontSize:12,color:C.text}}>× {m.qty} buc.</span>
       <button onClick={()=>onRemove(m.model)} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14}}>×</button>
     </div>)}
     <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginTop:6}}>
       <select value={sel} onChange={e=>setSel(e.target.value)}
-        style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",background:C.surface,outline:"none",color:C.text}}>
+        style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 8px",background:C.surface,outline:"none",color:C.text}}>
         {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
       </select>
       <input type="number" min="1" value={qty} onChange={e=>setQty(parseInt(e.target.value)||1)}
-        style={{width:55,fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
+        style={{width:55,fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
       <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
       <button onClick={()=>onAdd(sel||motoare[0]?.model,qty)}
-        style={{padding:"4px 12px",border:"none",borderRadius:6,background:C.accent,color:"#fff",cursor:"pointer",fontSize:12}}>+ Adaugă</button>
+        style={{padding:"4px 12px",border:"none",background:C.accent,color:"#fff",cursor:"pointer",fontSize:12}}>+ Adaugă</button>
     </div>
   </div>;
 }
@@ -279,7 +288,7 @@ function LogDiscutii({id,log,setLog,C,inp,btnP,gid,tday,fmtD}){
   return <div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`}}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:open?10:0}}>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,cursor:"pointer"}} onClick={()=>setOpen(!open)}>
-        Discuții {entries.length>0&&<span style={{background:C.accentLight,color:C.accent,padding:"1px 6px",borderRadius:10,fontSize:10,marginLeft:4}}>{entries.length}</span>}
+        Discuții {entries.length>0&&<span style={{background:C.accentLight,color:C.accent,padding:"1px 6px",fontSize:10,marginLeft:4}}>{entries.length}</span>}
         <span style={{marginLeft:6,fontSize:10}}>{open?"▾":"▸"}</span>
       </div>
       {!open&&entries.length>0&&<span style={{fontSize:11,color:C.textMuted}}>{fmtD(entries[0].data)} — {entries[0].text.slice(0,40)}{entries[0].text.length>40?"...":""}</span>}
@@ -290,7 +299,7 @@ function LogDiscutii({id,log,setLog,C,inp,btnP,gid,tday,fmtD}){
         <button onClick={addEntry} style={{...btnP(),fontSize:11,padding:"6px 14px"}}>+ Adaugă</button>
       </div>
       {entries.length===0&&<div style={{fontSize:12,color:C.textMuted,textAlign:"center",padding:"0.5rem"}}>Nicio discuție notată.</div>}
-      {entries.map(e=><div key={e.id} style={{display:"flex",gap:8,padding:"8px 10px",background:C.bg,borderRadius:8,marginBottom:4,alignItems:"flex-start"}}>
+      {entries.map(e=><div key={e.id} style={{display:"flex",gap:8,padding:"8px 10px",background:C.bg,marginBottom:4,alignItems:"flex-start"}}>
         <div style={{flex:1}}>
           <div style={{fontSize:12,color:C.text}}>{e.text}</div>
           <div style={{fontSize:10,color:C.textMuted,marginTop:2}}>{fmtD(e.data)} · {e.ora}</div>
@@ -307,18 +316,18 @@ function OfertaAddTask({onAdd,inp,btnP,tday}){
   const [tip,setTip]=React.useState("Comandă");
   const [data,setData]=React.useState("");
   const TIPURI=["Comandă","Ofertă","Măsurătoare","Montaj","Livrare","Plată","Alt task"];
-  if(!open) return <button onClick={()=>setOpen(true)} style={{fontSize:11,color:"#A0845C",border:"1px dashed #D4C9B8",borderRadius:6,padding:"5px 12px",background:"transparent",cursor:"pointer",marginTop:6,width:"100%"}}>+ adaugă sarcină</button>;
-  return <div style={{marginTop:6,padding:"10px",background:"#F5F0E8",borderRadius:8,border:"1px solid #E0D8CC"}}>
+  if(!open) return <button onClick={()=>setOpen(true)} style={{fontSize:11,color:"#A0845C",border:"1px dashed #D4C9B8",padding:"5px 12px",background:"transparent",cursor:"pointer",marginTop:6,width:"100%"}}>+ adaugă sarcină</button>;
+  return <div style={{marginTop:6,padding:"10px",background:"#F5F0E8",border:"1px solid #E0D8CC"}}>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
       <input autoFocus value={task} onChange={e=>setTask(e.target.value)} onKeyDown={e=>e.key==="Escape"&&setOpen(false)} placeholder="Descriere sarcină..." style={{...inp,flex:2,minWidth:120,padding:"6px 10px",fontSize:12}}/>
-      <select value={tip} onChange={e=>setTip(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",borderRadius:6,padding:"6px 8px",background:"#FAF8F4",outline:"none"}}>
+      <select value={tip} onChange={e=>setTip(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",padding:"6px 8px",background:"#FAF8F4",outline:"none"}}>
         {TIPURI.map(t=><option key={t} value={t}>{t}</option>)}
       </select>
-      <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",borderRadius:6,padding:"6px 8px",background:"#FAF8F4",outline:"none"}}/>
+      <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",padding:"6px 8px",background:"#FAF8F4",outline:"none"}}/>
     </div>
     <div style={{display:"flex",gap:6}}>
       <button onClick={()=>{if(task.trim()){onAdd({title:task.trim(),tip,date:data});setTask("");setTip("Comandă");setData("");setOpen(false);}}} style={{...btnP(),fontSize:11,padding:"5px 12px"}}>+ Adaugă</button>
-      <button onClick={()=>setOpen(false)} style={{fontSize:11,padding:"5px 10px",border:"1px solid #E0D8CC",borderRadius:6,background:"transparent",cursor:"pointer",color:"#A8998A"}}>Anulează</button>
+      <button onClick={()=>setOpen(false)} style={{fontSize:11,padding:"5px 10px",border:"1px solid #E0D8CC",background:"transparent",cursor:"pointer",color:"#A8998A"}}>Anulează</button>
     </div>
   </div>;
 }
@@ -326,7 +335,7 @@ function OfertaAddTask({onAdd,inp,btnP,tday}){
 function AddOfertaForm({onAdd,inp,btnP,btnS,C}){
   const [open,setOpen]=React.useState(false);
   const [name,setName]=React.useState("");
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,borderRadius:12,background:"transparent",cursor:"pointer"}}>+ ofertă nouă</button>;
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ ofertă nouă</button>;
   return <div style={{display:"flex",gap:6}}>
     <input autoFocus value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&name.trim()){onAdd(name.trim());setName("");setOpen(false);}if(e.key==="Escape")setOpen(false);}} placeholder="Nume client / ofertă..." style={{...inp,flex:1}}/>
     <button onClick={()=>{if(name.trim()){onAdd(name.trim());setName("");setOpen(false);}}} style={btnP()}>Adaugă</button>
@@ -344,33 +353,33 @@ function AddBiletForm({furnizori,onAdd,onAddFurnizor}){
   const [addingFurnizor,setAddingFurnizor]=React.useState(false);
   const C2={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textMuted:"#A8998A",accent:"#A0845C"};
   const confirmFurnizorNou=()=>{if(furnizorNou.trim()){const f=furnizorNou.trim();setFurnizor(f);onAddFurnizor(f);setAddingFurnizor(false);setFurnizorNou("");}};
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:C2.accent,border:`1.5px dashed ${C2.border}`,borderRadius:10,background:C2.surface,cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Bilet la ordin nou</button>;
-  return <div style={{background:C2.surface,border:`1px solid ${C2.border}`,borderRadius:12,padding:"16px",marginBottom:16}}>
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:C2.accent,border:`1.5px dashed ${C2.border}`,background:C2.surface,cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Bilet la ordin nou</button>;
+  return <div style={{background:C2.surface,border:`1px solid ${C2.border}`,padding:"16px",marginBottom:16}}>
     <div style={{fontSize:11,color:C2.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Bilet la ordin nou</div>
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10}}>
       <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Nr. bilet</div>
-        <input value={numar} onChange={e=>setNumar(e.target.value)} placeholder="ex: 001" style={{width:90,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
+        <input value={numar} onChange={e=>setNumar(e.target.value)} placeholder="ex: 001" style={{width:90,fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
       <div style={{flex:2,minWidth:140}}>
         <div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Furnizor</div>
         {addingFurnizor?<div style={{display:"flex",gap:6}}>
-          <input autoFocus value={furnizorNou} onChange={e=>setFurnizorNou(e.target.value)} onKeyDown={e=>e.key==="Enter"&&confirmFurnizorNou()} placeholder="Nume furnizor nou" style={{flex:1,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/>
-          <button onClick={confirmFurnizorNou} style={{padding:"6px 10px",border:"none",borderRadius:6,background:C2.accent,color:"#fff",cursor:"pointer",fontSize:12}}>OK</button>
-          <button onClick={()=>{setAddingFurnizor(false);setFurnizorNou("");}} style={{padding:"6px 10px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12}}>✕</button>
+          <input autoFocus value={furnizorNou} onChange={e=>setFurnizorNou(e.target.value)} onKeyDown={e=>e.key==="Enter"&&confirmFurnizorNou()} placeholder="Nume furnizor nou" style={{flex:1,fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 10px",outline:"none",background:"#fff"}}/>
+          <button onClick={confirmFurnizorNou} style={{padding:"6px 10px",border:"none",background:C2.accent,color:"#fff",cursor:"pointer",fontSize:12}}>OK</button>
+          <button onClick={()=>{setAddingFurnizor(false);setFurnizorNou("");}} style={{padding:"6px 10px",border:`1px solid ${C2.border}`,background:"transparent",cursor:"pointer",fontSize:12}}>✕</button>
         </div>:<div style={{display:"flex",gap:6}}>
-          <select value={furnizor} onChange={e=>setFurnizor(e.target.value)} style={{flex:1,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 8px",background:"#fff",outline:"none"}}>
+          <select value={furnizor} onChange={e=>setFurnizor(e.target.value)} style={{flex:1,fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 8px",background:"#fff",outline:"none"}}>
             {furnizori.map(f=><option key={f} value={f}>{f}</option>)}
           </select>
-          <button onClick={()=>setAddingFurnizor(true)} style={{padding:"6px 10px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C2.textMuted,whiteSpace:"nowrap"}}>+ nou</button>
+          <button onClick={()=>setAddingFurnizor(true)} style={{padding:"6px 10px",border:`1px solid ${C2.border}`,background:"transparent",cursor:"pointer",fontSize:11,color:C2.textMuted,whiteSpace:"nowrap"}}>+ nou</button>
         </div>}
       </div>
       <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Valoare (RON)</div>
-        <input type="number" value={valoare} onChange={e=>setValoare(e.target.value)} placeholder="0" style={{width:110,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
+        <input type="number" value={valoare} onChange={e=>setValoare(e.target.value)} placeholder="0" style={{width:110,fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
       <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Scadență</div>
-        <input type="date" value={scadenta} onChange={e=>setScadenta(e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
+        <input type="date" value={scadenta} onChange={e=>setScadenta(e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 10px",outline:"none",background:"#fff"}}/></div>
     </div>
     <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-      <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
-      <button onClick={()=>{if(valoare&&scadenta){onAdd({numar,furnizor,valoare:Number(valoare),scadenta});setNumar("");setValoare("");setScadenta("");setOpen(false);}}} style={{padding:"7px 20px",border:"none",borderRadius:6,background:C2.accent,color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează</button>
+      <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
+      <button onClick={()=>{if(valoare&&scadenta){onAdd({numar,furnizor,valoare:Number(valoare),scadenta});setNumar("");setValoare("");setScadenta("");setOpen(false);}}} style={{padding:"7px 20px",border:"none",background:C2.accent,color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează</button>
     </div>
   </div>;
 }
@@ -435,11 +444,11 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Cash Flow · Registru zilnic</div>
 
-    {primaZiNeg&&<div style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,borderRadius:10,marginBottom:10,fontSize:13,color:C.danger,fontWeight:500}}>
+    {primaZiNeg&&<div style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,marginBottom:10,fontSize:13,color:C.danger,fontWeight:500}}>
       ⚠️ Sold negativ previzionat pe {primaZiNeg.label}: {primaZiNeg.soldEnd.toLocaleString("ro-RO")} RON
     </div>}
     {bilete.filter(b=>!b.achitat&&b.scadenta&&daysTo(b.scadenta)<=7&&daysTo(b.scadenta)>=0).map(b=>(
-      <div key={b.id} style={{padding:"8px 14px",background:C.warnLight,border:`1px solid #C8A870`,borderRadius:10,marginBottom:6,fontSize:12,color:C.warn}}>
+      <div key={b.id} style={{padding:"8px 14px",background:C.warnLight,border:`1px solid #C8A870`,marginBottom:6,fontSize:12,color:C.warn}}>
         ⏰ Bilet #{b.numar} · {b.furnizor} · {Number(b.valoare).toLocaleString("ro-RO")} RON — scadent {fmtD(b.scadenta)}
       </div>
     ))}
@@ -465,7 +474,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
     {/* Sectiuni */}
     <div style={{display:"flex",gap:6,marginBottom:14}}>
       {[["registru","Registru"],["bilete","Bilete la ordin"],["recurente","Recurente"]].map(([id,l])=>
-        <button key={id} onClick={()=>setSectiune(id)} style={{padding:"7px 14px",border:`1px solid ${sectiune===id?C.accent:C.border}`,borderRadius:8,background:sectiune===id?C.accentLight:"transparent",color:sectiune===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:sectiune===id?500:400}}>{l}</button>
+        <button key={id} onClick={()=>setSectiune(id)} style={{padding:"7px 14px",border:`1px solid ${sectiune===id?C.accent:C.border}`,background:sectiune===id?C.accentLight:"transparent",color:sectiune===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:sectiune===id?500:400}}>{l}</button>
       )}
     </div>
 
@@ -480,7 +489,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
               <div style={{fontSize:13,fontWeight:600,color:z.isAzi?C.accent:C.text}}>{z.label}</div>
               <div style={{fontSize:11,color:C.textMuted,marginTop:2}}>Sold la început de zi: <strong style={{color:z.soldStart<0?C.danger:C.textSub}}>{z.soldStart.toLocaleString("ro-RO")} RON</strong></div>
             </div>
-            {z.isAzi&&<span style={{fontSize:10,background:C.accent,color:"#fff",padding:"3px 8px",borderRadius:6,fontWeight:600}}>AZI</span>}
+            {z.isAzi&&<span style={{fontSize:10,background:C.accent,color:"#fff",padding:"3px 8px",fontWeight:600}}>AZI</span>}
           </div>
 
           {/* ÎNCASĂRI */}
@@ -488,7 +497,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
             <div style={{fontSize:10,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:6}}>↓ Încasări</div>
             {z.incasariZi.map(m=><div key={m.id} style={{marginBottom:4}}>
               {editId===m.id?
-                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:"#F2F8F2",borderRadius:8,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:"#F2F8F2",flexWrap:"wrap"}}>
                   <input value={editData.descriere} onChange={e=>setEditData(x=>({...x,descriere:e.target.value}))} placeholder="Descriere" style={{...inpS,flex:2,minWidth:100}}/>
                   <input type="number" value={editData.suma} onChange={e=>setEditData(x=>({...x,suma:e.target.value}))} style={{...inpS,width:90}}/>
                   <input type="date" value={editData.data} onChange={e=>setEditData(x=>({...x,data:e.target.value}))} style={{...inpS,width:130}}/>
@@ -505,13 +514,13 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
             </div>)}
             {/* Buton adauga incasare */}
             {showForm?.data===z.data&&showForm?.tip==="incasare"?
-              <div style={{display:"flex",gap:6,alignItems:"center",padding:"8px 10px",background:"#F2F8F2",borderRadius:8,marginTop:4}}>
+              <div style={{display:"flex",gap:6,alignItems:"center",padding:"8px 10px",background:"#F2F8F2",marginTop:4}}>
                 <input autoFocus value={formData.descriere} onChange={e=>setFormData(x=>({...x,descriere:e.target.value}))} placeholder="Client / descriere" style={{...inpS,flex:2}}/>
                 <input type="number" value={formData.suma} onChange={e=>setFormData(x=>({...x,suma:e.target.value}))} placeholder="Sumă" style={{...inpS,width:100}}/>
                 <button onClick={()=>{adaugaInreg(z.data,"incasare");setShowForm(null);}} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
                 <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
               </div>:
-              <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",borderRadius:6,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
+              <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
             }
             {z.totalIn>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:"#2A6A2A",marginTop:6,paddingTop:6,borderTop:"1px solid #D0E8D0"}}>Total încasări: +{z.totalIn.toLocaleString("ro-RO")} RON</div>}
           </div>
@@ -521,7 +530,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
             <div style={{fontSize:10,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:6}}>↑ Plăți</div>
             {z.platiZi.map(m=><div key={m.id} style={{marginBottom:4}}>
               {editId===m.id?
-                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:C.dangerLight,borderRadius:8,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:C.dangerLight,flexWrap:"wrap"}}>
                   <input value={editData.descriere} onChange={e=>setEditData(x=>({...x,descriere:e.target.value}))} placeholder="Descriere" style={{...inpS,flex:2,minWidth:100}}/>
                   <input type="number" value={editData.suma} onChange={e=>setEditData(x=>({...x,suma:e.target.value}))} style={{...inpS,width:90}}/>
                   <input type="date" value={editData.data} onChange={e=>setEditData(x=>({...x,data:e.target.value}))} style={{...inpS,width:130}}/>
@@ -539,14 +548,14 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
             {/* Bilete scadente */}
             {z.bileteZi.map(b=><div key={b.id} style={{marginBottom:4}}>
               {editId===b.id?
-                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:C.dangerLight,borderRadius:8,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:6,alignItems:"center",padding:"6px 10px",background:C.dangerLight,flexWrap:"wrap"}}>
                   <input value={editData.descriere} onChange={e=>setEditData(x=>({...x,descriere:e.target.value}))} placeholder="Furnizor" style={{...inpS,flex:2,minWidth:100}}/>
                   <input type="number" value={editData.suma} onChange={e=>setEditData(x=>({...x,suma:e.target.value}))} style={{...inpS,width:90}}/>
                   <input type="date" value={editData.data} onChange={e=>setEditData(x=>({...x,data:e.target.value}))} style={{...inpS,width:130}}/>
                   <button onClick={()=>{setBilete(p=>p.map(x=>x.id!==b.id?x:{...x,furnizor:editData.descriere,valoare:Number(editData.suma),scadenta:editData.data}));setEditId(null);}} style={{...btnP(C.danger),fontSize:11,padding:"5px 12px"}}>✓</button>
                   <button onClick={()=>setEditId(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
                 </div>:
-                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",borderRadius:8,gap:8}}>
+                <div style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",gap:8}}>
                   <span style={{flex:1,fontSize:13,color:"#4A2A2A"}}>Bilet #{b.numar} · {b.furnizor}</span>
                   <span style={{fontSize:14,fontWeight:700,color:C.danger,minWidth:140,textAlign:"right"}}>-{Number(b.valoare).toLocaleString("ro-RO")} RON</span>
                   <button onClick={()=>{setEditId(b.id);setEditData({descriere:b.furnizor,suma:b.valoare,data:b.scadenta});}} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:12,width:16}}>✎</button>
@@ -555,14 +564,14 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
               }
             </div>)}
             {/* Recurente */}
-            {z.recZi.map(r=><div key={r.id} style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",borderRadius:8,gap:8,marginBottom:4}}>
+            {z.recZi.map(r=><div key={r.id} style={{display:"flex",alignItems:"center",padding:"7px 10px",background:"#FBF5F5",gap:8,marginBottom:4}}>
               <span style={{flex:1,fontSize:13,color:"#4A2A2A"}}>{r.denumire}</span>
               <span style={{fontSize:14,fontWeight:700,color:C.danger,minWidth:140,textAlign:"right"}}>-{Number(r.suma).toLocaleString("ro-RO")} RON</span>
               <div style={{width:32}}/>
             </div>)}
             {/* Buton adauga plata */}
             {showForm?.data===z.data&&showForm?.tip==="plata"?
-              <div style={{padding:"8px 10px",background:C.dangerLight,borderRadius:8,marginTop:4}}>
+              <div style={{padding:"8px 10px",background:C.dangerLight,marginTop:4}}>
                 <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:6}}>
                   {formData.addingFurnizor?
                     <>
@@ -575,7 +584,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                         <option value="">— alege furnizor —</option>
                         {furnizoriLista.map(f=><option key={f} value={f}>{f}</option>)}
                       </select>
-                      <button onClick={()=>setFormData(x=>({...x,addingFurnizor:true}))} style={{fontSize:11,padding:"5px 10px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",color:C.textSub,whiteSpace:"nowrap"}}>+ nou</button>
+                      <button onClick={()=>setFormData(x=>({...x,addingFurnizor:true}))} style={{fontSize:11,padding:"5px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",color:C.textSub,whiteSpace:"nowrap"}}>+ nou</button>
                     </>
                   }
                   <input type="number" value={formData.suma} onChange={e=>setFormData(x=>({...x,suma:e.target.value}))} placeholder="Sumă" style={{...inpS,width:100}}/>
@@ -585,13 +594,13 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                   <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>Anulează</button>
                 </div>
               </div>:
-              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:C.danger,border:`1px dashed #C0A0A0`,borderRadius:6,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
+              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:C.danger,border:`1px dashed #C0A0A0`,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
             }
             {z.totalOut>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:C.danger,marginTop:6,paddingTop:6,borderTop:"1px solid #E8D0D0"}}>Total plăți: -{z.totalOut.toLocaleString("ro-RO")} RON</div>}
           </div>
 
           {/* SOLD FINAL ZI */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:z.soldEnd<0?C.dangerLight:C.accentLight,borderRadius:10,marginTop:4}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:z.soldEnd<0?C.dangerLight:C.accentLight,marginTop:4}}>
             <div style={{fontSize:12,color:C.textSub}}>
               {z.soldStart.toLocaleString("ro-RO")} RON
               {z.totalIn>0&&<span style={{color:"#3A6A3A"}}> + {z.totalIn.toLocaleString("ro-RO")}</span>}
@@ -616,7 +625,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
           <div style={{fontSize:18,fontWeight:700,color:C.accent}}>{bilete.filter(b=>b.achitat).reduce((s,b)=>s+Number(b.valoare||0),0).toLocaleString("ro-RO")} RON</div>
         </div>
       </div>}
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,overflow:"hidden"}}>
         <div style={{display:"grid",gridTemplateColumns:"70px 1fr 110px 100px 90px 40px",padding:"8px 14px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
           {["NR.","FURNIZOR","VALOARE","SCADENȚĂ","STATUS",""].map(h=><div key={h} style={{fontSize:9,fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</div>)}
         </div>
@@ -630,7 +639,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
             <div style={{fontSize:13,fontWeight:600,color:ov?C.danger:C.text}}>{Number(b.valoare||0).toLocaleString("ro-RO")} RON</div>
             <div style={{fontSize:12,color:ov?C.danger:soon?C.warn:C.textSub,fontWeight:ov||soon?600:400}}>{fmtD(b.scadenta)}</div>
             <button onClick={()=>setBilete(p=>p.map(x=>x.id===b.id?{...x,achitat:!x.achitat}:x))}
-              style={{fontSize:10,padding:"3px 8px",borderRadius:6,border:"none",cursor:"pointer",fontWeight:500,background:b.achitat?C.accentLight:C.dangerLight,color:b.achitat?C.accent:C.danger}}>
+              style={{fontSize:10,padding:"3px 8px",border:"none",cursor:"pointer",fontWeight:500,background:b.achitat?C.accentLight:C.dangerLight,color:b.achitat?C.accent:C.danger}}>
               {b.achitat?"✓ Achitat":"Neachitat"}
             </button>
             <button onClick={()=>setBilete(p=>p.filter(x=>x.id!==b.id))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
@@ -660,18 +669,18 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
         </div>
       </div>}
       {recurente.length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nicio plată recurentă.</div>}
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,overflow:"hidden"}}>
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,overflow:"hidden"}}>
         {recurente.map(r=><div key={r.id} style={{display:"flex",alignItems:"center",gap:8,padding:"12px 16px",borderBottom:`1px solid ${C.bg}`,flexWrap:"wrap"}}>
           <div style={{flex:2,minWidth:120}}>
-            <input value={r.denumire} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,denumire:e.target.value}))} style={{width:"100%",fontSize:13,fontWeight:500,color:C.text,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",background:C.surface}}/>
+            <input value={r.denumire} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,denumire:e.target.value}))} style={{width:"100%",fontSize:13,fontWeight:500,color:C.text,border:`1px solid ${C.border}`,padding:"4px 8px",outline:"none",background:C.surface}}/>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:4}}>
             <span style={{fontSize:11,color:C.textMuted}}>Ziua</span>
-            <input type="number" min="1" max="31" value={r.ziua} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,ziua:e.target.value}))} style={{width:50,fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",outline:"none",textAlign:"center",background:C.surface}}/>
+            <input type="number" min="1" max="31" value={r.ziua} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,ziua:e.target.value}))} style={{width:50,fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",textAlign:"center",background:C.surface}}/>
             <span style={{fontSize:11,color:C.textMuted}}>/ lună</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:4}}>
-            <input type="number" value={r.suma} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,suma:Number(e.target.value)||0}))} style={{width:100,fontSize:13,fontWeight:600,color:C.danger,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",textAlign:"right",background:C.surface}}/>
+            <input type="number" value={r.suma} onChange={e=>updT("recurente",recurente.map(x=>x.id!==r.id?x:{...x,suma:Number(e.target.value)||0}))} style={{width:100,fontSize:13,fontWeight:600,color:C.danger,border:`1px solid ${C.border}`,padding:"4px 8px",outline:"none",textAlign:"right",background:C.surface}}/>
             <span style={{fontSize:12,color:C.textMuted}}>RON</span>
           </div>
           <button onClick={()=>updT("recurente",recurente.filter(x=>x.id!==r.id))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
@@ -702,30 +711,30 @@ function AddFacturaForm({motoare, onAdd}){
     setPozitii([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
     setOpen(false);
   };
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#3A6A3A",border:"1.5px dashed #90C090",borderRadius:10,background:"#F2F8F2",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Înregistrează intrare nouă (factură)</button>;
-  return <div style={{background:"#F2F8F2",border:"1.5px solid #90C090",borderRadius:12,padding:"16px",marginBottom:16}}>
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#3A6A3A",border:"1.5px dashed #90C090",background:"#F2F8F2",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Înregistrează intrare nouă (factură)</button>;
+  return <div style={{background:"#F2F8F2",border:"1.5px solid #90C090",padding:"16px",marginBottom:16}}>
     <div style={{fontSize:11,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Intrare nouă · Factură</div>
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:12}}>
       <div style={{flex:2,minWidth:120}}><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Furnizor *</div>
-        <input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="ex: Coulisse" style={{width:"100%",fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
+        <input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="ex: Coulisse" style={{width:"100%",fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
       <div style={{flex:2,minWidth:120}}><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Nr. factură</div>
-        <input value={factura} onChange={e=>setFactura(e.target.value)} placeholder="ex: F2024-001" style={{width:"100%",fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
+        <input value={factura} onChange={e=>setFactura(e.target.value)} placeholder="ex: F2024-001" style={{width:"100%",fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
       <div><div style={{fontSize:10,color:C2.textMuted,marginBottom:3}}>Data</div>
-        <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
+        <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 10px",outline:"none",background:C2.surface}}/></div>
     </div>
     <div style={{fontSize:10,color:C2.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Poziții</div>
     {pozitii.map((pz,i)=><div key={pz.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
-      <select value={pz.model} onChange={e=>updPoz(pz.id,"model",e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 8px",background:C2.surface,outline:"none",flex:1}}>
+      <select value={pz.model} onChange={e=>updPoz(pz.id,"model",e.target.value)} style={{fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 8px",background:C2.surface,outline:"none",flex:1}}>
         {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
       </select>
-      <input type="number" min="1" value={pz.qty} onChange={e=>updPoz(pz.id,"qty",e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C2.border}`,borderRadius:6,padding:"6px 8px",outline:"none",textAlign:"center"}}/>
+      <input type="number" min="1" value={pz.qty} onChange={e=>updPoz(pz.id,"qty",e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C2.border}`,padding:"6px 8px",outline:"none",textAlign:"center"}}/>
       <span style={{fontSize:12,color:C2.textMuted}}>buc.</span>
       {pozitii.length>1&&<button onClick={()=>delPoz(pz.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#C07070",fontSize:16,padding:"0 4px"}}>×</button>}
     </div>)}
-    <button onClick={addPoz} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",borderRadius:6,padding:"4px 12px",background:"transparent",cursor:"pointer",marginBottom:12}}>+ adaugă poziție</button>
+    <button onClick={addPoz} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",padding:"4px 12px",background:"transparent",cursor:"pointer",marginBottom:12}}>+ adaugă poziție</button>
     <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-      <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
-      <button onClick={handleSave} style={{padding:"7px 20px",border:"none",borderRadius:6,background:"#3A6A3A",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează factura</button>
+      <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
+      <button onClick={handleSave} style={{padding:"7px 20px",border:"none",background:"#3A6A3A",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează factura</button>
     </div>
   </div>;
 }
@@ -761,7 +770,7 @@ function EnergieCard({energie,setEnergie,C,card,tday}){
         <div style={{display:"flex",gap:8}}>
           {[["1","🔴 Scăzută","#8B3A3A","#F7EFEF"],["2","🟡 Medie","#8B6914","#F7F0E0"],["3","🟢 Ridicată","#3A6A3A","#EEF5EE"]].map(([v,l,col,bg])=>
             <button key={v} onClick={()=>updEnergie("nivel",v)}
-              style={{flex:1,padding:"8px 6px",border:`1.5px solid ${eAzi.nivel===v?col:C.border}`,borderRadius:8,background:eAzi.nivel===v?bg:"transparent",color:eAzi.nivel===v?col:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.nivel===v?600:400,transition:"all .15s"}}>
+              style={{flex:1,padding:"8px 6px",border:`1.5px solid ${eAzi.nivel===v?col:C.border}`,background:eAzi.nivel===v?bg:"transparent",color:eAzi.nivel===v?col:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.nivel===v?600:400,transition:"all .15s"}}>
               {l}
             </button>
           )}
@@ -772,7 +781,7 @@ function EnergieCard({energie,setEnergie,C,card,tday}){
         <div style={{display:"flex",gap:8}}>
           {[["blocuri","Blocuri mari de timp"],["mici","Task-uri mici / rapide"]].map(([v,l])=>
             <button key={v} onClick={()=>updEnergie("mod",v)}
-              style={{flex:1,padding:"8px 10px",border:`1.5px solid ${eAzi.mod===v?C.accent:C.border}`,borderRadius:8,background:eAzi.mod===v?C.accentLight:"transparent",color:eAzi.mod===v?C.accent:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.mod===v?600:400,transition:"all .15s"}}>
+              style={{flex:1,padding:"8px 10px",border:`1.5px solid ${eAzi.mod===v?C.accent:C.border}`,background:eAzi.mod===v?C.accentLight:"transparent",color:eAzi.mod===v?C.accent:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.mod===v?600:400,transition:"all .15s"}}>
               {l}
             </button>
           )}
@@ -783,13 +792,13 @@ function EnergieCard({energie,setEnergie,C,card,tday}){
         <div style={{display:"flex",gap:8}}>
           {[[true,"Da, sunt deschisă"],[false,"Nu azi"]].map(([v,l])=>
             <button key={String(v)} onClick={()=>updEnergie("contact",v)}
-              style={{flex:1,padding:"8px 10px",border:`1.5px solid ${eAzi.contact===v?C.accent:C.border}`,borderRadius:8,background:eAzi.contact===v?C.accentLight:"transparent",color:eAzi.contact===v?C.accent:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.contact===v?600:400,transition:"all .15s"}}>
+              style={{flex:1,padding:"8px 10px",border:`1.5px solid ${eAzi.contact===v?C.accent:C.border}`,background:eAzi.contact===v?C.accentLight:"transparent",color:eAzi.contact===v?C.accent:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.contact===v?600:400,transition:"all .15s"}}>
               {l}
             </button>
           )}
         </div>
       </div>
-      {completat&&<button onClick={()=>setOpen(false)} style={{marginTop:12,width:"100%",padding:"7px",border:"none",borderRadius:6,background:C.accent,color:"#fff",cursor:"pointer",fontSize:11,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>✓ Salvat</button>}
+      {completat&&<button onClick={()=>setOpen(false)} style={{marginTop:12,width:"100%",padding:"7px",border:"none",background:C.accent,color:"#fff",cursor:"pointer",fontSize:11,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>✓ Salvat</button>}
     </div>}
   </div>;
 }
@@ -1014,8 +1023,8 @@ function App() {
     else if(item.source==="Ofertă") setOferte(p=>p.map((o,i)=>{if(i!==item.oi)return o;const d=[...(o.done||[])];d[item.ti]=true;return {...o,done:d};}));
     else if(data.tasks.find(t=>t.id===item.id)) togTask(item.id);
   };
-  const reschedCal=(item,nd)=>{
-    if(item.source==="Program") setData(d=>({...d,events:d.events.map(e=>e.id===item.eventId?{...e,date:nd}:e).sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1)}));
+  const reschedCal=(item,nd,ntime)=>{
+    if(item.source==="Program") setData(d=>({...d,events:d.events.map(e=>e.id===item.eventId?{...e,date:nd,...(ntime!==undefined?{time:ntime}:{})}:e).sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1)}));
     else if(item.source==="Client"){const ci=clients.findIndex(c=>c.name===item.clientName);if(ci!==-1)updCliDate(ci,item.ti,nd);}
     else if(item.source==="Personal"){const pi=proiecte.findIndex(p=>p.name===item.proiectName);if(pi!==-1)updPrDate(pi,item.ti,nd);}
     else if(["Contabilitate","Administrativ","Marketing","Personal"].includes(item.source)) updAdmin(item.source.toLowerCase(),item.id,"deadline",nd);
@@ -1121,13 +1130,13 @@ function App() {
     {id:"trezorerie",l:"Cash Flow"}
   ];
 
-  const inp={padding:"9px 14px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:13,width:"100%",background:C.surface,color:C.text,outline:"none",letterSpacing:"0.01em"};
-  const card={background:C.surface,border:`1px solid ${C.border}`,borderRadius:14,padding:"18px 22px",marginBottom:12,boxShadow:"0 1px 6px rgba(42,33,24,0.04)"};
-  const btnP=(bg)=>({padding:"8px 20px",border:"none",borderRadius:6,background:bg||C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"});
-  const btnS={padding:"8px 16px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub,letterSpacing:"0.04em"};
+  const inp={padding:"9px 14px",border:`1px solid ${C.border}`,fontSize:13,width:"100%",background:C.surface,color:C.text,outline:"none",letterSpacing:"0.01em"};
+  const card={background:C.surface,border:`1px solid ${C.border}`,padding:"18px 22px",marginBottom:12};
+  const btnP=(bg)=>({padding:"8px 20px",border:"none",background:bg||C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"});
+  const btnS={padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub,letterSpacing:"0.04em"};
   const lbl={fontSize:10,color:C.textMuted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:500};
   const row={display:"flex",alignItems:"center",gap:10};
-  const PBar=({pct,color})=><div style={{background:C.border,borderRadius:20,height:4,overflow:"hidden",marginBottom:4}}><div style={{width:`${pct}%`,height:4,background:color||`linear-gradient(90deg,${C.accent},#C8A870)`,borderRadius:20,transition:"width .6s ease"}}/></div>;
+  const PBar=({pct,color})=><div style={{background:C.border,height:4,overflow:"hidden",marginBottom:4}}><div style={{width:`${pct}%`,height:4,background:color||`linear-gradient(90deg,${C.accent},#C8A870)`,transition:"width .6s ease"}}/></div>;
 
   function SimpleTab({section,ph}){
     const [lv,setLv]=useState("");
@@ -1155,41 +1164,46 @@ function App() {
     <div style={{fontSize:11,color:"#A8998A",textTransform:"uppercase",letterSpacing:"0.15em"}}>Se încarcă datele...</div>
   </div>;
 
-  return <div style={{fontFamily:"'Jost',sans-serif",maxWidth:800,margin:"0 auto",background:C.bg,minHeight:"100vh",paddingBottom:"4rem"}}>
-    <div style={{padding:"24px 24px 0",borderBottom:`1px solid ${C.border}`,background:C.surface,boxShadow:"0 1px 12px rgba(42,33,24,0.05)"}}>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{display:"flex",alignItems:"center",gap:16}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{display:"flex",gap:2.5}}>
-              <div style={{width:3,height:38,background:C.text,borderRadius:2}}/>
-              <div style={{width:1,height:38,background:C.text,opacity:0.35,borderRadius:1}}/>
-            </div>
-            <div>
-              <div style={{fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:C.text,lineHeight:1.15}}>KREATIVO</div>
-              <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:C.textSub,lineHeight:1.15}}>STUDIO</div>
-            </div>
+  const GRUPURI=[
+    {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"},{id:"recurente",l:"Recurente"}]},
+    {titlu:"Vânzări",items:[{id:"oferte",l:"Oferte"},{id:"clients",l:"Clienți"}]},
+    {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"perdele",l:"Perdele"},{id:"vopsele",l:"Vopsele"}]},
+    {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
+    {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
+  ];
+
+  return <div style={{fontFamily:"'Jost',sans-serif",display:"flex",background:C.bg,minHeight:"100vh"}}>
+    {/* SIDEBAR */}
+    <div style={{width:210,flexShrink:0,background:"#D4C9B8",borderRight:"1px solid #C4B8A4",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
+      <div style={{padding:"24px 20px 18px",borderBottom:"1px solid #C4B8A4"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",gap:2.5}}>
+            <div style={{width:3,height:38,background:C.text}}/>
+            <div style={{width:1,height:38,background:C.text,opacity:0.35}}/>
           </div>
-          <div style={{width:"1px",height:28,background:C.border}}/>
           <div>
-            <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:2,fontWeight:400}}>Panou de control</div>
-            <div style={{fontSize:10,fontWeight:300,color:C.textMuted,letterSpacing:"0.05em"}}>3P Design SRL</div>
-            {protectMode?<div style={{fontSize:9,fontWeight:700,color:"#fff",background:"#8B3A3A",borderRadius:4,padding:"3px 8px",marginTop:3,letterSpacing:"0.05em"}}>🛑 MOD PROTEJAT · nicio dată încărcată · salvare blocată · reîncarcă pagina când revine conexiunea</div>:
-            !supabaseOk&&<div style={{fontSize:9,fontWeight:600,color:"#8B6914",background:"#FFF3CD",border:"1px solid #C8A870",borderRadius:4,padding:"2px 7px",marginTop:3,letterSpacing:"0.05em"}}>⚠ Offline · date locale</div>}
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:C.text,lineHeight:1.15}}>KREATIVO</div>
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:C.textSub,lineHeight:1.15}}>STUDIO</div>
           </div>
         </div>
-        <div style={{display:"flex",gap:6}}>
-          <button onClick={exportDate} style={{padding:"6px 14px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C.textSub,letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
-          <button onClick={()=>importRef.current?.click()} style={{padding:"6px 14px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:11,color:C.textSub,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
-          <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
-        </div>
+        <div style={{fontSize:9,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.12em",marginTop:12,fontWeight:500}}>Panou de control · 3P Design</div>
+        {protectMode?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● mod protejat · salvare blocată</div>:
+        !supabaseOk&&<div style={{fontSize:9,color:C.textSub,marginTop:8,letterSpacing:"0.08em"}}>● offline · date locale</div>}
       </div>
-      <div style={{display:"flex",overflowX:"auto",gap:0}}>
-        {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"10px 14px",cursor:"pointer",border:"none",background:tab===t.id?C.accentLight:"transparent",borderBottom:tab===t.id?`2px solid ${C.accent}`:"2px solid transparent",color:tab===t.id?C.accent:C.textSub,fontWeight:tab===t.id?600:400,fontSize:11,whiteSpace:"nowrap",flexShrink:0,letterSpacing:"0.05em",textTransform:"uppercase",transition:"color .2s"}}>
-          {t.l}{t.id==="recurente"&&recAzi.length>0?<span style={{marginLeft:4,background:C.danger,color:"#fff",borderRadius:10,fontSize:9,padding:"1px 5px",fontWeight:700}}>{recAzi.length}</span>:null}
-        </button>)}
+      <div style={{flex:1,padding:"14px 0"}}>
+        {GRUPURI.flatMap(g=>g.items).map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:"9px 20px",cursor:"pointer",border:"none",borderLeft:tab===t.id?`3px solid ${C.text}`:"3px solid transparent",background:tab===t.id?"#C4A882":"transparent",color:C.text,fontWeight:tab===t.id?600:500,fontSize:13,letterSpacing:"0.02em"}}>
+            <span style={{flex:1}}>{t.l}</span>
+            {t.id==="recurente"&&recAzi.length>0?<span style={{background:C.danger,color:"#fff",fontSize:9,padding:"1px 6px",fontWeight:700}}>{recAzi.length}</span>:null}
+          </button>)}
+      </div>
+      <div style={{padding:"14px 20px",borderTop:"1px solid #C4B8A4",display:"flex",gap:6}}>
+        <button onClick={exportDate} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
+        <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
+        <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
       </div>
     </div>
-    <div style={{padding:"20px 24px 0"}}>
+    {/* CONȚINUT */}
+    <div style={{flex:1,minWidth:0,padding:"24px 32px 4rem",maxWidth:1100}}>
 
     {tab==="focus"&&<div>
 
@@ -1236,12 +1250,12 @@ function App() {
           <div style={{fontSize:11,fontWeight:600,color:rosii.length>0?C.danger:C.warn,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>
             ⚠️ {alerte.length} alertă{alerte.length!==1?"e":""} active
           </div>
-          {rosii.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.5)",borderRadius:7}}>
+          {rosii.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.5)"}}>
             <span style={{fontSize:11,color:C.danger,fontWeight:700,minWidth:80,flexShrink:0}}>{a.info}</span>
             <span style={{fontSize:11,color:C.textMuted,minWidth:60,flexShrink:0}}>{a.tip}</span>
             <span style={{fontSize:12,color:C.text,flex:1}}>{a.text}</span>
           </div>)}
-          {galbene.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.4)",borderRadius:7}}>
+          {galbene.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.4)"}}>
             <span style={{fontSize:11,color:C.warn,fontWeight:700,minWidth:80,flexShrink:0}}>{a.info}</span>
             <span style={{fontSize:11,color:C.textMuted,minWidth:60,flexShrink:0}}>{a.tip}</span>
             <span style={{fontSize:12,color:C.text,flex:1}}>{a.text}</span>
@@ -1276,7 +1290,7 @@ function App() {
         if(azItems.length===0) return null;
         return <div style={{...card,marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:600,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Azi · {fmtD(azi)} ({azItems.length})</div>
-          {azItems.map((item,i)=><CalItem key={item.id||i} item={item} onComplete={()=>compCal(item)} onReschedule={nd=>reschedCal(item,nd)}/>)}
+          {azItems.map((item,i)=><CalItem key={item.id||i} item={item} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/>)}
         </div>;
       })()}
 
@@ -1292,7 +1306,7 @@ function App() {
       {jAzi.length>0&&<div style={{...card,border:`1px solid #B8D4B8`,background:"#F2F7F2",marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>✓ Realizat azi ({jAzi.length})</div>
         {jAzi.map((item,i)=><div key={i} style={{...row,marginBottom:4}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:"#3A6A3A",flexShrink:0,marginTop:4}}/>
+          <div style={{width:6,height:6,background:"#3A6A3A",flexShrink:0,marginTop:4}}/>
           <span style={{flex:1,fontSize:12,color:C.text}}>{item.title}</span>
           <span style={{fontSize:11,color:C.textMuted}}>{item.time}</span>
         </div>)}
@@ -1310,12 +1324,12 @@ function App() {
         <ManualInput onAdd={v=>addJurnal(v,"Manual")}/>
         {jAzi.length===0?<div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:"1.5rem"}}>Niciun task bifat sau adăugat azi încă.</div>:<div>
           <div style={{fontSize:11,color:C.accent,fontWeight:600,marginBottom:10,textTransform:"uppercase",letterSpacing:"0.06em"}}>✓ {jAzi.length} realizări</div>
-          {jAzi.map((item,i)=><div key={i} style={{...row,padding:"8px 12px",background:i%2===0?C.bg:C.surface,borderRadius:8,marginBottom:4}}>
-            <div style={{width:20,height:20,borderRadius:"50%",background:C.accentLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:10,color:C.accent}}>✓</span></div>
+          {jAzi.map((item,i)=><div key={i} style={{...row,padding:"8px 12px",background:i%2===0?C.bg:C.surface,marginBottom:4}}>
+            <div style={{width:20,height:20,background:C.accentLight,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:10,color:C.accent}}>✓</span></div>
             <div style={{flex:1}}><div style={{fontSize:13,color:C.text}}>{item.title}</div><div style={{fontSize:11,color:C.textMuted}}>{item.source}</div></div>
             <span style={{fontSize:11,color:C.textMuted}}>{item.time}</span>
           </div>)}
-          <div style={{marginTop:12,padding:"10px 14px",background:C.accentLight,borderRadius:8,fontSize:12,color:C.accent}}>Scor zilei: <strong>{jAzi.length} realizări</strong></div>
+          <div style={{marginTop:12,padding:"10px 14px",background:C.accentLight,fontSize:12,color:C.accent}}>Scor zilei: <strong>{jAzi.length} realizări</strong></div>
         </div>}
       </div>
       <div style={card}>
@@ -1326,8 +1340,8 @@ function App() {
           <button style={btnP()} onClick={addPlanTask} disabled={tmPlan.length>=5}>+ Adaugă</button>
         </div>
         {tmPlan.length===0&&<div style={{color:C.textMuted,fontSize:13,textAlign:"center",padding:"1rem"}}>Planifică ziua de mâine înainte să închizi.</div>}
-        {tmPlan.map((t,i)=><div key={t.id} style={{...row,padding:"10px 14px",background:t.text.startsWith("[Reportat]")?"#FFF8E8":C.bg,borderRadius:8,marginBottom:6}}>
-          <div style={{width:22,height:22,borderRadius:"50%",background:i===0?C.accent:C.border,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:600,color:i===0?"#fff":C.textSub}}>{i+1}</span></div>
+        {tmPlan.map((t,i)=><div key={t.id} style={{...row,padding:"10px 14px",background:t.text.startsWith("[Reportat]")?"#FFF8E8":C.bg,marginBottom:6}}>
+          <div style={{width:22,height:22,background:i===0?C.accent:C.border,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:11,fontWeight:600,color:i===0?"#fff":C.textSub}}>{i+1}</span></div>
           <span style={{flex:1,fontSize:13,color:C.text}}>{t.text}</span>
           <button onClick={()=>delPlanTask(tmrw(),t.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
         </div>)}
@@ -1398,14 +1412,14 @@ function App() {
         Object.values(g).forEach(arr=>arr.sort((a,b)=>(a.title||"").localeCompare(b.title||"","ro")));
         return Object.entries(g).map(([date,items])=>{
           const isPast=date<tday(),isT=isToday(date),days=daysTo(date);
-          return <div key={date} style={{marginBottom:16,opacity:isPast?0.6:1}}>
+          return <div key={date} style={{marginBottom:16}}>
             <div style={{...row,marginBottom:8}}>
-              <div style={{fontSize:13,fontWeight:500,color:isT?C.accent:isPast?C.textMuted:C.text}}>{fmtD(date)}</div>
-              {isT&&<div style={{fontSize:11,background:C.accent,color:"#fff",padding:"2px 8px",borderRadius:6}}>Azi</div>}
-              {!isT&&!isPast&&days!==null&&days<=3&&<div style={{fontSize:11,background:C.dangerLight,color:C.danger,padding:"2px 8px",borderRadius:6}}>În {days} zile</div>}
-              {isPast&&<div style={{fontSize:11,color:C.danger}}>Trecut</div>}
+              <div style={{fontSize:13,fontWeight:500,color:isT?C.accent:C.text}}>{fmtD(date)}</div>
+              {isT&&<div style={{fontSize:11,background:C.accent,color:"#fff",padding:"2px 8px"}}>Azi</div>}
+              {!isT&&!isPast&&days!==null&&days<=3&&<div style={{fontSize:11,background:C.dangerLight,color:C.danger,padding:"2px 8px"}}>În {days} zile</div>}
+              {isPast&&<div style={{fontSize:10,color:C.textMuted,letterSpacing:"0.06em",textTransform:"uppercase"}}>trecut</div>}
             </div>
-            {items.map((item,i)=><CalItem key={i} item={item} onComplete={()=>compCal(item)} onReschedule={nd=>reschedCal(item,nd)}/>)}
+            {items.slice().sort((a,b)=>{if(a.time&&!b.time)return -1;if(!a.time&&b.time)return 1;if(a.time&&b.time)return a.time<b.time?-1:1;return 0;}).map((item,i)=><CalItem key={i} item={item} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/>)}
           </div>;
         });
       })()}
@@ -1416,7 +1430,7 @@ function App() {
       <div style={{display:"flex",gap:6,marginBottom:14}}>
         {[["lista","Clienți"],["valori","Valori comenzi"]].map(([id,l])=>{
           const activeCliTab=cliFilter==="valori"?"valori":"lista";
-          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,borderRadius:8,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
+          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
         })}
       </div>
 
@@ -1438,9 +1452,9 @@ function App() {
             const val=Number(c.valoare||0);
             const avans=Number(c.avans||Math.round(val*0.5));
             const rest=val-avans;
-            return <div key={c.id} style={{border:`1px solid ${C.border}`,borderRadius:10,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+            return <div key={c.id} style={{border:`1px solid ${C.border}`,marginBottom:8,background:C.surface,overflow:"hidden"}}>
               <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:i%2===0?CC_LIGHT[0]:CC_LIGHT[1]}}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:CC[clients.indexOf(c)%CC.length],flexShrink:0}}/>
+                <div style={{width:8,height:8,background:CC[clients.indexOf(c)%CC.length],flexShrink:0}}/>
                 <span style={{flex:1,fontSize:13,color:C.text,fontWeight:500}}>{c.name}</span>
                 <span style={{fontSize:14,fontWeight:700,color:C.accent}}>{val.toLocaleString("ro-RO")} RON</span>
               </div>
@@ -1454,7 +1468,7 @@ function App() {
                   <div style={{display:"flex",alignItems:"center",gap:4}}>
                     <input type="number" value={c.avans!==undefined?c.avans:Math.round(val*0.5)}
                       onChange={e=>setClients(p=>p.map(x=>x.id!==c.id?x:{...x,avans:Number(e.target.value)}))}
-                      style={{width:"100%",fontSize:13,fontWeight:600,color:"#3A6A3A",border:`1px solid ${C.border}`,borderRadius:6,padding:"3px 6px",outline:"none",background:"#F5FBF5"}}/>
+                      style={{width:"100%",fontSize:13,fontWeight:600,color:"#3A6A3A",border:`1px solid ${C.border}`,padding:"3px 6px",outline:"none",background:"#F5FBF5"}}/>
                   </div>
                   <div style={{fontSize:10,color:C.textMuted,marginTop:3}}>50% = {Math.round(val*0.5).toLocaleString("ro-RO")}</div>
                 </div>
@@ -1465,7 +1479,7 @@ function App() {
               </div>
             </div>;
           })}
-          {clients.filter(c=>!c.valoare||c.valoare==="0"||c.valoare==="").length>0&&<div style={{marginTop:10,padding:"8px 12px",background:C.bg,borderRadius:8,fontSize:12,color:C.textMuted}}>
+          {clients.filter(c=>!c.valoare||c.valoare==="0"||c.valoare==="").length>0&&<div style={{marginTop:10,padding:"8px 12px",background:C.bg,fontSize:12,color:C.textMuted}}>
             {clients.filter(c=>!c.valoare||c.valoare==="0"||c.valoare==="").length} clienți fără valoare setată
           </div>}
         </div>
@@ -1484,23 +1498,39 @@ function App() {
           {["all","pending","done"].map(f=><button key={f} onClick={()=>setCliFilter(f)} style={{...btnS,fontSize:11,padding:"5px 12px",background:cliFilter===f?C.accent:"transparent",color:cliFilter===f?"#fff":C.textSub,border:cliFilter===f?"none":`1px solid ${C.border}`}}>{f==="all"?"Toți":f==="pending"?"Cu sarcini":"Finalizați"}</button>)}
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,alignItems:"start"}}>
+      <div>
+      {/* GRILĂ DREPTUNGHIURI */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
       {filtCl.map((client,fi)=>{
-        const ci=clients.indexOf(client);const color=CC[fi%CC.length];
+        const ci=clients.indexOf(client);
         const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
-        return <div key={client.id} style={{border:`1px solid ${C.border}`,borderRadius:12,background:C.surface,overflow:"hidden",gridColumn:client.open?"1 / -1":"auto",aspectRatio:client.open?"auto":"1 / 1"}}>
-          <div onClick={()=>togCliOpen(ci)} style={client.open?
-            {display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}:
-            {display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,height:"100%",padding:"12px",background:color,cursor:"pointer",userSelect:"none",textAlign:"center"}}>
-            <div style={{flex:client.open?1:"none",fontSize:client.open?13:14,fontWeight:500,color:C.text,letterSpacing:"0.01em",overflow:"hidden",textOverflow:"ellipsis",wordBreak:"break-word",whiteSpace:client.open?"normal":"normal",maxHeight:client.open?"none":"3.6em"}}>{client.name}</div>
-            {(client.tasks.length>0)&&<div style={{fontSize:client.open?10:11,background:"rgba(0,0,0,0.1)",color:C.text,padding:"3px 10px",borderRadius:20,fontWeight:400,whiteSpace:"nowrap",flexShrink:0}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>}
-            {client.open&&<div style={{fontSize:11,color:C.textSub,flexShrink:0}}>▾</div>}
+        const activ=client.open;
+        return <div key={client.id} onClick={()=>setClients(p=>p.map((c,i)=>({...c,open:i===ci?!c.open:false})))} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,aspectRatio:"1 / 1",padding:"8px",cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:activ?"2px solid #2A2118":"1px solid transparent",transition:"border-color .1s"}}>
+          <span style={{fontSize:12,fontWeight:500,color:C.text,overflow:"hidden",wordBreak:"break-word",maxHeight:"3em",letterSpacing:"0.01em"}}>{client.name}</span>
+          {allDone?<span style={{fontSize:10,color:"#3A6A3A",flexShrink:0,fontWeight:600}}>✓</span>:
+           pending>0?<span style={{fontSize:10,fontWeight:600,color:C.text,flexShrink:0,background:"rgba(255,255,255,0.55)",padding:"1px 7px"}}>{pending}</span>:null}
+        </div>;
+      })}
+      </div>
+
+      {/* DETALIU */}
+      <div>
+      {(()=>{
+        const client=filtCl.find(c=>c.open);
+        if(!client) return null;
+        const ci=clients.indexOf(client);
+        const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
+        return <div style={{border:`1px solid ${C.border}`,background:C.surface}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
+            <div style={{flex:1,fontSize:14,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>{client.name}</div>
+            {(client.tasks.length>0)&&<div style={{fontSize:10,background:"#FFFFFF",color:C.textSub,padding:"3px 10px"}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>}
+            <button onClick={()=>setClients(p=>p.map(c=>({...c,open:false})))} style={{background:"none",border:"none",cursor:"pointer",color:C.textSub,fontSize:15}}>×</button>
           </div>
-          {client.open&&<div style={{padding:"12px"}}>
+          <div style={{padding:"12px 16px"}}>
             {/* Valoare comandă */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg,borderRadius:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg}}>
               <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Valoare comandă:</span>
-              <input type="number" value={client.valoare||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",outline:"none",background:C.surface}}/>
+              <input type="number" value={client.valoare||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
               <span style={{fontSize:12,color:C.textMuted}}>RON</span>
             </div>
             {client.tasks.map((task,ti)=>{
@@ -1509,7 +1539,7 @@ function App() {
             })}
             {addingTo===ci?<div style={{...row,marginTop:8}}>
               <input autoFocus value={newTask[ci]||""} onChange={e=>setNewTask(p=>({...p,[ci]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addCliTask(ci);if(e.key==="Escape")setAddingTo(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
-              <button onClick={()=>addCliTask(ci)} style={btnP(color)}>OK</button>
+              <button onClick={()=>addCliTask(ci)} style={btnP()}>OK</button>
               <button onClick={()=>setAddingTo(null)} style={btnS}>✕</button>
             </div>:<div style={{...row,justifyContent:"space-between",marginTop:8,marginBottom:8}}>
               <button onClick={()=>setAddingTo(ci)} style={{...btnS,fontSize:12,padding:"4px 12px"}}>+ sarcină</button>
@@ -1519,16 +1549,17 @@ function App() {
             {(client.motoare||[]).length>0&&<button onClick={()=>{if(window.confirm(`Marchezi motoarele lui ${client.name} ca livrate? Se scad din stoc și se înregistrează în istoric.`)) livreazaMotoare(ci);}} style={{...btnP(C.accent),width:"100%",marginTop:8,fontSize:12}}>✓ Marchează motoare livrate</button>}
             {/* Log discuții */}
             <LogDiscutii id={client.id} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
-          </div>}
+          </div>
         </div>;
-      })}
+      })()}
+      </div>
       </div>
       <div style={{marginTop:12}}>
         {addingCli?<div style={row}>
           <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder="Nume client nou..." style={{...inp,flex:1}}/>
           <button onClick={addCli} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingCli(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,borderRadius:12,background:"transparent",cursor:"pointer"}}>+ client nou</button>}
+        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ client nou</button>}
       </div>
       </div>}
     </div>}
@@ -1538,7 +1569,7 @@ function App() {
       <div style={{display:"flex",gap:6,marginBottom:14}}>
         {[["lista","Oferte"],["valori","Valori oferte"]].map(([id,l])=>{
           const activeTab=ofertaSubtab||"lista";
-          return <button key={id} onClick={()=>setOfertaSubtab(id)} style={{padding:"7px 14px",border:`1px solid ${id===activeTab?C.accent:C.border}`,borderRadius:8,background:id===activeTab?C.accentLight:"transparent",color:id===activeTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeTab?500:400}}>{l}</button>;
+          return <button key={id} onClick={()=>setOfertaSubtab(id)} style={{padding:"7px 14px",border:`1px solid ${id===activeTab?C.accent:C.border}`,background:id===activeTab?C.accentLight:"transparent",color:id===activeTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeTab?500:400}}>{l}</button>;
         })}
       </div>
 
@@ -1552,13 +1583,13 @@ function App() {
             </div>
           </div>
           <div style={{fontSize:11,color:C.textMuted,marginBottom:10}}>Total pipeline · {oferte.filter(o=>o.valoare).length} oferte cu valoare</div>
-          {oferte.filter(o=>Number(o.valoare||0)>0).sort((a,b)=>Number(b.valoare||0)-Number(a.valoare||0)).map((o,i)=><div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:i%2===0?C.bg:C.surface,borderRadius:8,marginBottom:4}}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:CC[oferte.indexOf(o)%CC.length],flexShrink:0}}/>
+          {oferte.filter(o=>Number(o.valoare||0)>0).sort((a,b)=>Number(b.valoare||0)-Number(a.valoare||0)).map((o,i)=><div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:i%2===0?C.bg:C.surface,marginBottom:4}}>
+            <div style={{width:8,height:8,background:CC[oferte.indexOf(o)%CC.length],flexShrink:0}}/>
             <span style={{flex:1,fontSize:13,color:C.text,fontWeight:500}}>{o.name}</span>
             <span style={{fontSize:11,color:C.textMuted,marginRight:8}}>{fmtD(o.data)}</span>
             <span style={{fontSize:14,fontWeight:700,color:C.accent}}>{Number(o.valoare).toLocaleString("ro-RO")} RON</span>
           </div>)}
-          {oferte.filter(o=>!o.valoare||o.valoare==="0"||o.valoare==="").length>0&&<div style={{marginTop:10,padding:"8px 12px",background:C.bg,borderRadius:8,fontSize:12,color:C.textMuted}}>
+          {oferte.filter(o=>!o.valoare||o.valoare==="0"||o.valoare==="").length>0&&<div style={{marginTop:10,padding:"8px 12px",background:C.bg,fontSize:12,color:C.textMuted}}>
             {oferte.filter(o=>!o.valoare||o.valoare==="0"||o.valoare==="").length} oferte fără valoare estimată
           </div>}
         </div>
@@ -1576,18 +1607,18 @@ function App() {
         const color=CC[oi%CC.length];
         const pending=(oferta.done||[]).filter(d=>!d).length;
         const allDone=(oferta.tasks||[]).length>0&&(oferta.done||[]).every(Boolean);
-        return <div key={oferta.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+        return <div key={oferta.id} style={{border:`1px solid ${C.border}`,marginBottom:8,background:C.surface,overflow:"hidden"}}>
           <div onClick={()=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,open:!o.open}))} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
             <div style={{flex:1,fontSize:13,fontWeight:500,color:oi%2===0?"#fff":C.text}}>{oferta.name}</div>
-            <div style={{fontSize:11,background:oi%2===0?"rgba(255,255,255,0.22)":"rgba(0,0,0,0.1)",color:oi%2===0?"#fff":C.text,padding:"3px 10px",borderRadius:20}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
+            <div style={{fontSize:11,background:oi%2===0?"rgba(255,255,255,0.22)":"rgba(0,0,0,0.1)",color:oi%2===0?"#fff":C.text,padding:"3px 10px"}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
             <div style={{fontSize:11,color:oi%2===0?"rgba(255,255,255,0.7)":C.textSub}}>{oferta.open?"▾":"▸"}</div>
           </div>
 
           {oferta.open&&<div style={{padding:"12px"}}>
             {/* Valoare — identic cu clienti */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg,borderRadius:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg}}>
               <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Valoare estimată:</span>
-              <input type="number" value={oferta.valoare||""} onChange={e=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"5px 10px",outline:"none",background:C.surface}}/>
+              <input type="number" value={oferta.valoare||""} onChange={e=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
               <span style={{fontSize:12,color:C.textMuted}}>RON</span>
             </div>
 
@@ -1598,13 +1629,13 @@ function App() {
               const isDone=(oferta.done||[])[ti];
               const tg=tagTask(taskTitle);
               const ov=taskDate&&taskDate<tday();
-              return <div key={ti} style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:10,padding:"10px 14px",marginBottom:8}}>
+              return <div key={ti} style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"10px 14px",marginBottom:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <input type="checkbox" checked={isDone||false} onChange={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const d=[...(o.done||[])];d[ti]=!d[ti];return {...o,done:d};}))} style={{cursor:"pointer",width:15,height:15,flexShrink:0,accentColor:C.accent}}/>
                   <span style={{flex:1,fontSize:13,color:isDone?C.textMuted:C.text,textDecoration:isDone?"line-through":"none"}}>{taskTitle}</span>
-                  <span style={{fontSize:10,padding:"2px 7px",borderRadius:6,background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
+                  <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
                   <input type="date" value={taskDate} onChange={e=>{const v=e.target.value;setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];t[ti]=typeof t[ti]==="object"?{...t[ti],date:v}:{title:t[ti],tip:"Comandă",date:v};return {...o,tasks:t};}));}}
-                    style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,borderRadius:6,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>
+                    style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>
                   <button onClick={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];const d=[...(o.done||[])];t.splice(ti,1);d.splice(ti,1);return {...o,tasks:t,done:d};}))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
                 </div>
               </div>;
@@ -1620,7 +1651,7 @@ function App() {
                 setClients(p=>[...p,client]);
                 setOferte(p=>p.filter((_,i)=>i!==oi));
               }} style={{...btnP(),fontSize:12}}>✓ Acceptat — mută în Clienți</button>
-              <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.name}?`)) setOferte(p=>p.filter((_,i)=>i!==oi));}} style={{padding:"8px 16px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",fontSize:12,color:C.textMuted}}>× Renunțat — șterge</button>
+              <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.name}?`)) setOferte(p=>p.filter((_,i)=>i!==oi));}} style={{padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textMuted}}>× Renunțat — șterge</button>
             </div>
             <LogDiscutii id={`oferta_${oferta.id}`} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
           </div>}
@@ -1641,7 +1672,7 @@ function App() {
 
       {/* Alerte stoc negativ */}
       {motoare.filter(m=>stocRamas(m.model)<0).map(m=>(
-        <div key={m.model} style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,borderRadius:10,marginBottom:8,fontSize:13,color:C.danger,fontWeight:500}}>
+        <div key={m.model} style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,marginBottom:8,fontSize:13,color:C.danger,fontWeight:500}}>
           ⚠️ {m.model} — lipsă {Math.abs(stocRamas(m.model))} buc. · De comandat urgent
         </div>
       ))}
@@ -1654,7 +1685,7 @@ function App() {
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>Facturi intrare ({intrari.length})</div>
         {intrari.map(f=>{
           const isOpenF=openModel[`f_${f.id}`]===true;
-          return <div key={f.id} style={{background:C.surface,border:"1px solid #C8DCC8",borderRadius:10,marginBottom:6,overflow:"hidden"}}>
+          return <div key={f.id} style={{background:C.surface,border:"1px solid #C8DCC8",marginBottom:6,overflow:"hidden"}}>
             <div onClick={()=>setOpenModel(p=>({...p,[`f_${f.id}`]:!isOpenF}))} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:"#F2F8F2",cursor:"pointer",userSelect:"none"}}>
               <div style={{flex:1}}>
                 <span style={{fontSize:13,fontWeight:500,color:"#2A4A2A"}}>{f.furnizor}</span>
@@ -1662,17 +1693,17 @@ function App() {
                 <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {fmtD(f.data)}</span>
                 <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {f.pozitii.reduce((s,p)=>s+p.qty,0)} buc.</span>
               </div>
-              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,borderRadius:6,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
               <span style={{fontSize:11,color:"#5A8A5A"}}>{isOpenF?"▾":"▸"}</span>
             </div>
             {isOpenF&&<div style={{padding:"8px 14px 12px"}}>
               {f.pozitii.map(pz=><div key={pz.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.bg}`}}>
-                <select value={pz.model} onChange={e=>updPozitie(f.id,pz.id,"model",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",background:C.surface,outline:"none",color:C.accent,fontWeight:500}}>
+                <select value={pz.model} onChange={e=>updPozitie(f.id,pz.id,"model",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",background:C.surface,outline:"none",color:C.accent,fontWeight:500}}>
                   {motoare.map(m=><option key={m.model} value={m.model}>{m.model}</option>)}
                 </select>
-                <input type="number" min="1" value={pz.qty} onChange={e=>updPozitie(f.id,pz.id,"qty",e.target.value)} style={{width:60,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
+                <input type="number" min="1" value={pz.qty} onChange={e=>updPozitie(f.id,pz.id,"qty",e.target.value)} style={{width:60,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
                 <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
-                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,borderRadius:6,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
               </div>)}
             </div>}
           </div>;
@@ -1693,40 +1724,40 @@ function App() {
         const intrarifisa=intrari.flatMap(f=>f.pozitii.filter(p=>p.model===m.model).map(p=>({id:f.id+p.id,data:f.data,tip:"intrare",sursa:f.furnizor,factura:f.factura,qty:p.qty})));
         const miscariFisa=[...iesiriFisa,...intrarifisa].sort((a,b)=>a.data>b.data?1:-1);
 
-        return <div key={m.model} style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:10,overflow:"hidden"}}>
+        return <div key={m.model} style={{background:C.surface,border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden"}}>
           <div onClick={()=>setOpenModel(p=>({...p,[m.model]:!isOpen}))} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 18px",cursor:"pointer",userSelect:"none",background:CC[1]}}>
-            <div style={{fontSize:14,fontWeight:600,color:C.text,minWidth:70}}>{m.model}</div>
+            <div style={{fontSize:14,fontWeight:500,color:C.text,minWidth:70,letterSpacing:"0.03em"}}>{m.model}</div>
             <div style={{display:"flex",gap:16,flex:1}}>
               <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold inițial</div><div style={{fontSize:13,fontWeight:500,color:C.textSub}}>{si}</div></div>
               <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>+ Intrări</div><div style={{fontSize:13,fontWeight:600,color:"#3A6A3A"}}>{ti}</div></div>
               <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>− Ieșiri</div><div style={{fontSize:13,fontWeight:600,color:C.danger}}>{alocat+livrate}</div></div>
               <div style={{textAlign:"center"}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>Sold final</div><div style={{fontSize:15,fontWeight:700,color:st==="lipsa"?C.danger:C.accent}}>{sf}</div></div>
             </div>
-            <span style={{fontSize:11,padding:"3px 10px",borderRadius:6,fontWeight:500,background:st==="lipsa"?C.dangerLight:st==="exact"?"#F0EFED":C.accentLight,color:st==="lipsa"?C.danger:st==="exact"?C.textSub:C.accent}}>{st==="lipsa"?`Lipsă ${Math.abs(sf)}`:st==="exact"?"Exact":"OK"}</span>
+            <span style={{fontSize:11,padding:"3px 10px",fontWeight:500,background:st==="lipsa"?C.dangerLight:st==="exact"?"#F0EFED":C.accentLight,color:st==="lipsa"?C.danger:st==="exact"?C.textSub:C.accent}}>{st==="lipsa"?`Lipsă ${Math.abs(sf)}`:st==="exact"?"Exact":"OK"}</span>
             <span style={{fontSize:11,color:C.textMuted}}>{isOpen?"▾":"▸"}</span>
           </div>
           {isOpen&&<div style={{padding:"14px 18px"}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,paddingBottom:14,borderBottom:`1px solid ${C.border}`}}>
               <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Sold inițial:</span>
-              <input type="number" min="0" value={m.stoc} onChange={e=>updStoc(m.model,e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C.border}`,borderRadius:6,padding:"4px 8px",outline:"none",textAlign:"center"}}/>
+              <input type="number" min="0" value={m.stoc} onChange={e=>updStoc(m.model,e.target.value)} style={{width:70,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 8px",outline:"none",textAlign:"center"}}/>
               <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
             </div>
             {miscariFisa.length>0&&<div>
               <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Fișă mișcări</div>
-              <div style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
+              <div style={{border:`1px solid ${C.border}`,overflow:"hidden"}}>
                 <div style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"7px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
                   {["DATA","TIP","SURSĂ","BUC.","FACTURĂ"].map(h=><div key={h} style={{fontSize:9,fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{h}</div>)}
                 </div>
                 {miscariFisa.map(e=><div key={e.id} style={{display:"grid",gridTemplateColumns:"90px 80px 1fr 70px 90px",padding:"8px 12px",borderBottom:`1px solid ${C.bg}`,alignItems:"center"}}>
                   <div style={{fontSize:11,color:C.textSub}}>{fmtD(e.data)}</div>
-                  <div><span style={{padding:"2px 7px",borderRadius:10,fontSize:10,fontWeight:600,background:e.tip==="intrare"?"#EAF2EA":"#F5EEEE",color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"↓ IN":"↑ OUT"}</span></div>
+                  <div><span style={{padding:"2px 7px",fontSize:10,fontWeight:600,background:e.tip==="intrare"?"#EAF2EA":"#F5EEEE",color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"↓ IN":"↑ OUT"}</span></div>
                   <div style={{fontSize:12,color:C.text,fontWeight:500}}>{e.sursa||"—"}</div>
                   <div style={{fontSize:13,fontWeight:600,color:e.tip==="intrare"?"#3A6A3A":C.danger}}>{e.tip==="intrare"?"+":"-"}{e.qty}</div>
                   <div style={{fontSize:11,color:C.textMuted}}>{e.factura||"—"}</div>
                 </div>)}
               </div>
             </div>}
-            {alocat>0&&<div style={{marginTop:12,padding:"10px 14px",background:C.accentLight,borderRadius:8}}>
+            {alocat>0&&<div style={{marginTop:12,padding:"10px 14px",background:C.accentLight}}>
               <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Alocat clienți activi</div>
               {clients.filter(c=>(c.motoare||[]).find(x=>x.model===m.model)).map(c=>{const mx=c.motoare.find(x=>x.model===m.model);return <div key={c.id} style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}><span style={{flex:1,fontSize:12,color:C.text}}>{c.name}</span><span style={{fontSize:12,fontWeight:600,color:C.accent}}>{mx.qty} buc.</span></div>;})}
             </div>}
@@ -1752,10 +1783,10 @@ function App() {
       {proiecte.map((proiect,fi)=>{
         const pi=proiecte.indexOf(proiect);const color=CC[fi%CC.length];
         const pending=proiect.done.filter(d=>!d).length;const allDone=proiect.tasks.length>0&&proiect.done.every(Boolean);
-        return <div key={proiect.id} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+        return <div key={proiect.id} style={{border:`1px solid ${C.border}`,marginBottom:8,background:C.surface,overflow:"hidden"}}>
           <div onClick={()=>togPrOpen(pi)} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
             <div style={{flex:1,fontSize:13,fontWeight:500,color:C.text,letterSpacing:"0.01em"}}>{proiect.name}</div>
-            <div style={{fontSize:11,background:"rgba(0,0,0,0.1)",color:C.text,padding:"3px 10px",borderRadius:20,fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
+            <div style={{fontSize:11,background:"rgba(0,0,0,0.1)",color:C.text,padding:"3px 10px",fontWeight:400}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
             <div style={{fontSize:11,color:C.textSub}}>{proiect.open?"▾":"▸"}</div>
           </div>
           {proiect.open&&<div style={{padding:"12px"}}>
@@ -1779,7 +1810,7 @@ function App() {
           <input autoFocus value={newPrName} onChange={e=>setNewPrName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addPr();if(e.key==="Escape")setAddingPr(false);}} placeholder="Nume proiect (ex: Renovare apartament)..." style={{...inp,flex:1}}/>
           <button onClick={addPr} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingPr(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingPr(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,borderRadius:12,background:"transparent",cursor:"pointer"}}>+ proiect nou</button>}
+        </div>:<button onClick={()=>setAddingPr(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ proiect nou</button>}
       </div>
     </div>}
 
@@ -1790,9 +1821,9 @@ function App() {
         {perdele.map((etapa,ei)=>{
           const dE=etapa.taskuri.filter(t=>t.done).length,tE=etapa.taskuri.length,pE=tE?Math.round(dE/tE*100):0,isOpen=openEtapa[ei];
           const sorted=[...etapa.taskuri].sort((a,b)=>{if(!a.deadline&&!b.deadline)return 0;if(!a.deadline)return 1;if(!b.deadline)return -1;return a.deadline>b.deadline?1:-1;});
-          return <div key={ei} style={{border:`1px solid ${C.border}`,borderRadius:12,marginBottom:10,overflow:"hidden",background:C.surface}}>
+          return <div key={ei} style={{border:`1px solid ${C.border}`,marginBottom:10,overflow:"hidden",background:C.surface}}>
             <div onClick={()=>setOpenEtapa(p=>({...p,[ei]:!p[ei]}))} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",cursor:"pointer",userSelect:"none"}}>
-              <div style={{width:40,height:40,borderRadius:8,background:etapa.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:13,fontWeight:300,color:"rgba(255,255,255,0.9)"}}>{pE}%</span></div>
+              <div style={{width:40,height:40,background:etapa.color,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:13,fontWeight:300,color:"rgba(255,255,255,0.9)"}}>{pE}%</span></div>
               <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,color:C.text}}>{etapa.titlu}</div><div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{etapa.period} · {dE}/{tE}</div></div>
               <div style={{fontSize:11,color:C.textMuted}}>{isOpen?"▾":"▸"}</div>
             </div>
@@ -1828,12 +1859,12 @@ function App() {
 
     {tab==="chat"&&<div>
       <div style={{fontSize:11,color:C.textMuted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.06em"}}>Asistentă · prioritizare · execuție</div>
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,borderRadius:12,minHeight:280,maxHeight:400,overflowY:"auto",padding:16,marginBottom:12,display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{background:C.surface,border:`1px solid ${C.border}`,minHeight:280,maxHeight:400,overflowY:"auto",padding:16,marginBottom:12,display:"flex",flexDirection:"column",gap:10}}>
         {chat.length===0&&<div style={{color:C.textMuted,fontSize:13,textAlign:"center",marginTop:"3rem",lineHeight:1.7}}>Ce faci <strong>mai întâi</strong> azi?<br/><span style={{fontSize:12}}>Sau scrie "bună dimineața" să stabilim top 3 împreună.</span></div>}
         {chat.map((m,i)=><div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"80%"}}>
-          <div style={{background:m.role==="user"?C.accent:C.bg,color:m.role==="user"?"#fff":C.text,border:m.role==="assistant"?`1px solid ${C.border}`:"none",borderRadius:10,padding:"10px 14px",fontSize:13,lineHeight:1.6}}>{m.content}</div>
+          <div style={{background:m.role==="user"?C.accent:C.bg,color:m.role==="user"?"#fff":C.text,border:m.role==="assistant"?`1px solid ${C.border}`:"none",padding:"10px 14px",fontSize:13,lineHeight:1.6}}>{m.content}</div>
         </div>)}
-        {loading&&<div style={{alignSelf:"flex-start"}}><div style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:C.textMuted}}>···</div></div>}
+        {loading&&<div style={{alignSelf:"flex-start"}}><div style={{background:C.bg,border:`1px solid ${C.border}`,padding:"10px 14px",fontSize:13,color:C.textMuted}}>···</div></div>}
         <div ref={chatRef}/>
       </div>
       <div style={row}>
@@ -1841,7 +1872,7 @@ function App() {
         <button style={btnP()} onClick={sendChat} disabled={loading}>{loading?"···":"Trimite"}</button>
       </div>
       <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
-        {["Bună dimineața, stabilim top 3","Ce am amânat?","Ce pot delega azi?"].map(s=><button key={s} style={{fontSize:11,padding:"5px 10px",border:`1px solid ${C.border}`,borderRadius:6,background:"transparent",cursor:"pointer",color:C.textSub}} onClick={()=>setChatInput(s)}>{s}</button>)}
+        {["Bună dimineața, stabilim top 3","Ce am amânat?","Ce pot delega azi?"].map(s=><button key={s} style={{fontSize:11,padding:"5px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",color:C.textSub}} onClick={()=>setChatInput(s)}>{s}</button>)}
       </div>
     </div>}
 
