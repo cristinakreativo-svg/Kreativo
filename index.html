@@ -273,6 +273,43 @@ function LiveClock({C}){
   </div>;
 }
 
+function ClientDocumente({client,ci,setClients,C,sb,tday,fmtD}){
+  const [uploading,setUploading]=React.useState(false);
+  const inputRef=React.useRef(null);
+  const fisiere=client.fisiere||[];
+  const handleUpload=async(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    setUploading(true);
+    try{
+      const path=`${client.id}/${Date.now()}_${file.name}`;
+      const {error}=await sb.storage.from("oferte-clienti").upload(path,file);
+      if(error){ alert("Eroare la încărcare: "+error.message); setUploading(false); return; }
+      const {data}=sb.storage.from("oferte-clienti").getPublicUrl(path);
+      setClients(p=>p.map((c,i)=>i!==ci?c:{...c,fisiere:[...(c.fisiere||[]),{nume:file.name,url:data.publicUrl,path,data:tday()}]}));
+    }catch(err){ alert("Eroare: "+err.message); }
+    setUploading(false);
+    if(inputRef.current) inputRef.current.value="";
+  };
+  const handleDelete=async(f)=>{
+    if(!window.confirm(`Ștergi fișierul "${f.nume}"?`)) return;
+    try{ await sb.storage.from("oferte-clienti").remove([f.path]); }catch{}
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,fisiere:(c.fisiere||[]).filter(x=>x.path!==f.path)}));
+  };
+  return <div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`}}>
+    <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>
+      Documente {fisiere.length>0&&<span style={{background:C.accentLight,color:C.accent,padding:"1px 6px",fontSize:10,marginLeft:4}}>{fisiere.length}</span>}
+    </div>
+    {fisiere.map((f,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
+      <a href={f.url} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📎 {f.nume}</a>
+      <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
+      <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
+    </div>)}
+    <input ref={inputRef} type="file" accept=".pdf,image/*" style={{display:"none"}} onChange={handleUpload}/>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document (PDF / imagine)"}</button>
+  </div>;
+}
+
 function LogDiscutii({id,log,setLog,C,inp,btnP,gid,tday,fmtD}){
   const [open,setOpen]=React.useState(false);
   const [text,setText]=React.useState("");
@@ -1552,6 +1589,8 @@ function App() {
             {(client.motoare||[]).length>0&&<button onClick={()=>{if(window.confirm(`Marchezi motoarele lui ${client.name} ca livrate? Se scad din stoc și se înregistrează în istoric.`)) livreazaMotoare(ci);}} style={{...btnP(C.accent),width:"100%",marginTop:8,fontSize:12}}>✓ Marchează motoare livrate</button>}
             {/* Log discuții */}
             <LogDiscutii id={client.id} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
+            {/* Documente / oferte */}
+            <ClientDocumente client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD}/>
           </div>
         </div>;
       })()}
