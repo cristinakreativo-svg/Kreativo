@@ -1644,7 +1644,24 @@ function App() {
     setJurnal(j=>{const ex=j[t]||[];if(ex.find(e=>e.title===title&&e.source===source)) return j;return {...j,[t]:[...ex,{title,source,time:new Date().toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})}]};});
   };
 
-  const saveEv=()=>{if(!evForm.title.trim()) return;setData(d=>({...d,events:[{id:gid(),...evForm},...d.events].sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1)}));setEvForm({title:"",date:tday(),time:"",loc:""});setShowEvForm(false);};
+  const saveEv=()=>{
+    if(!evForm.title.trim()) return;
+    const dow=evForm.date?new Date(evForm.date).getDay():null;
+    const isWeekend=dow===0||dow===6;
+    const blocatii=[...(zileBlocate.nico||[]),...(zileBlocate.dan||[]),...(zileBlocate.tudor||[])];
+    const blocat=blocatii.find(z=>evForm.date>=z.dataStart&&evForm.date<=(z.dataEnd||z.dataStart));
+    if(isWeekend||blocat){
+      const motiv=blocat?(blocat.motiv||"zi blocată"):"weekend";
+      if(!window.confirm(`Atenție: ${fmtD(evForm.date)} este ${isWeekend?"weekend":`blocată (${motiv})`}. Sigur vrei să programezi aici?`)) return;
+    }
+    if(evForm.time){
+      const conflict=calItems.some(i=>i.date===evForm.date&&i.time===evForm.time);
+      if(conflict&&!window.confirm(`Ai deja o programare la ora ${evForm.time} în ${fmtD(evForm.date)}. Sigur vrei să adaugi și asta?`)) return;
+    }
+    setData(d=>({...d,events:[{id:gid(),...evForm},...d.events].sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1)}));
+    setEvForm({title:"",date:tday(),time:"",loc:""});
+    setShowEvForm(false);
+  };
   const delEv=(id)=>setData(d=>({...d,events:d.events.filter(e=>e.id!==id)}));
   const togTask=(id)=>{const t=data.tasks.find(x=>x.id===id);if(t&&!t.done)addJurnal(t.title,t.cat||"Task");setData(d=>({...d,tasks:d.tasks.map(t=>t.id===id?{...t,done:!t.done}:t)}));};
   const addAdminTask=(s,v)=>{if(!v.trim()) return;setAdmin(a=>({...a,[s]:[{id:gid(),title:v,done:false,created:tday(),deadline:"",resp:"Cristina"},...a[s]]}));};
