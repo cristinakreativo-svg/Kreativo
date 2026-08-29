@@ -163,7 +163,7 @@ function impactScore(task,cat,prio) {
   return s;
 }
 
-const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#8B3A3A",dangerLight:"#F7EFEF",warn:"#8B6914",warnLight:"#F7F0E0"};
+const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#2A2118",dangerLight:"#EDE6D8",warn:"#4A3F30",warnLight:"#F2EDE2"};
 
 function ClientTaskRow({task,date,notif,onToggle,onDelete,onDateChange,onNotifChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
@@ -171,13 +171,13 @@ function ClientTaskRow({task,date,notif,onToggle,onDelete,onDateChange,onNotifCh
   const tg=tagTask(taskTitle);
   const ov=d&&d<tday();
   const soon=d&&!ov&&daysTo(d)<=2&&daysTo(d)>=0;
-  return <div style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":soon?"#C8A870":C.border}`,padding:"10px 14px",marginBottom:8}}>
+  return <div style={{background:C.surface,border:`1px solid ${ov?"#C9BCA6":soon?"#C9BCA6":C.border}`,padding:"10px 14px",marginBottom:8}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
       <input type="checkbox" checked={false} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
       <span style={{flex:1,fontSize:13,color:C.text}}>{taskTitle}</span>
       <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
-        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
+        style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
       <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
     </div>
@@ -195,7 +195,7 @@ function AdminTaskRow({task,onToggle,onDelete,onRespChange,onDateChange}) {
       {!task.done&&<input value={lr} onChange={e=>{setLr(e.target.value);onRespChange(e.target.value);}} placeholder="Resp."
         style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 7px",background:C.surface,color:C.textSub,outline:"none",width:100,flexShrink:0}}/>}
       {!task.done&&<input type="date" value={ld} onChange={e=>{setLd(e.target.value);onDateChange(e.target.value);}}
-        style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>}
+        style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>}
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
     </div>
   </div>;
@@ -444,11 +444,11 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Cash Flow · Registru zilnic</div>
 
-    {primaZiNeg&&<div style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,marginBottom:10,fontSize:13,color:C.danger,fontWeight:500}}>
-      ⚠️ Sold negativ previzionat pe {primaZiNeg.label}: {primaZiNeg.soldEnd.toLocaleString("ro-RO")} RON
+    {primaZiNeg&&<div style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C9BCA6`,marginBottom:10,fontSize:13,color:C.danger,fontWeight:500}}>
+      ● Sold negativ previzionat pe {primaZiNeg.label}: {primaZiNeg.soldEnd.toLocaleString("ro-RO")} RON
     </div>}
     {bilete.filter(b=>!b.achitat&&b.scadenta&&daysTo(b.scadenta)<=7&&daysTo(b.scadenta)>=0).map(b=>(
-      <div key={b.id} style={{padding:"8px 14px",background:C.warnLight,border:`1px solid #C8A870`,marginBottom:6,fontSize:12,color:C.warn}}>
+      <div key={b.id} style={{padding:"8px 14px",background:C.warnLight,border:`1px solid #C9BCA6`,marginBottom:6,fontSize:12,color:C.warn}}>
         ⏰ Bilet #{b.numar} · {b.furnizor} · {Number(b.valoare).toLocaleString("ro-RO")} RON — scadent {fmtD(b.scadenta)}
       </div>
     ))}
@@ -594,9 +594,9 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                   <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>Anulează</button>
                 </div>
               </div>:
-              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:C.danger,border:`1px dashed #C0A0A0`,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
+              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:C.danger,border:`1px dashed #C9BCA6`,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
             }
-            {z.totalOut>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:C.danger,marginTop:6,paddingTop:6,borderTop:"1px solid #E8D0D0"}}>Total plăți: -{z.totalOut.toLocaleString("ro-RO")} RON</div>}
+            {z.totalOut>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:C.danger,marginTop:6,paddingTop:6,borderTop:"1px solid #DED2BE"}}>Total plăți: -{z.totalOut.toLocaleString("ro-RO")} RON</div>}
           </div>
 
           {/* SOLD FINAL ZI */}
@@ -745,8 +745,8 @@ function EnergieCard({energie,setEnergie,C,card,tday}){
   const completat=!!(eAzi.nivel&&eAzi.mod&&eAzi.contact!==undefined);
   const [open,setOpen]=useState(!completat);
   const updEnergie=(field,val)=>setEnergie(p=>({...p,[azi]:{...(p[azi]||{}),[field]:val}}));
-  const culoareNivel={"1":"#8B3A3A","2":"#8B6914","3":"#3A6A3A"}[eAzi.nivel]||C.textMuted;
-  const emojiNivel={"1":"🔴","2":"🟡","3":"🟢"}[eAzi.nivel]||"·";
+  const culoareNivel=eAzi.nivel?C.accent:C.textMuted;
+  const emojiNivel="·";
   return <div style={{...card,marginBottom:12,padding:"14px 18px",border:completat?`1px solid ${C.border}`:`1.5px solid ${C.accent}`}}>
     <div onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",userSelect:"none"}}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -768,9 +768,9 @@ function EnergieCard({energie,setEnergie,C,card,tday}){
       <div style={{marginBottom:12}}>
         <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Energie</div>
         <div style={{display:"flex",gap:8}}>
-          {[["1","🔴 Scăzută","#8B3A3A","#F7EFEF"],["2","🟡 Medie","#8B6914","#F7F0E0"],["3","🟢 Ridicată","#3A6A3A","#EEF5EE"]].map(([v,l,col,bg])=>
+          {[["1","Scăzută"],["2","Medie"],["3","Ridicată"]].map(([v,l])=>
             <button key={v} onClick={()=>updEnergie("nivel",v)}
-              style={{flex:1,padding:"8px 6px",border:`1.5px solid ${eAzi.nivel===v?col:C.border}`,background:eAzi.nivel===v?bg:"transparent",color:eAzi.nivel===v?col:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.nivel===v?600:400,transition:"all .15s"}}>
+              style={{flex:1,padding:"8px 6px",border:`1.5px solid ${eAzi.nivel===v?C.accent:C.border}`,background:eAzi.nivel===v?C.accentLight:"transparent",color:eAzi.nivel===v?C.accent:C.textMuted,cursor:"pointer",fontSize:12,fontWeight:eAzi.nivel===v?600:400,transition:"all .15s"}}>
               {l}
             </button>
           )}
@@ -1165,9 +1165,9 @@ function App() {
   </div>;
 
   const GRUPURI=[
-    {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"},{id:"recurente",l:"Recurente"}]},
-    {titlu:"Vânzări",items:[{id:"oferte",l:"Oferte"},{id:"clients",l:"Clienți"}]},
-    {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"perdele",l:"Perdele"},{id:"vopsele",l:"Vopsele"}]},
+    {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
+    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"}]},
+    {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"perdele",l:"Perdele"},{id:"vopsele",l:"Vopsele"},{id:"recurente",l:"Recurente"}]},
     {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
@@ -1222,7 +1222,7 @@ function App() {
         clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{
           const d=(c.dates||[])[ti];
           if(d&&d<tday()&&!(c.done||[])[ti])
-            alerte.push({tip:"👤 Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"rosie",info:"Depășit"});
+            alerte.push({tip:"Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"rosie",info:"Depășit"});
         }));
         // Termene depășite admin
         ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).filter(t=>!t.done&&t.deadline&&t.deadline<tday()).forEach(t=>
@@ -1233,7 +1233,7 @@ function App() {
           const d=(c.dates||[])[ti];
           const notif=(c.notifs||[])[ti];
           if(d&&!d<tday()&&!(c.done||[])[ti]&&daysTo(d)<=2&&daysTo(d)>=0)
-            alerte.push({tip:"👤 Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"galbena",info:daysTo(d)===0?"Azi":daysTo(d)===1?"Mâine":`În ${daysTo(d)} zile`});
+            alerte.push({tip:"Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"galbena",info:daysTo(d)===0?"Azi":daysTo(d)===1?"Mâine":`În ${daysTo(d)} zile`});
         }));
         // Sold negativ previzionat
         const soldAziCalc=(()=>{let s=trezorerie.soldInitial||0;const az=tday();(trezorerie.inregistrari||[]).filter(x=>x.data<=az).forEach(x=>{if(x.tip==="incasare")s+=x.suma;else s-=x.suma;});return s;})();
@@ -1246,9 +1246,9 @@ function App() {
         if(alerte.length===0) return null;
         const rosii=alerte.filter(a=>a.urgenta==="rosie");
         const galbene=alerte.filter(a=>a.urgenta==="galbena");
-        return <div style={{...card,marginBottom:12,padding:"14px 18px",border:`1.5px solid ${rosii.length>0?"#C0A0A0":"#C8A870"}`,background:rosii.length>0?C.dangerLight:C.warnLight}}>
+        return <div style={{...card,marginBottom:12,padding:"14px 18px",border:`1.5px solid ${rosii.length>0?"#C9BCA6":"#C9BCA6"}`,background:rosii.length>0?C.dangerLight:C.warnLight}}>
           <div style={{fontSize:11,fontWeight:600,color:rosii.length>0?C.danger:C.warn,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>
-            ⚠️ {alerte.length} alertă{alerte.length!==1?"e":""} active
+            ● {alerte.length} alertă{alerte.length!==1?"e":""} active
           </div>
           {rosii.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.5)"}}>
             <span style={{fontSize:11,color:C.danger,fontWeight:700,minWidth:80,flexShrink:0}}>{a.info}</span>
@@ -1297,7 +1297,7 @@ function App() {
       {/* Notificări active */}
       {(()=>{const notifAlerts=[];clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const d=(c.dates||[])[ti];const notif=(c.notifs||[])[ti];if(notif&&d&&!( c.done||[])[ti]){const days=daysTo(d);if(days<=2&&days>=0)notifAlerts.push({name:c.name,task:typeof task==="object"?task.title:task,data:d,days});}}));
       if(notifAlerts.length===0) return null;return null;})()} 
-      {recAzi.length>0&&<div style={{...card,border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:12}}>
+      {recAzi.length>0&&<div style={{...card,border:`1px solid #C9BCA6`,background:C.dangerLight,marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{recAzi.length} recurente azi — acționează</div>
         {recAzi.map(r=><div key={r.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{r.title}</span><button style={btnP()} onClick={()=>doneRec(r.id)}>✓</button></div>)}
       </div>}
@@ -1377,7 +1377,7 @@ function App() {
       {recurente.length===0&&<div style={{color:C.textMuted,textAlign:"center",padding:"3rem",fontSize:13}}>Nicio sarcină recurentă.</div>}
       {recAzi.length>0&&<div style={{marginBottom:16}}>
         <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Scadente azi</div>
-        {recAzi.map(r=><div key={r.id} style={{...card,padding:"12px 16px",border:`1px solid #C0A0A0`,background:C.dangerLight,marginBottom:8}}>
+        {recAzi.map(r=><div key={r.id} style={{...card,padding:"12px 16px",border:`1px solid #C9BCA6`,background:C.dangerLight,marginBottom:8}}>
           <div style={row}><div style={{flex:1}}><div style={{fontSize:13,color:C.text,fontWeight:500}}>{r.title}</div><div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{recLabel(r)} · {r.cat}</div></div>
             <button style={btnP()} onClick={()=>doneRec(r.id)}>✓ Gata</button>
             <button onClick={()=>delRec(r.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
@@ -1629,13 +1629,13 @@ function App() {
               const isDone=(oferta.done||[])[ti];
               const tg=tagTask(taskTitle);
               const ov=taskDate&&taskDate<tday();
-              return <div key={ti} style={{background:C.surface,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"10px 14px",marginBottom:8}}>
+              return <div key={ti} style={{background:C.surface,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"10px 14px",marginBottom:8}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
                   <input type="checkbox" checked={isDone||false} onChange={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const d=[...(o.done||[])];d[ti]=!d[ti];return {...o,done:d};}))} style={{cursor:"pointer",width:15,height:15,flexShrink:0,accentColor:C.accent}}/>
                   <span style={{flex:1,fontSize:13,color:isDone?C.textMuted:C.text,textDecoration:isDone?"line-through":"none"}}>{taskTitle}</span>
                   <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
                   <input type="date" value={taskDate} onChange={e=>{const v=e.target.value;setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];t[ti]=typeof t[ti]==="object"?{...t[ti],date:v}:{title:t[ti],tip:"Comandă",date:v};return {...o,tasks:t};}));}}
-                    style={{fontSize:12,border:`1px solid ${ov?"#C0A0A0":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>
+                    style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>
                   <button onClick={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];const d=[...(o.done||[])];t.splice(ti,1);d.splice(ti,1);return {...o,tasks:t,done:d};}))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
                 </div>
               </div>;
@@ -1670,12 +1670,23 @@ function App() {
     {tab==="motionblinds"&&<div>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:16}}>Fișe Magazie · Motoare MotionBlinds / Coulisse</div>
 
-      {/* Alerte stoc negativ */}
-      {motoare.filter(m=>stocRamas(m.model)<0).map(m=>(
-        <div key={m.model} style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C0A0A0`,marginBottom:8,fontSize:13,color:C.danger,fontWeight:500}}>
-          ⚠️ {m.model} — lipsă {Math.abs(stocRamas(m.model))} buc. · De comandat urgent
-        </div>
-      ))}
+      {/* Listă achiziții necesare */}
+      {(()=>{
+        const lipsa=motoare.filter(m=>stocRamas(m.model)<0);
+        if(lipsa.length===0) return null;
+        const totalBuc=lipsa.reduce((s,m)=>s+Math.abs(stocRamas(m.model)),0);
+        return <div style={{...card,marginBottom:16,padding:"16px 20px"}}>
+          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:12}}>
+            <div style={{fontSize:12,fontWeight:600,color:C.text,textTransform:"uppercase",letterSpacing:"0.08em"}}>Listă achiziții necesare</div>
+            <div style={{fontSize:11,color:C.textMuted}}>{lipsa.length} poziții · {totalBuc} buc.</div>
+          </div>
+          {lipsa.map(m=><div key={m.model} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+            <span style={{fontSize:13,fontWeight:500,color:C.text,minWidth:70}}>{m.model}</span>
+            <span style={{fontSize:12,color:C.textMuted,flex:1}}>de comandat</span>
+            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{Math.abs(stocRamas(m.model))} buc.</span>
+          </div>)}
+        </div>;
+      })()}
 
       {/* Formular intrare centralizată */}
       <AddFacturaForm motoare={motoare} onAdd={adaugaFactura}/>
@@ -1693,7 +1704,7 @@ function App() {
                 <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {fmtD(f.data)}</span>
                 <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {f.pozitii.reduce((s,p)=>s+p.qty,0)} buc.</span>
               </div>
-              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
               <span style={{fontSize:11,color:"#5A8A5A"}}>{isOpenF?"▾":"▸"}</span>
             </div>
             {isOpenF&&<div style={{padding:"8px 14px 12px"}}>
@@ -1703,7 +1714,7 @@ function App() {
                 </select>
                 <input type="number" min="1" value={pz.qty} onChange={e=>updPozitie(f.id,pz.id,"qty",e.target.value)} style={{width:60,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
                 <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
-                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C0A0A0`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
               </div>)}
             </div>}
           </div>;
