@@ -163,7 +163,7 @@ function impactScore(task,cat,prio) {
   return s;
 }
 
-const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#2A2118",dangerLight:"#EDE6D8",warn:"#4A3F30",warnLight:"#F2EDE2"};
+const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#2A2118",dangerLight:"#FAF8F4",warn:"#4A3F30",warnLight:"#FAF8F4"};
 
 function ClientTaskRow({task,date,notif,onToggle,onDelete,onDateChange,onNotifChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
@@ -1246,16 +1246,19 @@ function App() {
         if(alerte.length===0) return null;
         const rosii=alerte.filter(a=>a.urgenta==="rosie");
         const galbene=alerte.filter(a=>a.urgenta==="galbena");
-        return <div style={{...card,marginBottom:12,padding:"14px 18px",border:`1.5px solid ${rosii.length>0?"#C9BCA6":"#C9BCA6"}`,background:rosii.length>0?C.dangerLight:C.warnLight}}>
-          <div style={{fontSize:11,fontWeight:600,color:rosii.length>0?C.danger:C.warn,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>
-            ● {alerte.length} alertă{alerte.length!==1?"e":""} active
+        return <div style={{...card,marginBottom:12,padding:"14px 18px",border:`1px solid ${C.border}`,background:C.surface}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <div style={{width:26,height:26,background:"#5C6B65",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <span style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.9)"}}>{alerte.length}</span>
+            </div>
+            <div style={{fontSize:11,fontWeight:600,color:C.text,textTransform:"uppercase",letterSpacing:"0.08em"}}>alertă{alerte.length!==1?"e":""} active</div>
           </div>
-          {rosii.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.5)"}}>
+          {rosii.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:C.bg}}>
             <span style={{fontSize:11,color:C.danger,fontWeight:700,minWidth:80,flexShrink:0}}>{a.info}</span>
             <span style={{fontSize:11,color:C.textMuted,minWidth:60,flexShrink:0}}>{a.tip}</span>
             <span style={{fontSize:12,color:C.text,flex:1}}>{a.text}</span>
           </div>)}
-          {galbene.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:"rgba(255,255,255,0.4)"}}>
+          {galbene.map((a,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,marginBottom:6,padding:"7px 10px",background:C.bg}}>
             <span style={{fontSize:11,color:C.warn,fontWeight:700,minWidth:80,flexShrink:0}}>{a.info}</span>
             <span style={{fontSize:11,color:C.textMuted,minWidth:60,flexShrink:0}}>{a.tip}</span>
             <span style={{fontSize:12,color:C.text,flex:1}}>{a.text}</span>
