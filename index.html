@@ -732,6 +732,8 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
 }
 
 function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setAddingOb,newObName,setNewObName,addObiectiv,delObiectiv,toggleZi,setNotaZi}){
+  const [expandedOi,setExpandedOi]=React.useState(null);
+  const [newItemText,setNewItemText]=React.useState("");
   const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
   const todayKey=new Date().toISOString().slice(0,10);
   const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
@@ -763,6 +765,11 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
     if(v&&v.trim()) setNotaZi(oi,todayKey,v.trim());
   };
 
+  const setDescriere=(oi,val)=>setObiective(p=>p.map((o,i)=>i!==oi?o:{...o,descriere:val}));
+  const addItem=(oi)=>{const t=(newItemText||"").trim();if(!t) return;setObiective(p=>p.map((o,i)=>i!==oi?o:{...o,itemi:[...(o.itemi||[]),{id:gid(),text:t,link:"",nota:"",bifat:false}]}));setNewItemText("");};
+  const updItem=(oi,itemId,field,val)=>setObiective(p=>p.map((o,i)=>i!==oi?o:{...o,itemi:(o.itemi||[]).map(it=>it.id!==itemId?it:{...it,[field]:val})}));
+  const delItem=(oi,itemId)=>setObiective(p=>p.map((o,i)=>i!==oi?o:{...o,itemi:(o.itemi||[]).filter(it=>it.id!==itemId)}));
+
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:12,fontWeight:600}}>Obiective zilnice · imagine de ansamblu</div>
 
@@ -791,8 +798,8 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
             const streak=calcStreak(o);
             const pct=calcPercent(o,obMonth.y,obMonth.m);
             return <tr key={o.id}>
-              <td style={{position:"sticky",left:0,background:C.surface,padding:"6px 10px",fontSize:12,fontWeight:500,color:C.text,whiteSpace:"nowrap"}}>
-                {o.name}
+              <td onClick={()=>setExpandedOi(expandedOi===oi?null:oi)} style={{position:"sticky",left:0,background:C.surface,padding:"6px 10px",fontSize:12,fontWeight:500,color:C.text,whiteSpace:"nowrap",cursor:"pointer"}}>
+                {o.name} <span style={{fontSize:9,color:C.textMuted}}>{expandedOi===oi?"▾":"▸"}</span>
               </td>
               {days.map(day=>{
                 const key=keyFor(obMonth.y,obMonth.m,day);
@@ -814,6 +821,36 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
         </tbody>
       </table>
     </div>:<div style={{fontSize:13,color:C.textMuted,padding:"16px 0"}}>Niciun obiectiv încă. Adaugă unul mai jos (ex: Sport, Organizare) — apare ca rând nou, cu bifă pentru fiecare zi din lună.</div>}
+
+    {expandedOi!==null&&obiective[expandedOi]&&(()=>{
+      const o=obiective[expandedOi];
+      return <div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
+          <div style={{flex:1,fontSize:14,fontWeight:600,color:C.text}}>{o.name} · jurnal</div>
+          <button onClick={()=>setExpandedOi(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.textSub,fontSize:15}}>×</button>
+        </div>
+        <div style={{padding:"14px 16px"}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:6}}>Ce vreau de la {o.name.toLowerCase()}</div>
+          <textarea value={o.descriere||""} onChange={e=>setDescriere(expandedOi,e.target.value)} placeholder="Ex: 20 pagini pe zi, un subiect nou pe lună..." rows={3} style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",boxSizing:"border-box",resize:"vertical",marginBottom:16,fontFamily:"inherit"}}/>
+
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Listă (cărți, subiecte, orice de urmărit)</div>
+          {(o.itemi||[]).map(it=><div key={it.id} style={{background:C.bg,padding:"10px 12px",marginBottom:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <input type="checkbox" checked={it.bifat} onChange={e=>updItem(expandedOi,it.id,"bifat",e.target.checked)} style={{cursor:"pointer",width:14,height:14,flexShrink:0}}/>
+              <input value={it.text} onChange={e=>updItem(expandedOi,it.id,"text",e.target.value)} placeholder="Titlu / subiect" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 8px",background:C.surface,outline:"none",textDecoration:it.bifat?"line-through":"none",color:it.bifat?C.textMuted:C.text}}/>
+              <button onClick={()=>delItem(expandedOi,it.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14,flexShrink:0}}>×</button>
+            </div>
+            <input value={it.link||""} onChange={e=>updItem(expandedOi,it.id,"link",e.target.value)} placeholder="Link (unde l-ai găsit / de unde îl cumperi)" style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"5px 8px",background:C.surface,outline:"none",marginBottom:6,boxSizing:"border-box"}}/>
+            {it.link&&<a href={it.link.startsWith("http")?it.link:`https://${it.link}`} target="_blank" rel="noopener noreferrer" style={{fontSize:11,color:C.accent,display:"inline-block",marginBottom:6}}>Deschide link →</a>}
+            <input value={it.nota||""} onChange={e=>updItem(expandedOi,it.id,"nota",e.target.value)} placeholder="Ce mi-a plăcut / observații" style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"5px 8px",background:C.surface,outline:"none",boxSizing:"border-box"}}/>
+          </div>)}
+          <div style={{display:"flex",gap:8}}>
+            <input value={newItemText} onChange={e=>setNewItemText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addItem(expandedOi);}} placeholder="Titlu nou (ex: numele cărții)..." style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.surface,outline:"none"}}/>
+            <button onClick={()=>addItem(expandedOi)} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
+          </div>
+        </div>
+      </div>;
+    })()}
 
     <div>
       {addingOb?<div style={{display:"flex",alignItems:"center",gap:10}}>
