@@ -806,7 +806,9 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
             <th style={{position:"sticky",left:0,background:C.surface,padding:"6px 10px",fontSize:10,color:C.textMuted,textAlign:"left",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap",zIndex:1}}>Obiectiv</th>
             {days.map(day=>{
               const isToday=keyFor(obMonth.y,obMonth.m,day)===todayKey;
-              return <th key={day} style={{fontSize:10,color:isToday?C.text:C.textMuted,fontWeight:isToday?700:400,padding:"6px 2px",borderBottom:`1px solid ${C.border}`,minWidth:24}}>{day}</th>;
+              const dow=new Date(obMonth.y,obMonth.m,day).getDay();
+              const isWeekend=dow===0||dow===6;
+              return <th key={day} style={{fontSize:10,color:isToday?C.text:isWeekend?"#A89E8C":C.textMuted,fontWeight:isToday?700:400,padding:"6px 2px",borderBottom:`1px solid ${C.border}`,minWidth:24,background:isWeekend?"#EFE9DC":"transparent"}}>{day}</th>;
             })}
             <th style={{fontSize:10,color:C.textMuted,padding:"6px 8px",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>Streak</th>
             <th style={{fontSize:10,color:C.textMuted,padding:"6px 8px",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>%</th>
@@ -826,8 +828,11 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
                 const done=!!o.zile[key];
                 const isFuture=key>todayKey;
                 const nota=o.note&&o.note[key];
+                const dow=new Date(obMonth.y,obMonth.m,day).getDay();
+                const isWeekend=dow===0||dow===6;
+                const bg=done?C.accent:isWeekend?"#DDD6C8":C.bg;
                 return <td key={day} style={{padding:2,textAlign:"center"}}>
-                  <div onClick={()=>!isFuture&&toggleZi(oi,key)} title={nota||""} style={{width:20,height:20,margin:"0 auto",cursor:isFuture?"default":"pointer",background:done?C.accent:C.bg,border:`1px solid ${C.border}`,opacity:isFuture?0.35:1}}/>
+                  <div onClick={()=>!isFuture&&toggleZi(oi,key)} title={nota||""} style={{width:20,height:20,margin:"0 auto",cursor:isFuture?"default":"pointer",background:bg,border:`1px solid ${C.border}`,opacity:isFuture?0.35:1}}/>
                 </td>;
               })}
               <td style={{textAlign:"center",fontSize:12,fontWeight:600,color:C.accent}}>{streak}</td>
