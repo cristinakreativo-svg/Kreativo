@@ -305,8 +305,8 @@ function ClientDocumente({client,ci,setClients,C,sb,tday,fmtD}){
       <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
       <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
     </div>)}
-    <input ref={inputRef} type="file" accept=".pdf,image/*" style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document (PDF / imagine)"}</button>
+    <input ref={inputRef} type="file" accept=".pdf,image/*,.xlsx,.xls,.csv,.doc,.docx" style={{display:"none"}} onChange={handleUpload}/>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document (PDF, Excel, Word, imagine)"}</button>
   </div>;
 }
 
