@@ -35,6 +35,7 @@ const SK = "asistenta_kreativo_v1";
 const CK = "asistenta_chat_v1";
 const CLK = "kreativo_clienti_v2";
 const TDK = "kreativo_tudor_v1";
+const TCK = "kreativo_tudor_contacte_v1";
 const OBK = "kreativo_obiective_v1";
 const PRK = "kreativo_proiecte_personale_v1";
 const FLK = "kreativo_furnizori_lista_v1";
@@ -607,7 +608,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C}){
   const ci=client?clients.indexOf(client):-1;
 
   const montajeByDay={};
-  danClients.forEach(c=>{if(c.dataMontaj) (montajeByDay[c.dataMontaj]=montajeByDay[c.dataMontaj]||[]).push(c.name);});
+  danClients.forEach(c=>{if(c.dataMontaj) (montajeByDay[c.dataMontaj]=montajeByDay[c.dataMontaj]||[]).push({name:c.name,ora:c.oraMontaj||""});});
 
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10,fontWeight:600}}>Programare montaje</div>
@@ -632,7 +633,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C}){
           const nume=montajeByDay[key]||[];
           cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?C.accentLight:C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
             <div style={{fontSize:11,fontWeight:isToday?700:400,color:C.textMuted,marginBottom:2}}>{day}</div>
-            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:C.accent,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
+            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:C.accent,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
           </div>);
         }
         return cells;
@@ -654,6 +655,8 @@ function TabDan({clients,setClients,sb,tday,fmtD,C}){
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 14px",background:C.bg}}>
           <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Data montaj:</span>
           <input type="date" value={client.dataMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,dataMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
+          <span style={{fontSize:12,color:C.textMuted,marginLeft:8}}>Ora:</span>
+          <input type="time" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
         </div>
         <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:14,padding:"10px 14px",background:C.bg,border:"none",cursor:"pointer",textAlign:"left"}}>
           <span style={{fontSize:12,color:C.textSub,fontWeight:500,flex:1}}>📇 Date de contact (telefon, adresă)</span>
@@ -1434,6 +1437,7 @@ function App() {
   const [admin,setAdmin]=useState({contabilitate:[],administrativ:[],marketing:[],personal:[]});
   const [clients,setClients]=useState([]);
   const [tudor,setTudor]=useState([]);
+  const [tudorContacte,setTudorContacte]=useState([]);
   const [obiective,setObiective]=useState([]);
   const [proiecte,setProiecte]=useState([]);
   const [perdele,setPerdele]=useState(PP);
@@ -1468,6 +1472,10 @@ function App() {
   const [addingToTudor,setAddingToTudor]=useState(null);
   const [addingTudor,setAddingTudor]=useState(false);
   const [newTudorName,setNewTudorName]=useState("");
+  const [tudorSubtab,setTudorSubtab]=useState("taskuri");
+  const [openContactId,setOpenContactId]=useState(null);
+  const [newContactName,setNewContactName]=useState({});
+  const [tudorCalMonth,setTudorCalMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [addingOb,setAddingOb]=useState(false);
   const [newObName,setNewObName]=useState("");
   const [obMonth,setObMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
@@ -1534,14 +1542,15 @@ function App() {
           const fl=await sbGet(FLK); if(fl){setFurnizoriLista(fl);gotAnyData=true;}
           const td=await sbGet(TDK); if(td){setTudor(td.map(t=>({...t,open:false})));gotAnyData=true;}
           const ob=await sbGet(OBK); if(ob){setObiective(ob);gotAnyData=true;}
+          const tc=await sbGet(TCK); if(tc){setTudorContacte(tc);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -1559,6 +1568,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(SK,data);},[data,loaded]);
   useEffect(()=>{if(loaded) sbSave(CLK,clients);},[clients,loaded]);
   useEffect(()=>{if(loaded) sbSave(TDK,tudor);},[tudor,loaded]);
+  useEffect(()=>{if(loaded) sbSave(TCK,tudorContacte);},[tudorContacte,loaded]);
   useEffect(()=>{if(loaded) sbSave(OBK,obiective);},[obiective,loaded]);
   useEffect(()=>{if(loaded) sbSave(PRK,proiecte);},[proiecte,loaded]);
   useEffect(()=>{if(loaded) sbSave(FLK,furnizoriLista);},[furnizoriLista,loaded]);
@@ -1607,6 +1617,13 @@ function App() {
   const delTudorTask=(ti_,si)=>setTudor(p=>p.map((t,i)=>i!==ti_?t:{...t,tasks:t.tasks.filter((_,j)=>j!==si),done:t.done.filter((_,j)=>j!==si),dates:(t.dates||[]).filter((_,j)=>j!==si),obs:(t.obs||[]).filter((_,j)=>j!==si)}));
   const delTudor=(ti_)=>setTudor(p=>p.filter((_,i)=>i!==ti_));
   const addTudor=()=>{const n=newTudorName.trim();if(!n) return;setTudor(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],obs:[],open:false}]);setNewTudorName("");setAddingTudor(false);};
+
+  const addContact=(categorie,nume)=>{const n=(nume||"").trim();if(!n) return;setTudorContacte(p=>[...p,{id:gid(),categorie,nume:n,firma:"",adresa:"",telefon:"",website:"",istoric:[],open:false}]);};
+  const delContact=(id)=>setTudorContacte(p=>p.filter(c=>c.id!==id));
+  const updContact=(id,field,val)=>setTudorContacte(p=>p.map(c=>c.id!==id?c:{...c,[field]:val}));
+  const addIstoric=(id)=>setTudorContacte(p=>p.map(c=>c.id!==id?c:{...c,istoric:[{id:gid(),data:tday(),continut:"",deFacut:"",termen:"",bifat:false},...(c.istoric||[])]}));
+  const updIstoric=(id,hid,field,val)=>setTudorContacte(p=>p.map(c=>c.id!==id?c:{...c,istoric:(c.istoric||[]).map(h=>h.id!==hid?h:{...h,[field]:val})}));
+  const delIstoric=(id,hid)=>setTudorContacte(p=>p.map(c=>c.id!==id?c:{...c,istoric:(c.istoric||[]).filter(h=>h.id!==hid)}));
 
   const addObiectiv=()=>{const n=newObName.trim();if(!n) return;setObiective(p=>[...p,{id:gid(),name:n,zile:{},note:{},open:false}]);setNewObName("");setAddingOb(false);};
   const delObiectiv=(oi)=>setObiective(p=>p.filter((_,i)=>i!==oi));
@@ -1703,7 +1720,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective
+        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -1742,6 +1759,7 @@ function App() {
         if(d[PRK]) setProiecte(d[PRK]);
         if(d[FLK]) setFurnizoriLista(d[FLK]);
         if(d[TDK]) setTudor(d[TDK]);
+        if(d[TCK]) setTudorContacte(d[TCK]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -2419,6 +2437,13 @@ function App() {
     </div>}
 
     {tab==="tudor"&&<div>
+      <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+        {[["taskuri","Task-uri"],["designeri","Designeri"],["arhitecti","Arhitecți"],["perdele","Firme perdele/draperii"],["smarthome","Smart home"],["calendar","Calendar"]].map(([id,l])=>
+          <button key={id} onClick={()=>setTudorSubtab(id)} style={{padding:"7px 14px",border:`1px solid ${tudorSubtab===id?C.accent:C.border}`,background:tudorSubtab===id?C.accentLight:"transparent",color:tudorSubtab===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:tudorSubtab===id?500:400}}>{l}</button>
+        )}
+      </div>
+
+      {tudorSubtab==="taskuri"&&<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
       {tudor.slice().sort((a,b)=>a.name.localeCompare(b.name,"ro")).map((t,fi)=>{
         const ti_=tudor.indexOf(t);
@@ -2467,6 +2492,100 @@ function App() {
           <button onClick={()=>setAddingTudor(false)} style={btnS}>✕</button>
         </div>:<button onClick={()=>setAddingTudor(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ task nou</button>}
       </div>
+      </>}
+
+      {["designeri","arhitecti","perdele","smarthome"].includes(tudorSubtab)&&(()=>{
+        const contacteCateg=tudorContacte.filter(c=>c.categorie===tudorSubtab).sort((a,b)=>a.nume.localeCompare(b.nume,"ro"));
+        return <div>
+          <div style={{...row,marginBottom:14}}>
+            <input value={newContactName[tudorSubtab]||""} onChange={e=>setNewContactName(p=>({...p,[tudorSubtab]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){addContact(tudorSubtab,newContactName[tudorSubtab]);setNewContactName(p=>({...p,[tudorSubtab]:""}));}}} placeholder="Nume și prenume contact nou..." style={{...inp,flex:1}}/>
+            <button onClick={()=>{addContact(tudorSubtab,newContactName[tudorSubtab]);setNewContactName(p=>({...p,[tudorSubtab]:""}));}} style={btnP()}>+ Adaugă</button>
+          </div>
+          {contacteCateg.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"10px 0"}}>Niciun contact încă în această categorie.</div>}
+          {contacteCateg.map(c=>{
+            const isOpen=openContactId===c.id;
+            return <div key={c.id} style={{border:`1px solid ${C.border}`,marginBottom:8,background:C.surface,overflow:"hidden"}}>
+              <div onClick={()=>setOpenContactId(isOpen?null:c.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",cursor:"pointer",userSelect:"none",background:C.accentLight}}>
+                <div style={{flex:1}}>
+                  <span style={{fontSize:13,fontWeight:600,color:C.text}}>{c.nume}</span>
+                  {c.firma&&<span style={{fontSize:12,color:C.textSub,marginLeft:8}}>· {c.firma}</span>}
+                </div>
+                {(c.istoric||[]).filter(h=>h.termen&&!h.bifat).length>0&&<span style={{fontSize:10,fontWeight:600,color:C.accent,background:"#fff",padding:"2px 8px"}}>{(c.istoric||[]).filter(h=>h.termen&&!h.bifat).length} de urmărit</span>}
+                <span style={{fontSize:11,color:C.textSub}}>{isOpen?"▾":"▸"}</span>
+              </div>
+              {isOpen&&<div style={{padding:"14px 16px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+                  <input value={c.nume} onChange={e=>updContact(c.id,"nume",e.target.value)} placeholder="Nume și prenume" style={{...inp}}/>
+                  <input value={c.firma} onChange={e=>updContact(c.id,"firma",e.target.value)} placeholder="Firmă" style={{...inp}}/>
+                  <input value={c.adresa} onChange={e=>updContact(c.id,"adresa",e.target.value)} placeholder="Adresă" style={{...inp}}/>
+                  <input type="tel" value={c.telefon} onChange={e=>updContact(c.id,"telefon",e.target.value)} placeholder="Telefon" style={{...inp}}/>
+                  <input value={c.website} onChange={e=>updContact(c.id,"website",e.target.value)} placeholder="Website" style={{...inp,gridColumn:"1 / -1"}}/>
+                </div>
+                <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+                  {c.telefon&&<a href={`tel:${c.telefon.replace(/\s+/g,"")}`} style={{fontSize:12,color:C.accent,textDecoration:"none"}}>📞 Sună</a>}
+                  {c.website&&<a href={c.website.startsWith("http")?c.website:`https://${c.website}`} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,textDecoration:"none"}}>🌐 Website</a>}
+                  <button onClick={()=>delContact(c.id)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",marginLeft:"auto"}}>șterge contact</button>
+                </div>
+                <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Istoric contacte</div>
+                <button onClick={()=>addIstoric(c.id)} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"6px 12px",background:"transparent",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă contact nou</button>
+                {(c.istoric||[]).map(h=><div key={h.id} style={{background:C.bg,padding:"10px 12px",marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                    <input type="checkbox" checked={h.bifat} onChange={e=>updIstoric(c.id,h.id,"bifat",e.target.checked)} style={{cursor:"pointer",width:14,height:14,flexShrink:0}}/>
+                    <span style={{fontSize:11,color:C.textMuted}}>Data:</span>
+                    <input type="date" value={h.data} onChange={e=>updIstoric(c.id,h.id,"data",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 6px",background:C.surface,outline:"none"}}/>
+                    <button onClick={()=>delIstoric(c.id,h.id)} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14}}>×</button>
+                  </div>
+                  <input value={h.continut} onChange={e=>updIstoric(c.id,h.id,"continut",e.target.value)} placeholder="Conținutul discuției..." style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none",marginBottom:6,boxSizing:"border-box"}}/>
+                  <div style={{display:"flex",gap:8}}>
+                    <input value={h.deFacut} onChange={e=>updIstoric(c.id,h.id,"deFacut",e.target.value)} placeholder="Ce e de făcut..." style={{flex:2,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none"}}/>
+                    <input type="date" value={h.termen} onChange={e=>updIstoric(c.id,h.id,"termen",e.target.value)} style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none"}}/>
+                  </div>
+                </div>)}
+              </div>}
+            </div>;
+          })}
+        </div>;
+      })()}
+
+      {tudorSubtab==="calendar"&&(()=>{
+        const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+        const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
+        const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
+        const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+        const todayKey=new Date().toISOString().slice(0,10);
+        const byDay={};
+        tudor.forEach(t=>{(t.tasks||[]).forEach((task,si)=>{const d=(t.dates||[])[si];if(d&&!t.done[si]) (byDay[d]=byDay[d]||[]).push(`${t.name}: ${task}`);});});
+        tudorContacte.forEach(c=>{(c.istoric||[]).forEach(h=>{if(h.termen&&!h.bifat) (byDay[h.termen]=byDay[h.termen]||[]).push(`${c.nume}${c.firma?" ("+c.firma+")":""}: ${h.deFacut||"follow-up"}`);});});
+        return <div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
+            <button onClick={()=>setTudorCalMonth(p=>{const m=p.m-1;return m<0?{y:p.y-1,m:11}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
+            <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[tudorCalMonth.m]} {tudorCalMonth.y}</div>
+            <button onClick={()=>setTudorCalMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:4}}>
+            {ZILE_SCURT.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
+            {(()=>{
+              const first=new Date(tudorCalMonth.y,tudorCalMonth.m,1);
+              const offset=(first.getDay()+6)%7;
+              const total=daysInM(tudorCalMonth.y,tudorCalMonth.m);
+              const cells=[];
+              for(let i=0;i<offset;i++) cells.push(<div key={`e${i}`}/>);
+              for(let day=1;day<=total;day++){
+                const key=keyFor(tudorCalMonth.y,tudorCalMonth.m,day);
+                const isToday=key===todayKey;
+                const items=byDay[key]||[];
+                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:items.length?C.accentLight:C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:C.textMuted,marginBottom:2}}>{day}</div>
+                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:C.accent,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
+                </div>);
+              }
+              return cells;
+            })()}
+          </div>
+        </div>;
+      })()}
     </div>}
 
     {tab==="motionblinds"&&<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
