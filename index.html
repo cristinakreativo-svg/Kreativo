@@ -79,7 +79,7 @@ const IC = [
 ];
 
 const PP = [
-  {etapa:"ETAPA 1",titlu:"Consolidare & Fundație",period:"Iulie–Sept 2025",color:"#5C6B65",taskuri:[
+  {etapa:"ETAPA 1",titlu:"Consolidare & Fundație",period:"Iulie–Sept 2025",color:"#2A2118",taskuri:[
     {id:"p1",text:"Rezolvare probleme tehnice perdelekreativo.ro",resp:"Expert-Online",done:false,deadline:""},
     {id:"p2",text:"Reducere pagini neindexate de la 176 la sub 80",resp:"Cristina + Expert-Online",done:false,deadline:""},
     {id:"p3",text:"Publicare 4 articole blog SEO",resp:"Cristina",done:false,deadline:""},
@@ -247,13 +247,13 @@ function TudorDocumente({t,ti_,setTudor,C,sb,tday,fmtD}){
       const office=["xlsx","xls","doc","docx","ppt","pptx","csv"].includes(ext);
       const openUrl=office?`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(f.url)}`:f.url;
       return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
-        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📎 {f.nume}</a>
+        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"-1px",marginRight:5}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>{f.nume}</a>
         <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
         <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
       </div>;
     })}
     <input ref={inputRef} type="file" style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document"}</button>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document"}</button>
   </div>;
 }
 
@@ -378,13 +378,13 @@ function ClientDocumente({client,ci,setClients,C,sb,tday,fmtD}){
       const office=["xlsx","xls","doc","docx","ppt","pptx","csv"].includes(ext);
       const openUrl=office?`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(f.url)}`:f.url;
       return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
-        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📎 {f.nume}</a>
+        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"-1px",marginRight:5}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>{f.nume}</a>
         <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
         <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
       </div>;
     })}
     <input ref={inputRef} type="file" accept=".pdf,image/*,.xlsx,.xls,.csv,.doc,.docx" style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document (PDF, Excel, Word, imagine)"}</button>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document (PDF, Excel, Word, imagine)"}</button>
   </div>;
 }
 
@@ -417,13 +417,13 @@ function ComenziNico({client,ci,setClients,C,sb,tday,fmtD}){
       const office=["xlsx","xls","csv"].includes(ext);
       const openUrl=office?`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(f.url)}`:f.url;
       return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
-        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📎 {f.nume}</a>
+        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"-1px",marginRight:5}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>{f.nume}</a>
         <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
         <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
       </div>;
     })}
     <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă comandă (Excel)"}</button>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă comandă (Excel)"}</button>
   </div>;
 }
 
@@ -494,9 +494,9 @@ function TabNico({clients,setClients,sb,tday,fmtD,C}){
           const key=keyFor(calMonth.y,calMonth.m,day);
           const isToday=key===todayKey;
           const nume=productieByDay[key]||[];
-          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?C.accentLight:C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
-            <div style={{fontSize:11,fontWeight:isToday?700:400,color:C.textMuted,marginBottom:2}}>{day}</div>
-            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:C.accent,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
+          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?"#5C6B65":C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+            <div style={{fontSize:11,fontWeight:isToday?700:400,color:nume.length?"rgba(255,255,255,0.75)":C.textMuted,marginBottom:2}}>{day}</div>
+            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n}</div>)}
           </div>);
         }
         return cells;
@@ -545,7 +545,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C}){
             <input value={r.cantitate} onChange={e=>updConsum(idx,"cantitate",e.target.value)} placeholder="Cantitate" style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
             <button onClick={()=>delConsum(idx)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14,flexShrink:0}}>×</button>
           </div>)}
-          <button onClick={addConsum} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"6px 12px",background:"transparent",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă consum</button>
+          <button onClick={addConsum} style={{fontSize:12,color:"#2A2118",border:"none",padding:"6px 12px",background:"#5C6B65",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă consum</button>
           {(client.consumuri||[]).length>0&&<button onClick={printConsum} style={{width:"100%",fontSize:12,fontWeight:600,padding:"8px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează consum</button>}
         </div>
       </div>
@@ -584,13 +584,13 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
       const openUrl=office?`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(f.url)}`:f.url;
       return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
         {isImg&&<img src={f.url} alt="" style={{width:36,height:36,objectFit:"cover",flexShrink:0}}/>}
-        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isImg?"":"📎 "}{f.nume}</a>
+        <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isImg?"":<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"-1px",marginRight:5}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}{f.nume}</a>
         <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
         <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
       </div>;
     })}
     <input ref={inputRef} type="file" accept={accept} style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"7px 12px",background:"transparent",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":buttonLabel}</button>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":buttonLabel}</button>
   </div>;
 }
 
@@ -631,9 +631,9 @@ function TabDan({clients,setClients,sb,tday,fmtD,C}){
           const key=keyFor(calMonth.y,calMonth.m,day);
           const isToday=key===todayKey;
           const nume=montajeByDay[key]||[];
-          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?C.accentLight:C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
-            <div style={{fontSize:11,fontWeight:isToday?700:400,color:C.textMuted,marginBottom:2}}>{day}</div>
-            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:C.accent,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
+          cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:nume.length?"#5C6B65":C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+            <div style={{fontSize:11,fontWeight:isToday?700:400,color:nume.length?"rgba(255,255,255,0.75)":C.textMuted,marginBottom:2}}>{day}</div>
+            {nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
           </div>);
         }
         return cells;
@@ -744,10 +744,9 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
           {obiective.map((o,oi)=>{
             const streak=calcStreak(o);
             const pct=calcPercent(o,obMonth.y,obMonth.m);
-            const alert=missedTwice(o);
             return <tr key={o.id}>
               <td style={{position:"sticky",left:0,background:C.surface,padding:"6px 10px",fontSize:12,fontWeight:500,color:C.text,whiteSpace:"nowrap"}}>
-                {o.name}{alert&&<span title="2 zile ratate la rând — azi contează" style={{marginLeft:5,fontWeight:700}}>⚠</span>}
+                {o.name}
               </td>
               {days.map(day=>{
                 const key=keyFor(obMonth.y,obMonth.m,day);
@@ -775,7 +774,7 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
         <input autoFocus value={newObName} onChange={e=>setNewObName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addObiectiv();if(e.key==="Escape")setAddingOb(false);}} placeholder="Obiectiv nou (ex: Sport, Organizare)..." style={{padding:"9px 14px",border:`1px solid ${C.border}`,fontSize:13,flex:1,background:C.surface,color:C.text,outline:"none"}}/>
         <button onClick={addObiectiv} style={{padding:"8px 20px",border:"none",background:C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>Adaugă</button>
         <button onClick={()=>setAddingOb(false)} style={{padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub}}>✕</button>
-      </div>:<button onClick={()=>setAddingOb(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ obiectiv nou</button>}
+      </div>:<button onClick={()=>setAddingOb(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ obiectiv nou</button>}
     </div>
   </div>;
 }
@@ -944,7 +943,7 @@ function OfertaAddTask({onAdd,inp,btnP,tday}){
   const [tip,setTip]=React.useState("Comandă");
   const [data,setData]=React.useState("");
   const TIPURI=["Comandă","Ofertă","Măsurătoare","Montaj","Livrare","Plată","Alt task"];
-  if(!open) return <button onClick={()=>setOpen(true)} style={{fontSize:11,color:"#A0845C",border:"1px dashed #D4C9B8",padding:"5px 12px",background:"transparent",cursor:"pointer",marginTop:6,width:"100%"}}>+ adaugă sarcină</button>;
+  if(!open) return <button onClick={()=>setOpen(true)} style={{fontSize:11,color:"#2A2118",border:"none",padding:"5px 12px",background:"#5C6B65",cursor:"pointer",marginTop:6,width:"100%"}}>+ adaugă sarcină</button>;
   return <div style={{marginTop:6,padding:"10px",background:"#F5F0E8",border:"1px solid #E0D8CC"}}>
     <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
       <input autoFocus value={task} onChange={e=>setTask(e.target.value)} onKeyDown={e=>e.key==="Escape"&&setOpen(false)} placeholder="Descriere sarcină..." style={{...inp,flex:2,minWidth:120,padding:"6px 10px",fontSize:12}}/>
@@ -963,7 +962,7 @@ function OfertaAddTask({onAdd,inp,btnP,tday}){
 function AddOfertaForm({onAdd,inp,btnP,btnS,C}){
   const [open,setOpen]=React.useState(false);
   const [name,setName]=React.useState("");
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ ofertă nouă</button>;
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ ofertă nouă</button>;
   return <div style={{display:"flex",gap:6}}>
     <input autoFocus value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&name.trim()){onAdd(name.trim());setName("");setOpen(false);}if(e.key==="Escape")setOpen(false);}} placeholder="Nume client / ofertă..." style={{...inp,flex:1}}/>
     <button onClick={()=>{if(name.trim()){onAdd(name.trim());setName("");setOpen(false);}}} style={btnP()}>Adaugă</button>
@@ -981,7 +980,7 @@ function AddBiletForm({furnizori,onAdd,onAddFurnizor}){
   const [addingFurnizor,setAddingFurnizor]=React.useState(false);
   const C2={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textMuted:"#A8998A",accent:"#A0845C"};
   const confirmFurnizorNou=()=>{if(furnizorNou.trim()){const f=furnizorNou.trim();setFurnizor(f);onAddFurnizor(f);setAddingFurnizor(false);setFurnizorNou("");}};
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:C2.accent,border:`1.5px dashed ${C2.border}`,background:C2.surface,cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Bilet la ordin nou</button>;
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Bilet la ordin nou</button>;
   return <div style={{background:C2.surface,border:`1px solid ${C2.border}`,padding:"16px",marginBottom:16}}>
     <div style={{fontSize:11,color:C2.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Bilet la ordin nou</div>
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10}}>
@@ -1148,7 +1147,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                 <button onClick={()=>{adaugaInreg(z.data,"incasare");setShowForm(null);}} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
                 <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
               </div>:
-              <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
+              <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#2A2118",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
             }
             {z.totalIn>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:"#2A6A2A",marginTop:6,paddingTop:6,borderTop:"1px solid #D0E8D0"}}>Total încasări: +{z.totalIn.toLocaleString("ro-RO")} RON</div>}
           </div>
@@ -1222,7 +1221,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                   <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>Anulează</button>
                 </div>
               </div>:
-              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:C.danger,border:`1px dashed #C9BCA6`,padding:"4px 12px",background:"transparent",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
+              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:"#2A2118",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
             }
             {z.totalOut>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:C.danger,marginTop:6,paddingTop:6,borderTop:"1px solid #DED2BE"}}>Total plăți: -{z.totalOut.toLocaleString("ro-RO")} RON</div>}
           </div>
@@ -1339,7 +1338,7 @@ function AddFacturaForm({motoare, onAdd}){
     setPozitii([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
     setOpen(false);
   };
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#3A6A3A",border:"1.5px dashed #90C090",background:"#F2F8F2",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Înregistrează intrare nouă (factură)</button>;
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Înregistrează intrare nouă (factură)</button>;
   return <div style={{background:"#F2F8F2",border:"1.5px solid #90C090",padding:"16px",marginBottom:16}}>
     <div style={{fontSize:11,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Intrare nouă · Factură</div>
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:12}}>
@@ -1359,7 +1358,7 @@ function AddFacturaForm({motoare, onAdd}){
       <span style={{fontSize:12,color:C2.textMuted}}>buc.</span>
       {pozitii.length>1&&<button onClick={()=>delPoz(pz.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#C07070",fontSize:16,padding:"0 4px"}}>×</button>}
     </div>)}
-    <button onClick={addPoz} style={{fontSize:11,color:"#3A6A3A",border:"1px dashed #90C090",padding:"4px 12px",background:"transparent",cursor:"pointer",marginBottom:12}}>+ adaugă poziție</button>
+    <button onClick={addPoz} style={{fontSize:11,color:"#2A2118",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginBottom:12}}>+ adaugă poziție</button>
     <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
       <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
       <button onClick={handleSave} style={{padding:"7px 20px",border:"none",background:"#3A6A3A",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează factura</button>
@@ -1840,8 +1839,8 @@ function App() {
 
   const GRUPURI=[
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
-    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"achizitii",l:"Achiziții"},{id:"tudor",l:"Tudor"}]},
-    {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"perdele",l:"Perdele"},{id:"vopsele",l:"Vopsele"},{id:"recurente",l:"Recurente"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"}]},
+    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"achizitii",l:"Achiziții"}]},
+    {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Tudor"},{id:"recurente",l:"Recurente"}]},
     {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
@@ -2293,7 +2292,7 @@ function App() {
           <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder="Nume client nou..." style={{...inp,flex:1}}/>
           <button onClick={addCli} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingCli(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ client nou</button>}
+        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ client nou</button>}
       </div>
       </div>}
     </div>}
@@ -2491,7 +2490,7 @@ function App() {
           <input autoFocus value={newTudorName} onChange={e=>setNewTudorName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addTudor();if(e.key==="Escape")setAddingTudor(false);}} placeholder="Nume task nou..." style={{...inp,flex:1}}/>
           <button onClick={addTudor} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingTudor(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingTudor(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ task nou</button>}
+        </div>:<button onClick={()=>setAddingTudor(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ task nou</button>}
       </div>
       </>}
 
@@ -2528,7 +2527,7 @@ function App() {
                   <button onClick={()=>delContact(c.id)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",marginLeft:"auto"}}>șterge contact</button>
                 </div>
                 <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Istoric contacte</div>
-                <button onClick={()=>addIstoric(c.id)} style={{fontSize:12,color:C.textSub,border:`1px dashed ${C.border}`,padding:"6px 12px",background:"transparent",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă contact nou</button>
+                <button onClick={()=>addIstoric(c.id)} style={{fontSize:12,color:"#2A2118",border:"none",padding:"6px 12px",background:"#5C6B65",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă contact nou</button>
                 {(c.istoric||[]).map(h=><div key={h.id} style={{background:C.bg,padding:"10px 12px",marginBottom:8}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
                     <input type="checkbox" checked={h.bifat} onChange={e=>updIstoric(c.id,h.id,"bifat",e.target.checked)} style={{cursor:"pointer",width:14,height:14,flexShrink:0}}/>
@@ -2577,9 +2576,9 @@ function App() {
                 const key=keyFor(tudorCalMonth.y,tudorCalMonth.m,day);
                 const isToday=key===todayKey;
                 const items=byDay[key]||[];
-                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:items.length?C.accentLight:C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
-                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:C.textMuted,marginBottom:2}}>{day}</div>
-                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:C.accent,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
+                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:items.length?"#5C6B65":C.bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:items.length?"rgba(255,255,255,0.75)":C.textMuted,marginBottom:2}}>{day}</div>
+                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
                 </div>);
               }
               return cells;
@@ -2630,7 +2629,7 @@ function App() {
           <input autoFocus value={newPrName} onChange={e=>setNewPrName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addPr();if(e.key==="Escape")setAddingPr(false);}} placeholder="Nume proiect (ex: Renovare apartament)..." style={{...inp,flex:1}}/>
           <button onClick={addPr} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingPr(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingPr(true)} style={{width:"100%",padding:"12px",fontSize:13,color:C.textMuted,border:`1.5px dashed ${C.border}`,background:"transparent",cursor:"pointer"}}>+ proiect nou</button>}
+        </div>:<button onClick={()=>setAddingPr(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ proiect nou</button>}
       </div>
     </div>}
 
