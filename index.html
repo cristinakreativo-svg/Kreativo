@@ -60,6 +60,7 @@ const OBK = "kreativo_obiective_v1";
 const PRK = "kreativo_proiecte_personale_v1";
 const OMK = "kreativo_obiective_mari_v1";
 const FLK = "kreativo_furnizori_lista_v1";
+const RMK = "kreativo_rulou_materiale_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -544,8 +545,10 @@ function rulouCalc(inp){
 function rulouPartsList(inp, res, qty){
   qty = qty||1;
   const code = res.code, dn = res.dayNight;
+  const RULOU_INFO_ONLY = new Set(["Fabric - Height","Fabric - M2","Fabric - Width"]); // rânduri informative Excel, nu sunt componente de comandat
   const out = [];
   for(const p of RULOU_DATA.parts){
+    if(RULOU_INFO_ONLY.has(p.a)) continue;
     const okUsed = p.uAny || p.u.some(u=>wildcardMatch(u, code));
     if(!okUsed) continue;
     if(p.x.some(x=>wildcardMatch(x, code))) continue;
@@ -674,14 +677,7 @@ function rulouBottombarsAvailable(codeSoFar){
   }).map(b=>b.name);
 }
 
-// ---------- persistent custom materials (manual fabric) — introduse manual, rămân salvate ----------
-const RULOU_MATERIALE_KEY = "kr_rulouMateriale";
-function rulouLoadMateriale(){
-  try{ const v = localStorage.getItem(RULOU_MATERIALE_KEY); return v ? JSON.parse(v) : []; }catch{ return []; }
-}
-function rulouSaveMateriale(list){
-  try{ localStorage.setItem(RULOU_MATERIALE_KEY, JSON.stringify(list)); }catch{}
-}
+// ---------- persistent custom materials (manual fabric) — introduse manual, rămân salvate (sincronizate în Supabase, ca restul aplicației) ----------
 function rulouUpsertMaterial(list, mat){
   const name = (mat.name||"").trim();
   if(!name) return list;
@@ -692,6 +688,44 @@ function rulouUpsertMaterial(list, mat){
 }
 function rulouDeleteMaterial(list, name){
   return list.filter(m=>m.name.toLowerCase()!==(name||"").toLowerCase());
+}
+
+// ---------- shared print-document builders (Roman + Rulou) — folosite atât din configurator cât și din pagina clientului ----------
+function buildRomanPrintHtml(cfg){
+  const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+  return `<html><head><title>Comandă Stor Roman ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;">
+    <h2>Configurator Absolute Roman</h2>
+    ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>`:""}
+    ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
+    <p><b>Cod articol:</b> ${cfg.result.articleCode}</p>
+    <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:6px;">Date introduse (nu sunt calcule ale sistemului)</div>
+      Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Înălțime montaj: ${cfg.input.installHeight}mm · Mecanism: ${cfg.input.mechKey}${cfg.input.motorKey&&cfg.result.isMotor?" · Motor: "+cfg.input.motorKey:""} · Țesătură: ${cfg.input.fabricKey} · Culoare: ${cfg.input.colourKey}
+    </div>
+    <p><b>Rezultat calcul:</b> Șină: ${cfg.result.headrail}mm · Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?" + "+cfg.result.tiltrod2+"mm (2 bucăți)":""} · Bară de jos: ${cfg.result.bottombar}mm · Bobine: ${cfg.result.spools} · Console: ${cfg.result.clips}</p>
+    <table style="border-collapse:collapse;width:100%;margin-top:14px;">
+      <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
+      ${rows}
+    </table>
+  </body></html>`;
+}
+function buildRulouPrintHtml(cfg){
+  const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.article}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+  return `<html><head><title>Comandă Rulou ${cfg.result.code}</title></head><body style="font-family:sans-serif;padding:20px;">
+    <h2>Configurator Rulou (Absolute Roller Blind)</h2>
+    ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>`:""}
+    ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
+    <p><b>Cod articol:</b> ${cfg.result.code}</p>
+    <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:6px;">Date introduse (nu sunt calcule ale sistemului)</div>
+      Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Tub: ${cfg.input.tube} · Culoare: ${cfg.input.color}${cfg.input.materialName?" · Material: "+cfg.input.materialName:""} · Cantitate: ${cfg.qty}
+    </div>
+    <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Lungime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
+    <table style="border-collapse:collapse;width:100%;margin-top:14px;">
+      <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
+      ${rows}
+    </table>
+  </body></html>`;
 }
 
 
@@ -958,6 +992,37 @@ const fmtD=s=>{if(!s)return"";const[y,m,d]=s.split("-");return`${d}.${m}.${y}`;}
 const isOvd=(dl,done)=>!!(dl&&!done&&dl<tday());
 const isToday=s=>s===tday();
 const daysTo=s=>{if(!s)return null;return Math.ceil((new Date(s)-new Date(tday()))/86400000);};
+
+// ---------- consum centralizat de componente per client (contabilitate) ----------
+// Cantitățile din fiecare cfg.parts sunt DEJA înmulțite cu "Cantitate" la momentul calculului
+// (getPartsList pentru șină primește numberOfSystems; rulouPartsList primește qty) —
+// aici doar însumăm ce e deja salvat, fără să înmulțim din nou cu nimic.
+function consolidateClientParts(client){
+  const map=new Map();
+  const add=(code,qty)=>{
+    if(!code||!qty) return;
+    map.set(code,(map.get(code)||0)+qty);
+  };
+  (client.configuratiiSina||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(p.code,p.qty)));
+  (client.configuratiiRoman||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(p.code,p.qty)));
+  (client.configuratiiRulou||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(p.article,p.qty)));
+  return Array.from(map.entries())
+    .map(([cod,cantitate])=>({cod,cantitate:Math.round(cantitate*10000)/10000}))
+    .sort((a,b)=>a.cod.localeCompare(b.cod));
+}
+function exportClientPartsCSV(client){
+  const rows=consolidateClientParts(client);
+  if(!rows.length){ alert("Nu există nicio configurație salvată (șină/stor roman/rulou) pentru acest client."); return; }
+  const lines=["Cod;Cantitate", ...rows.map(r=>`${r.cod};${String(r.cantitate).replace(".",",")}`)];
+  const csv="\uFEFF"+lines.join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`Consum_${(client.name||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_${tday()}.csv`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
 
 function nxtRecur(r) {
   const now=new Date();
@@ -1458,16 +1523,16 @@ function TabConfigurator({C,clients,setClients,clientIdFixat}){
   const clientObj=clients&&clients.find(c=>c.id===clientId);
 
   const buildPrintHtml=(cfg)=>{
-    const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+    const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
     return `<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;">
       <h2>Configurator Coulisse SmartCurtain</h2>
-      ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}${cfg.camera?" · "+cfg.camera:""}</p>`:""}
+      ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>`:""}
       ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
       <p><b>Cod articol:</b> ${cfg.result.articleCode}</p>
       <p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Segmente șină: ${cfg.input.railSegments} · Cantitate: ${cfg.input.quantity}</p>
       <p>Șină de tăiat: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets} · Stackwidth: ${Math.round(cfg.result.stackwidth)}mm</p>
       <table style="border-collapse:collapse;width:100%;margin-top:14px;">
-        <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
+        <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
         ${rows}
       </table>
     </body></html>`;
@@ -1599,7 +1664,8 @@ function TabConfigurator({C,clients,setClients,clientIdFixat}){
         <div style={{flex:1,fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Listă piese de comandat ({parts.length})</div>
         <button onClick={printParts} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
       </div>
-      {parts.map(p=><div key={p.code} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+      {parts.map((p,i)=><div key={p.code} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+        <span style={{fontSize:11,color:C.textMuted,minWidth:20,flexShrink:0}}>{i+1}.</span>
         <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{p.code}</span>
         <span style={{fontSize:12,color:C.text,flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
         <span style={{fontSize:12,fontWeight:600,color:C.text,flexShrink:0}}>{p.qty}</span>
@@ -1669,7 +1735,8 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint}){
       </div>
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Piese de comandat ({cfg.parts.length})</div>
-      {cfg.parts.map(p=><div key={p.code} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
+      {cfg.parts.map((p,i)=><div key={p.code} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
+        <span style={{color:C.textMuted,minWidth:18}}>{i+1}.</span>
         <span style={{fontWeight:600,color:C.accent,minWidth:90}}>{p.code}</span>
         <span style={{flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
         <span style={{fontWeight:600,color:C.text}}>{p.qty}</span>
@@ -1712,21 +1779,7 @@ function TabConfiguratorRoman({C,clients,setClients}){
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
   const clientObj=clients&&clients.find(c=>c.id===clientId);
 
-  const buildPrintHtml=(cfg)=>{
-    const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-    return `<html><head><title>Comandă Stor Roman ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;">
-      <h2>Configurator Absolute Roman</h2>
-      ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}${cfg.camera?" · "+cfg.camera:""}</p>`:""}
-      ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
-      <p><b>Cod articol:</b> ${cfg.result.articleCode}</p>
-      <p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Înălțime montaj: ${cfg.input.installHeight}mm · Mecanism: ${cfg.input.mechKey}${cfg.input.motorKey&&cfg.result.isMotor?" · Motor: "+cfg.input.motorKey:""} · Țesătură: ${cfg.input.fabricKey} · Culoare: ${cfg.input.colourKey}</p>
-      <p>Șină: ${cfg.result.headrail}mm · Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?" + "+cfg.result.tiltrod2+"mm (2 bucăți)":""} · Bară de jos: ${cfg.result.bottombar}mm · Bobine: ${cfg.result.spools} · Console: ${cfg.result.clips}</p>
-      <table style="border-collapse:collapse;width:100%;margin-top:14px;">
-        <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
-        ${rows}
-      </table>
-    </body></html>`;
-  };
+  const buildPrintHtml=buildRomanPrintHtml;
   const printParts=()=>{ if(!result) return; printHtmlDoc(buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:{width,height,installHeight,mechKey,motorKey,fabricKey,colourKey},result,parts})); };
   const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
 
@@ -1841,7 +1894,8 @@ function TabConfiguratorRoman({C,clients,setClients}){
         <div style={{flex:1,fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Listă piese de comandat ({parts.length})</div>
         <button onClick={printParts} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
       </div>
-      {parts.map(p=><div key={p.code} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+      {parts.map((p,i)=><div key={p.code} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+        <span style={{fontSize:11,color:C.textMuted,minWidth:20,flexShrink:0}}>{i+1}.</span>
         <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{p.code}</span>
         <span style={{fontSize:12,color:C.text,flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
         <span style={{fontSize:12,fontWeight:600,color:C.text,flexShrink:0}}>{p.qty}</span>
@@ -1902,7 +1956,8 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
           </div>
         )}
       </div>
-      {cfg.parts.map(p=><div key={p.code} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
+      {cfg.parts.map((p,i)=><div key={p.code} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
+        <span style={{color:C.textMuted,minWidth:18}}>{i+1}.</span>
         <span style={{fontWeight:600,color:C.accent,minWidth:90}}>{p.code}</span>
         <span style={{flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
         <span style={{fontWeight:600,color:C.text}}>{p.qty}</span>
@@ -1915,7 +1970,7 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
   </div>;
 }
 
-function TabConfiguratorRulou({C,clients,setClients}){
+function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1500);
   const [installHeight,setInstallHeight]=React.useState("");
@@ -1936,7 +1991,6 @@ function TabConfiguratorRulou({C,clients,setClients}){
   const [fabricThickness,setFabricThickness]=React.useState(0.45);
   const [fabricWeight,setFabricWeight]=React.useState(350);
   const [materialName,setMaterialName]=React.useState("");
-  const [savedMateriale,setSavedMateriale]=React.useState(()=>rulouLoadMateriale());
   const [btb,setBtb]=React.useState("");
   const [qty,setQty]=React.useState(1);
   const [clientId,setClientId]=React.useState("");
@@ -2004,21 +2058,7 @@ function TabConfiguratorRulou({C,clients,setClients}){
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
   const clientObj=clients&&clients.find(c=>c.id===clientId);
 
-  const buildPrintHtml=(cfg)=>{
-    const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.article}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-    return `<html><head><title>Comandă Rulou ${cfg.result.code}</title></head><body style="font-family:sans-serif;padding:20px;">
-      <h2>Configurator Rulou (Absolute Roller Blind)</h2>
-      ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}${cfg.camera?" · "+cfg.camera:""}</p>`:""}
-      ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
-      <p><b>Cod articol:</b> ${cfg.result.code}</p>
-      <p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Tub: ${cfg.input.tube} · Culoare: ${cfg.input.color}${cfg.input.materialName?" · Material: "+cfg.input.materialName:""} · Cantitate: ${cfg.qty}</p>
-      <p>Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Lungime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
-      <table style="border-collapse:collapse;width:100%;margin-top:14px;">
-        <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
-        ${rows}
-      </table>
-    </body></html>`;
-  };
+  const buildPrintHtml=buildRulouPrintHtml;
   const printParts=()=>{ if(!result) return; printHtmlDoc(buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:inp,qty,result,parts})); };
   const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
 
@@ -2026,7 +2066,7 @@ function TabConfiguratorRulou({C,clients,setClients}){
     if(!clientId||!result) return;
     if(fabricManual&&materialName.trim()){
       const upd=rulouUpsertMaterial(savedMateriale,{name:materialName,thickness:Number(fabricThickness),weight:Number(fabricWeight)});
-      setSavedMateriale(upd); rulouSaveMateriale(upd);
+      setSavedMateriale(upd);
     }
     const cfg={id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
       qty:Number(qty)||1, input:inp, result, parts};
@@ -2118,12 +2158,10 @@ function TabConfiguratorRulou({C,clients,setClients}){
     </div>}
 
     <div style={{marginBottom:16}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:5}}>
-        <label style={{...lblStyle,marginBottom:0}}>Țesătură</label>
-        <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.textSub,cursor:"pointer"}}>
-          <input type="checkbox" checked={fabricManual} onChange={e=>setFabricManual(e.target.checked)}/>
-          introdu material manual (nu e în lista Coulisse)
-        </label>
+      <label style={lblStyle}>Țesătură</label>
+      <div style={{display:"flex",gap:8,marginBottom:8}}>
+        <button type="button" onClick={()=>setFabricManual(false)} style={{flex:1,fontSize:12,fontWeight:600,padding:"9px 8px",border:`1px solid ${!fabricManual?C.accent:C.border}`,background:!fabricManual?C.accentLight:C.surface,color:!fabricManual?C.accent:C.textSub,cursor:"pointer"}}>Din lista Coulisse</button>
+        <button type="button" onClick={()=>setFabricManual(true)} style={{flex:1,fontSize:12,fontWeight:600,padding:"9px 8px",border:`1px solid ${fabricManual?C.accent:C.border}`,background:fabricManual?C.accentLight:C.surface,color:fabricManual?C.accent:C.textSub,cursor:"pointer"}}>✏️ Material propriu (manual)</button>
       </div>
       {!fabricManual&&<select value={fabricKey} onChange={e=>setFabricKey(e.target.value)} style={selStyle}>
         {RULOU_DATA.fabrics.map(f=><option key={f.name} value={f.name}>{f.name}</option>)}
@@ -2145,13 +2183,13 @@ function TabConfiguratorRulou({C,clients,setClients}){
           <button onClick={()=>{
             if(!materialName.trim()) return;
             const upd=rulouUpsertMaterial(savedMateriale,{name:materialName,thickness:Number(fabricThickness),weight:Number(fabricWeight)});
-            setSavedMateriale(upd); rulouSaveMateriale(upd);
+            setSavedMateriale(upd);
           }} disabled={!materialName.trim()} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:materialName.trim()?"#5C6B65":C.border,color:"#fff",border:"none",cursor:materialName.trim()?"pointer":"default"}}>💾 Salvează materialul (rămâne pentru altă dată)</button>
           {savedMateriale.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
             {savedMateriale.map(m=>
               <span key={m.name} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.textSub,background:C.bg,padding:"4px 4px 4px 10px"}}>
                 <span style={{cursor:"pointer"}} onClick={()=>{setMaterialName(m.name);setFabricThickness(m.thickness);setFabricWeight(m.weight);}}>{m.name}</span>
-                <button onClick={()=>{const upd=rulouDeleteMaterial(savedMateriale,m.name);setSavedMateriale(upd);rulouSaveMateriale(upd);}} title="Șterge materialul din memorie" style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14,padding:"0 4px",lineHeight:1}}>×</button>
+                <button onClick={()=>{const upd=rulouDeleteMaterial(savedMateriale,m.name);setSavedMateriale(upd);}} title="Șterge materialul din memorie" style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14,padding:"0 4px",lineHeight:1}}>×</button>
               </span>
             )}
           </div>}
@@ -2232,6 +2270,7 @@ function TabConfiguratorRulou({C,clients,setClients}){
         <button onClick={printParts} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
       </div>
       {parts.map((p,i)=><div key={p.article+i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+        <span style={{fontSize:11,color:C.textMuted,minWidth:20,flexShrink:0}}>{i+1}.</span>
         <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{p.article}</span>
         <span style={{fontSize:12,color:C.text,flex:1}}>{p.desc}</span>
         <span style={{fontSize:12,fontWeight:600,color:C.text,flexShrink:0}}>{p.qty}</span>
@@ -2298,6 +2337,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
         )}
       </div>
       {cfg.parts.map((p,i)=><div key={p.article+i} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
+        <span style={{color:C.textMuted,minWidth:18}}>{i+1}.</span>
         <span style={{fontWeight:600,color:C.accent,minWidth:90}}>{p.article}</span>
         <span style={{flex:1}}>{p.desc}</span>
         <span style={{fontWeight:600,color:C.text}}>{p.qty}</span>
@@ -2351,7 +2391,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale}){
   const [openId,setOpenId]=React.useState(null);
   const [contactOpen,setContactOpen]=React.useState({});
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
@@ -2446,12 +2486,15 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi șină / sisteme de produs</div>
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>
+        {((client.configuratiiSina||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length)>0&&<div style={{marginTop:16}}>
+          <button onClick={()=>exportClientPartsCSV(client)} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📊 Consum centralizat componente (CSV, pentru contabilitate)</button>
+        </div>}
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
           {(client.configuratiiSina||[]).map(cfg=>
             <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onPrint={()=>{
-              const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-              const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}${cfg.camera?" · "+cfg.camera:""}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
+              const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+              const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
               printHtmlDoc(html);
             }}/>
           )}
@@ -2460,9 +2503,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Storuri romane ({(client.configuratiiRoman||[]).length})</div>
           {(client.configuratiiRoman||[]).map(cfg=>
             <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onPrint={()=>{
-              const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-              const html=`<html><head><title>Comandă Stor Roman ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Absolute Roman</h2><p><b>Client:</b> ${client.name}${cfg.camera?" · "+cfg.camera:""}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Înălțime montaj: ${cfg.input.installHeight}mm · Mecanism: ${cfg.input.mechKey}${cfg.input.motorKey&&cfg.result.isMotor?" · Motor: "+cfg.input.motorKey:""} · Țesătură: ${cfg.input.fabricKey} · Culoare: ${cfg.input.colourKey}</p><p>Șină: ${cfg.result.headrail}mm · Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?" + "+cfg.result.tiltrod2+"mm (2 bucăți)":""} · Bară de jos: ${cfg.result.bottombar}mm · Bobine: ${cfg.result.spools} · Console: ${cfg.result.clips}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
-              printHtmlDoc(html);
+              printHtmlDoc(buildRomanPrintHtml({...cfg,clientName:client.name}));
             }}/>
           )}
         </div>}
@@ -2470,9 +2511,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Rulouri ({(client.configuratiiRulou||[]).length})</div>
           {(client.configuratiiRulou||[]).map(cfg=>
             <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onPrint={()=>{
-              const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.article}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-              const html=`<html><head><title>Comandă Rulou ${cfg.result.code}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Rulou (Absolute Roller Blind)</h2><p><b>Client:</b> ${client.name}${cfg.camera?" · "+cfg.camera:""}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.code}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Tub: ${cfg.input.tube} · Culoare: ${cfg.input.color}${cfg.input.materialName?" · Material: "+cfg.input.materialName:""} · Cantitate: ${cfg.qty}</p><p>Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Lungime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
-              printHtmlDoc(html);
+              printHtmlDoc(buildRulouPrintHtml({...cfg,clientName:client.name}));
             }}/>
           )}
         </div>}
@@ -3287,6 +3326,7 @@ function App() {
   const [bilete,setBilete]=useState([]);
   const [trezorerie,setTrezorerie]=useState({soldInitial:0,incasari:[],plati:[],recurente:[]});
   const [furnizoriLista,setFurnizoriLista]=useState(["Coulisse","Benjamin Moore","Darstar","Duval"]);
+  const [rulouMateriale,setRulouMateriale]=useState([]);
   const [oferte,setOferte]=useState([]);
   const [log,setLog]=useState({});
   const [ofertaSubtab,setOfertaSubtab]=useState("lista"); // {clientId: [{text, data, ora}]}
@@ -3392,14 +3432,15 @@ function App() {
           const tc=await sbGet(TCK); if(tc){setTudorContacte(tc);gotAnyData=true;}
           const zb=await sbGet(ZBK); if(zb){setZileBlocate({nico:[],dan:[],tudor:[],...zb});gotAnyData=true;}
           const om=await sbGet(OMK); if(om){setObiectiveMari(om.map(o=>({...o,open:false})));gotAnyData=true;}
+          const rm=await sbGet(RMK); if(rm){setRulouMateriale(rm);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false})))];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -3423,6 +3464,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(OBK,obiective);},[obiective,loaded]);
   useEffect(()=>{if(loaded) sbSave(PRK,proiecte);},[proiecte,loaded]);
   useEffect(()=>{if(loaded) sbSave(FLK,furnizoriLista);},[furnizoriLista,loaded]);
+  useEffect(()=>{if(loaded) sbSave(RMK,rulouMateriale);},[rulouMateriale,loaded]);
   useEffect(()=>{if(loaded) sbSave(AK,admin);},[admin,loaded]);
   useEffect(()=>{if(loaded) sbSave(PK,perdele);},[perdele,loaded]);
   useEffect(()=>{if(loaded) sbSave(MIK,mit);},[mit,loaded]);
@@ -3604,7 +3646,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari
+        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -3646,6 +3688,7 @@ function App() {
         if(d[TCK]) setTudorContacte(d[TCK]);
         if(d[ZBK]) setZileBlocate({nico:[],dan:[],tudor:[],...d[ZBK]});
         if(d[OMK]) setObiectiveMari(d[OMK]);
+        if(d[RMK]) setRulouMateriale(d[RMK]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -3757,7 +3800,7 @@ function App() {
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:danView==="cfgroman"?C.accentLight:"transparent",color:danView==="cfgroman"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
         <button onClick={()=>setDanView("cfgrulou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgrulou"?C.accent:C.border}`,background:danView==="cfgrulou"?C.accentLight:"transparent",color:danView==="cfgrulou"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgrulou"?500:400}}>Configurator rulou</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients}/>:
       <TabConfiguratorRoman C={C} clients={clients} setClients={setClients}/>}
@@ -4450,8 +4493,8 @@ function App() {
       </div>
       {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients}/>:
-      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)}/>}
+      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale}/>:
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale}/>}
     </div>}
 
     {tab==="achizitii"&&<div>
