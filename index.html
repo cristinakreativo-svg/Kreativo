@@ -6,13 +6,13 @@
 <title>Kreativo Studio · Panou de control</title>
 <link rel="icon" type="image/png" href="favicon-32.png">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="manifest" href="manifest.json">
 <script>
 (function(){
   var p = new URLSearchParams(window.location.search);
-  var m = document.querySelector('link[rel="manifest"]');
-  if(p.get('dan')==='1'){ m.setAttribute('href','manifest-dan.json'); }
-  else if(p.get('nico')==='1'){ m.setAttribute('href','manifest-nico.json'); }
+  var href = 'manifest.json';
+  if(p.get('dan')==='1') href = 'manifest-dan.json';
+  else if(p.get('nico')==='1') href = 'manifest-nico.json';
+  document.write('<link rel="manifest" href="'+href+'">');
 })();
 </script>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -732,7 +732,7 @@ function buildRulouPrintHtml(cfg){
         Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}<br/>Cantitate: ${cfg.qty}
       </div>
     </div>
-    <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Lungime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
+    <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Înălțime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
     <table style="border-collapse:collapse;width:100%;margin-top:14px;">
       <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
       ${rows}
@@ -2278,7 +2278,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
         <div style={{fontSize:14,fontWeight:600,color:C.text,wordBreak:"break-all"}}>{result.code}</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:0,padding:"14px 16px"}}>
-        {[...(inp.materialName?[["Material",inp.materialName]]:[]),["Tub tăiat",result.tubeL+" mm"],["Lățime stofă",result.fabricW+" mm"],["Lungime stofă",result.fabricH+" mm"],
+        {[...(inp.materialName?[["Material",inp.materialName]]:[]),["Tub tăiat",result.tubeL+" mm"],["Lățime stofă",result.fabricW+" mm"],["Înălțime stofă",result.fabricH+" mm"],
           ["Bottombar",result.btbL+" mm"],["Diametru rulou",result.rolDiam+" mm"],["Cuplu",result.torque.toFixed(2)+" Nm"],
           ["Forță acționare",result.force.toFixed(2)+" kg"],
           ...(result.lprofile?[["Profil casetă (bază)",result.lprofile+" mm"]]:[]),
@@ -2367,7 +2367,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Rezultat calcul</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14,background:C.bg,padding:"10px"}}>
-        {[["Tub tăiat",cfg.result.tubeL+" mm"],["Lățime stofă",cfg.result.fabricW+" mm"],["Lungime stofă",cfg.result.fabricH+" mm"],["Bottombar",cfg.result.btbL+" mm"],["Diametru",cfg.result.rolDiam+" mm"]].map(([l,v])=>
+        {[["Tub tăiat",cfg.result.tubeL+" mm"],["Lățime stofă",cfg.result.fabricW+" mm"],["Înălțime stofă",cfg.result.fabricH+" mm"],["Bottombar",cfg.result.btbL+" mm"],["Diametru",cfg.result.rolDiam+" mm"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{v}</div>
