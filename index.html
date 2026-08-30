@@ -43,6 +43,7 @@ button:active{transform:scale(0.98);}
 <body>
 <div id="root"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
@@ -61,6 +62,7 @@ const PRK = "kreativo_proiecte_personale_v1";
 const OMK = "kreativo_obiective_mari_v1";
 const FLK = "kreativo_furnizori_lista_v1";
 const RMK = "kreativo_rulou_materiale_v1";
+const CMK = "kreativo_camere_lista_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -693,14 +695,15 @@ function rulouDeleteMaterial(list, name){
 // ---------- shared print-document builders (Roman + Rulou) — folosite atât din configurator cât și din pagina clientului ----------
 function buildRomanPrintHtml(cfg){
   const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-  return `<html><head><title>Comandă Stor Roman ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;">
+  return `<html><head><title>Comandă Stor Roman</title></head><body style="font-family:sans-serif;padding:20px;">
     <h2>Configurator Absolute Roman</h2>
     ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>`:""}
     ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
-    <p><b>Cod articol:</b> ${cfg.result.articleCode}</p>
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:6px;">Date introduse (nu sunt calcule ale sistemului)</div>
-      Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Înălțime montaj: ${cfg.input.installHeight}mm · Mecanism: ${cfg.input.mechKey}${cfg.input.motorKey&&cfg.result.isMotor?" · Motor: "+cfg.input.motorKey:""} · Țesătură: ${cfg.input.fabricKey} · Culoare: ${cfg.input.colourKey}
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
+      <div style="line-height:1.9;">
+        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Înălțime montaj: ${cfg.input.installHeight}mm<br/>Mecanism: ${cfg.input.mechKey}${cfg.input.motorKey&&cfg.result.isMotor?"<br/>Motor: "+cfg.input.motorKey:""}<br/>Țesătură: ${cfg.input.fabricKey}<br/>Culoare: ${cfg.input.colourKey}
+      </div>
     </div>
     <p><b>Rezultat calcul:</b> Șină: ${cfg.result.headrail}mm · Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?" + "+cfg.result.tiltrod2+"mm (2 bucăți)":""} · Bară de jos: ${cfg.result.bottombar}mm · Bobine: ${cfg.result.spools} · Console: ${cfg.result.clips}</p>
     <table style="border-collapse:collapse;width:100%;margin-top:14px;">
@@ -711,14 +714,15 @@ function buildRomanPrintHtml(cfg){
 }
 function buildRulouPrintHtml(cfg){
   const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.article}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-  return `<html><head><title>Comandă Rulou ${cfg.result.code}</title></head><body style="font-family:sans-serif;padding:20px;">
+  return `<html><head><title>Comandă Rulou</title></head><body style="font-family:sans-serif;padding:20px;">
     <h2>Configurator Rulou (Absolute Roller Blind)</h2>
     ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>`:""}
     ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
-    <p><b>Cod articol:</b> ${cfg.result.code}</p>
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
-      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:6px;">Date introduse (nu sunt calcule ale sistemului)</div>
-      Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Tub: ${cfg.input.tube} · Culoare: ${cfg.input.color}${cfg.input.materialName?" · Material: "+cfg.input.materialName:""} · Cantitate: ${cfg.qty}
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
+      <div style="line-height:1.9;">
+        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}<br/>Cantitate: ${cfg.qty}
+      </div>
     </div>
     <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Lungime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
     <table style="border-collapse:collapse;width:100%;margin-top:14px;">
@@ -1010,18 +1014,16 @@ function consolidateClientParts(client){
     .map(([cod,cantitate])=>({cod,cantitate:Math.round(cantitate*10000)/10000}))
     .sort((a,b)=>a.cod.localeCompare(b.cod));
 }
-function exportClientPartsCSV(client){
+function exportClientPartsXLSX(client){
   const rows=consolidateClientParts(client);
   if(!rows.length){ alert("Nu există nicio configurație salvată (șină/stor roman/rulou) pentru acest client."); return; }
-  const lines=["Cod;Cantitate", ...rows.map(r=>`${r.cod};${String(r.cantitate).replace(".",",")}`)];
-  const csv="\uFEFF"+lines.join("\r\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;
-  a.download=`Consum_${(client.name||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_${tday()}.csv`;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
+  if(typeof XLSX==="undefined"){ alert("Modulul Excel nu s-a încărcat (verifică conexiunea la internet) — încearcă din nou."); return; }
+  const data=[["Cod","Cantitate"], ...rows.map(r=>[r.cod, r.cantitate])];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"]=[{wch:20},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Consum");
+  XLSX.writeFile(wb, `Consum_${(client.name||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_${tday()}.xlsx`);
 }
 
 function nxtRecur(r) {
@@ -1493,7 +1495,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   </div>;
 }
 
-function TabConfigurator({C,clients,setClients,clientIdFixat}){
+function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCamereLista}){
   const [width,setWidth]=React.useState(2000);
   const [height,setHeight]=React.useState(2500);
   const [motorKey,setMotorKey]=React.useState("CM-57");
@@ -1524,13 +1526,17 @@ function TabConfigurator({C,clients,setClients,clientIdFixat}){
 
   const buildPrintHtml=(cfg)=>{
     const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-    return `<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;">
+    return `<html><head><title>Comandă Coulisse</title></head><body style="font-family:sans-serif;padding:20px;">
       <h2>Configurator Coulisse SmartCurtain</h2>
       ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>`:""}
       ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
-      <p><b>Cod articol:</b> ${cfg.result.articleCode}</p>
-      <p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Segmente șină: ${cfg.input.railSegments} · Cantitate: ${cfg.input.quantity}</p>
-      <p>Șină de tăiat: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets} · Stackwidth: ${Math.round(cfg.result.stackwidth)}mm</p>
+      <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
+        <div style="line-height:1.9;">
+          Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Motor: ${cfg.input.motorKey}<br/>Glisor: ${cfg.input.gliderKey}<br/>Împachetare: ${cfg.input.packKey}<br/>Culoare: ${cfg.input.colourKey}<br/>Segmente șină: ${cfg.input.railSegments}<br/>Cantitate: ${cfg.input.quantity}
+        </div>
+      </div>
+      <p><b>Rezultat calcul:</b> Șină de tăiat: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets} · Stackwidth: ${Math.round(cfg.result.stackwidth)}mm</p>
       <table style="border-collapse:collapse;width:100%;margin-top:14px;">
         <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
         ${rows}
@@ -1553,6 +1559,10 @@ function TabConfigurator({C,clients,setClients,clientIdFixat}){
     if(!clientId||!result) return;
     if(validErrors.length>0){ alert("Nu poți salva — sunt erori de validare care trebuie corectate întâi:\n\n"+validErrors.join("\n")); return; }
     if(validWarnings.length>0 && !window.confirm("Atenție:\n\n"+validWarnings.join("\n")+"\n\nSigur vrei să salvezi oricum?")) return;
+    if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
+    if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())){
+      setCamereLista(p=>[...p,camera.trim()]);
+    }
     const cfg={
       id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
       input:{width:Number(width),height:Number(height),motorKey,gliderKey,packKey,colourKey,railSegments:Number(railSegments),quantity:Number(quantity)||1,options},
@@ -1575,7 +1585,8 @@ function TabConfigurator({C,clients,setClients,clientIdFixat}){
         </select>
       </div>
       <div><label style={lblStyle}>Cameră</label>
-        <input value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+        <input list="camere-dl" value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+        <datalist id="camere-dl">{(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}</datalist>
       </div>
       <div style={{gridColumn:"1 / -1"}}><label style={lblStyle}>Observații pentru Dan</label>
         <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} placeholder="ex: atenție la colțul din stânga, geamul e strâmb..." rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
@@ -1749,7 +1760,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint}){
   </div>;
 }
 
-function TabConfiguratorRoman({C,clients,setClients}){
+function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1000);
   const [installHeight,setInstallHeight]=React.useState(1000);
@@ -1786,6 +1797,10 @@ function TabConfiguratorRoman({C,clients,setClients}){
   const salveazaLaClient=()=>{
     if(!clientId||!result) return;
     if(validErrors.length>0){ alert("Nu poți salva — erori de validare:\n\n"+validErrors.join("\n")); return; }
+    if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
+    if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())){
+      setCamereLista(p=>[...p,camera.trim()]);
+    }
     const cfg={id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
       input:{width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,motorKey,fabricKey,colourKey,controlSide,cordsSpools,options},
       result, parts};
@@ -1806,7 +1821,8 @@ function TabConfiguratorRoman({C,clients,setClients}){
         </select>
       </div>
       <div><label style={lblStyle}>Cameră</label>
-        <input value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+        <input list="camere-dl" value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+        <datalist id="camere-dl">{(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}</datalist>
       </div>
       <div style={{gridColumn:"1 / -1"}}><label style={lblStyle}>Observații pentru Dan</label>
         <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} placeholder="ex: atenție la colțul din stânga, geamul e strâmb..." rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
@@ -1970,7 +1986,7 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
   </div>;
 }
 
-function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale}){
+function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale,camereLista,setCamereLista}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1500);
   const [installHeight,setInstallHeight]=React.useState("");
@@ -2064,6 +2080,10 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
 
   const salveazaLaClient=()=>{
     if(!clientId||!result) return;
+    if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
+    if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())){
+      setCamereLista(p=>[...p,camera.trim()]);
+    }
     if(fabricManual&&materialName.trim()){
       const upd=rulouUpsertMaterial(savedMateriale,{name:materialName,thickness:Number(fabricThickness),weight:Number(fabricWeight)});
       setSavedMateriale(upd);
@@ -2087,7 +2107,8 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
         </select>
       </div>
       <div><label style={lblStyle}>Cameră</label>
-        <input value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+        <input list="camere-dl" value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+        <datalist id="camere-dl">{(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}</datalist>
       </div>
       <div style={{gridColumn:"1 / -1"}}><label style={lblStyle}>Observații pentru Dan</label>
         <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} placeholder="ex: atenție la colțul din stânga, geamul e strâmb..." rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
@@ -2391,7 +2412,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista}){
   const [openId,setOpenId]=React.useState(null);
   const [contactOpen,setContactOpen]=React.useState({});
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
@@ -2487,7 +2508,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>
         {((client.configuratiiSina||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length)>0&&<div style={{marginTop:16}}>
-          <button onClick={()=>exportClientPartsCSV(client)} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📊 Consum centralizat componente (CSV, pentru contabilitate)</button>
+          <button onClick={()=>exportClientPartsXLSX(client)} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📊 Consum centralizat componente (Excel, pentru contabilitate)</button>
         </div>}
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
@@ -3327,6 +3348,7 @@ function App() {
   const [trezorerie,setTrezorerie]=useState({soldInitial:0,incasari:[],plati:[],recurente:[]});
   const [furnizoriLista,setFurnizoriLista]=useState(["Coulisse","Benjamin Moore","Darstar","Duval"]);
   const [rulouMateriale,setRulouMateriale]=useState([]);
+  const [camereLista,setCamereLista]=useState(["Living","Dormitor","Dormitor 2","Bucătărie","Hol","Baie","Birou","Cameră copil","Terasă","Dressing"]);
   const [oferte,setOferte]=useState([]);
   const [log,setLog]=useState({});
   const [ofertaSubtab,setOfertaSubtab]=useState("lista"); // {clientId: [{text, data, ora}]}
@@ -3433,14 +3455,15 @@ function App() {
           const zb=await sbGet(ZBK); if(zb){setZileBlocate({nico:[],dan:[],tudor:[],...zb});gotAnyData=true;}
           const om=await sbGet(OMK); if(om){setObiectiveMari(om.map(o=>({...o,open:false})));gotAnyData=true;}
           const rm=await sbGet(RMK); if(rm){setRulouMateriale(rm);gotAnyData=true;}
+          const cm=await sbGet(CMK); if(cm){setCamereLista(cm);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -3465,6 +3488,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(PRK,proiecte);},[proiecte,loaded]);
   useEffect(()=>{if(loaded) sbSave(FLK,furnizoriLista);},[furnizoriLista,loaded]);
   useEffect(()=>{if(loaded) sbSave(RMK,rulouMateriale);},[rulouMateriale,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CMK,camereLista);},[camereLista,loaded]);
   useEffect(()=>{if(loaded) sbSave(AK,admin);},[admin,loaded]);
   useEffect(()=>{if(loaded) sbSave(PK,perdele);},[perdele,loaded]);
   useEffect(()=>{if(loaded) sbSave(MIK,mit);},[mit,loaded]);
@@ -3646,7 +3670,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale
+        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -3689,6 +3713,7 @@ function App() {
         if(d[ZBK]) setZileBlocate({nico:[],dan:[],tudor:[],...d[ZBK]});
         if(d[OMK]) setObiectiveMari(d[OMK]);
         if(d[RMK]) setRulouMateriale(d[RMK]);
+        if(d[CMK]) setCamereLista(d[CMK]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -3800,10 +3825,11 @@ function App() {
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:danView==="cfgroman"?C.accentLight:"transparent",color:danView==="cfgroman"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
         <button onClick={()=>setDanView("cfgrulou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgrulou"?C.accent:C.border}`,background:danView==="cfgrulou"?C.accentLight:"transparent",color:danView==="cfgrulou"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgrulou"?500:400}}>Configurator rulou</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
-      danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients}/>:
-      <TabConfiguratorRoman C={C} clients={clients} setClients={setClients}/>}
+      danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>}
     </div>;
   }
 
@@ -4491,10 +4517,10 @@ function App() {
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:danView==="cfgroman"?C.accentLight:"transparent",color:danView==="cfgroman"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
         <button onClick={()=>setDanView("cfgrulou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgrulou"?C.accent:C.border}`,background:danView==="cfgrulou"?C.accentLight:"transparent",color:danView==="cfgrulou"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgrulou"?500:400}}>Configurator rulou</button>
       </div>
-      {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients}/>:
-      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients}/>:
-      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale}/>}
+      {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>}
     </div>}
 
     {tab==="achizitii"&&<div>
