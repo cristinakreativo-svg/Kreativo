@@ -1,0 +1,13 @@
+{
+  "name": "Dan - Kreativo Studio",
+  "short_name": "Dan",
+  "start_url": "./?dan=1",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2EFE9",
+  "theme_color": "#2A2118",
+  "icons": [
+    { "src": "favicon-32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
