@@ -135,6 +135,378 @@ const CC = ["#C4A882","#D4C9B8"];
 const TC=[["#FBEAD9","#EEC9A3"],["#E4EEF8","#B6D2EC"],["#E5F3E9","#B8DCC5"],["#F8EAEE","#E9C3CE"],["#EEEAF8","#CFC5EC"],["#FAF2DB","#EBDCA6"],["#E8F2F2","#BBD9D9"],["#F4EBE2","#DCC8B4"]];
 const CC_LIGHT = ["#C4A882","#D4C9B8"];
 
+// ============ COULISSE SMARTCURTAIN ENGINE ============
+// ============ COULISSE SMARTCURTAIN ENGINE ============
+
+const MOTORS = {
+  "CM-35":     {prefix:"CC-B2", railOffset:115, beltOffset:-10, firstBracket:105, endcapW:85, codeAdd:""},
+  "CM-35-120": {prefix:"CC-B2", railOffset:115, beltOffset:-10, firstBracket:105, endcapW:85, codeAdd:"120V-"},
+  "CM-36":     {prefix:"CC-B1", railOffset:98,  beltOffset:20,  firstBracket:100, endcapW:60, codeAdd:""},
+  "CM-36-E":   {prefix:"CC-B1", railOffset:98,  beltOffset:20,  firstBracket:100, endcapW:60, codeAdd:"EVE-"},
+  "CM-51-E":   {prefix:"CC-B1", railOffset:98,  beltOffset:20,  firstBracket:100, endcapW:60, codeAdd:"WIR-"},
+  "CM-57":     {prefix:"CC-B3", railOffset:110, beltOffset:0,   firstBracket:105, endcapW:81, codeAdd:"0"},
+  "Manual":    {prefix:"CC-F0", railOffset:11,  beltOffset:0,   firstBracket:50,  endcapW:12, codeAdd:""},
+};
+
+const GLIDER_TYPES = {
+  "Pleat":                 {code:"PLE",  digit:1, type:"pleat", perMeter:10, pitch:10.5},
+  "Wave 80mm":             {code:"WA80", digit:2, type:"wave",  spacing:80,  pitch:12.5},
+  "Wave 60mm":             {code:"WA60", digit:2, type:"wave",  spacing:60,  pitch:12.5},
+  "Ripple fold 1 7/8\"":   {code:"RP48", digit:3, type:"wave",  spacing:48,  pitch:12.5},
+  "Ripple fold 2 1/8\"":   {code:"RP54", digit:3, type:"wave",  spacing:54,  pitch:12.5},
+  "Ripple fold 2 3/8\"":   {code:"RP60", digit:3, type:"wave",  spacing:60,  pitch:12.5},
+};
+
+const PACK_SIDES = {
+  "Left":                       {code:"QPL-QML", digit:0, center:false},
+  "Right":                      {code:"QPR-QMR", digit:0, center:false},
+  "Center opening motor left":  {code:"QPS-QML", digit:2, center:true},
+  "Center opening motor right": {code:"QPS-QMR", digit:2, center:true},
+};
+
+const COLOURS = {"White":"WH","Black":"BK"};
+
+const OPTIONS = {
+  "Overlap carrier":    {code:"OVL"},
+  "Remote control (RM01)": {code:"RM01"},
+  "Remote control (RM2)":  {code:"RM2"},
+  "Remote control (RM3)":  {code:"RM3"},
+  "Pull wand":          {code:"PUL8"},
+  "Wall bracket (instead of ceiling)": {code:"WBR"},
+  "Wall bracket double": {code:"WBD"},
+};
+
+function excelOdd(x){
+  const c = Math.ceil(Math.abs(x));
+  const odd = (c%2===0) ? c+1 : c;
+  return x<0 ? -odd : odd;
+}
+
+// Excel SEARCH-style wildcard match: ? = any 1 char, * = any sequence, case-insensitive substring
+function wildcardMatch(pattern, text){
+  if(pattern==="" || pattern==null) return true; // empty pattern = always matches (like Excel SEARCH(""))
+  if(pattern==="@") return true; // "@" used in sheet as "any / no constraint"
+  const esc = pattern.replace(/[.+^${}()|[\]\\]/g,"\\$&").replace(/\?/g,".").replace(/\*/g,".*");
+  return new RegExp(esc, "i").test(text);
+}
+
+const PARTS = [
+  {code:"CC1001-BK", desc:"Curtain headrail", colour:"black", used:["CC??"], excl:[], colourCode:"BK", qty:(c)=>c.rail/1000},
+  {code:"CC1001-W",  desc:"Curtain headrail", colour:"white", used:["CC??"], excl:[], colourCode:"WH", qty:(c)=>c.rail/1000},
+  {code:"CC1002",    desc:"Drive belt", colour:"", used:["CC-B"], excl:[], colourCode:"", qty:(c)=>c.belt/1000},
+  {code:"CC1003-BK", desc:"Motor endcap left", colour:"black", used:["CC-B1??*QML"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1003-W",  desc:"Motor endcap left", colour:"white", used:["CC-B1??*QML"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1004-BK", desc:"Motor endcap right", colour:"black", used:["CC-B1??*QMR"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1004-W",  desc:"Motor endcap right", colour:"white", used:["CC-B1??*QMR"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1005-BK", desc:"Return endcap left", colour:"black", used:["CC-B???*QMR"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1005-W",  desc:"Return endcap left", colour:"white", used:["CC-B???*QMR"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1006-BK", desc:"Return endcap right", colour:"black", used:["CC-B???*QML"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1006-W",  desc:"Return endcap right", colour:"white", used:["CC-B???*QML"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1007-TR", desc:"Support hook pleat", colour:"transparent", used:["PLE"], excl:[], colourCode:"", qty:(c)=>c.center?2:1},
+  {code:"CC1008-TR", desc:"Support hook wave", colour:"transparent", used:["WA80","WA60"], excl:[], colourCode:"", qty:(c)=>c.center?2:1},
+  {code:"CC1009",    desc:"Belt connector", colour:"grey", used:["CC-B??"], excl:["SGM2","SGM3"], colourCode:"", qty:()=>1},
+  {code:"CC1010",    desc:"Belt connector split draw", colour:"grey", used:["CC-B??*QPS"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CC1011-BK", desc:"Master carrier", colour:"black", used:["CC"], excl:["OVL","RP??"], colourCode:"BK", qty:(c)=>c.center?2:1},
+  {code:"CC1011-W",  desc:"Master carrier", colour:"white", used:["CC"], excl:["OVL","RP??"], colourCode:"WH", qty:(c)=>c.center?2:1},
+  {code:"CC1012-BK", desc:"Master carrier wave adapter", colour:"black", used:["WA80","WA60"], excl:["OVL"], colourCode:"BK", qty:(c)=>c.center?2:1},
+  {code:"CC1012-W",  desc:"Master carrier wave adapter", colour:"white", used:["WA80","WA60"], excl:[], colourCode:"WH", qty:(c)=>c.center?2:1},
+  {code:"CC1013-BK", desc:"Glider pleat", colour:"black", used:["PLE"], excl:[], colourCode:"BK", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1013-W",  desc:"Glider pleat", colour:"white", used:["PLE"], excl:[], colourCode:"WH", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1014-BK", desc:"Glider wave rotatable 80mm", colour:"black", used:["WA80"], excl:[], colourCode:"BK", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1014-W",  desc:"Glider wave rotatable 80mm", colour:"white", used:["WA80"], excl:[], colourCode:"WH", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1015-BK", desc:"Glider wave rotatable 60mm", colour:"black", used:["WA60"], excl:[], colourCode:"BK", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1015-W",  desc:"Glider wave rotatable 60mm", colour:"white", used:["WA60"], excl:[], colourCode:"WH", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1016-BK", desc:"Headrail connector", colour:"black", used:["SGM2","SGM3"], excl:[], colourCode:"BK", qty:(c)=>Math.max(0,c.railSegments-1)},
+  {code:"CC1016-W",  desc:"Headrail connector", colour:"white", used:["SGM2","SGM3"], excl:[], colourCode:"WH", qty:(c)=>Math.max(0,c.railSegments-1)},
+  {code:"CC1017-BK", desc:"Ceiling bracket", colour:"black", used:["CC"], excl:[], colourCode:"BK", qty:(c)=>c.brackets},
+  {code:"CC1017-W",  desc:"Ceiling bracket", colour:"white", used:["CC"], excl:[], colourCode:"WH", qty:(c)=>c.brackets},
+  {code:"CC1018-BK", desc:"Wall bracket", colour:"black", used:["CC??*WBR"], excl:[], colourCode:"BK", qty:(c)=>c.brackets},
+  {code:"CC1018-W",  desc:"Wall bracket", colour:"white", used:["CC??*WBR"], excl:[], colourCode:"WH", qty:(c)=>c.brackets},
+  {code:"CC1019-BK", desc:"Motor endcap for CM-35", colour:"black", used:["CC-B2??"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1019-W",  desc:"Motor endcap for CM-35", colour:"white", used:["CC-B2??"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1020-BK", desc:"Master carrier metal overlap", colour:"black", used:["OVL"], excl:["RP??"], colourCode:"BK", qty:()=>1},
+  {code:"CC1020-W",  desc:"Master carrier metal overlap", colour:"white", used:["OVL"], excl:["RP??"], colourCode:"WH", qty:()=>1},
+  {code:"CC1021-BK", desc:"Split rail belt connector", colour:"black", used:["SGM2","SGM3"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1021-W",  desc:"Split rail belt connector", colour:"white", used:["SGM2","SGM3"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1022-BK", desc:"Fabric motor cover CM-36", colour:"black", used:["CC-B1??"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1023-BK", desc:"Manual endcap", colour:"black", used:["CC-F"], excl:[], colourCode:"BK", qty:()=>2},
+  {code:"CC1023-W",  desc:"Manual endcap", colour:"white", used:["CC-F"], excl:[], colourCode:"WH", qty:()=>2},
+  {code:"CC1025-BK", desc:"Master carrier button butt right", colour:"black", used:["CC-B?30*QPR-QMR","CC-B?32","CC-F?3?"], excl:["CC-B*OVL","CC-F032*OVL"], colourCode:"BK", qty:()=>1},
+  {code:"CC1025-W",  desc:"Master carrier button butt right", colour:"white", used:["CC-B?30*QPR-QMR","CC-B?32","CC-F?3?"], excl:["CC-B*OVL","CC-F032*OVL"], colourCode:"WH", qty:()=>1},
+  {code:"CC1026-BK", desc:"Master carrier button butt left", colour:"black", used:["CC-B?30*QPL-QML","CC-B?32","CC-F?3?"], excl:["CC-B*OVL","CC-F032*OVL"], colourCode:"BK", qty:()=>1},
+  {code:"CC1026-W",  desc:"Master carrier button butt left", colour:"white", used:["CC-B?30*QPL-QML","CC-B?32","CC-F?3?"], excl:["CC-B*OVL","CC-F032*OVL"], colourCode:"WH", qty:()=>1},
+  {code:"CC1027-BK", desc:"Button carrier overlap closing", colour:"black", used:["CC-B?32*OVL","CC-F032*OVL"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1027-W",  desc:"Button carrier overlap closing", colour:"white", used:["CC-B?32*OVL","CC-F032*OVL"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1028-BK", desc:"Glider wave rotatable button 48mm", colour:"black", used:["RP48"], excl:[], colourCode:"BK", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1028-W",  desc:"Glider wave rotatable button 48mm", colour:"white", used:["RP48"], excl:[], colourCode:"WH", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1029-BK", desc:"Glider wave rotatable button 54mm", colour:"black", used:["RP54"], excl:[], colourCode:"BK", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1029-W",  desc:"Glider wave rotatable button 54mm", colour:"white", used:["RP54"], excl:[], colourCode:"WH", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1030-BK", desc:"Glider wave rotatable button 60mm", colour:"black", used:["RP60"], excl:[], colourCode:"BK", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1030-W",  desc:"Glider wave rotatable button 60mm", colour:"white", used:["RP60"], excl:[], colourCode:"WH", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1031-BK", desc:"Wave glider hook", colour:"black", used:["RP48","RP54","RP60"], excl:[], colourCode:"BK", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1031-W",  desc:"Wave glider hook", colour:"white", used:["RP48","RP54","RP60"], excl:[], colourCode:"WH", qty:(c)=>c.center?c.gliders*2:c.gliders},
+  {code:"CC1032-TR", desc:"Support hook button", colour:"transparent", used:["RP48","RP54","RP60"], excl:[], colourCode:"", qty:(c)=>c.center?2:1},
+  {code:"CC1033-BK", desc:"Endcap curtain for wired motor", colour:"black", used:["CC-B3??"], excl:[], colourCode:"BK", qty:()=>1},
+  {code:"CC1033-W",  desc:"Endcap curtain for wired motor", colour:"white", used:["CC-B3??"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"CC1034-BK", desc:"Wall bracket double 120mm", colour:"black", used:["*WBD"], excl:[], colourCode:"BK", qty:(c)=>c.brackets},
+  {code:"CC1034-W",  desc:"Wall bracket double 120mm", colour:"white", used:["*WBD"], excl:[], colourCode:"WH", qty:(c)=>c.brackets},
+  {code:"CM-35",     desc:"Curtain motor 230V AC", colour:"", used:["CC-B2??"], excl:["120V"], colourCode:"", qty:()=>1},
+  {code:"CM-35-120", desc:"Curtain motor 120V AC", colour:"", used:["CC-B2?*-120V"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-36-E",   desc:"Curtain motor Eve (battery DC)", colour:"", used:["CC-B1?*-E"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-36-W",   desc:"Curtain motor (battery DC)", colour:"", used:["CC-B1?"], excl:["EVE","WIR"], colourCode:"", qty:()=>1},
+  {code:"CM-51-E",   desc:"Curtain motor wired EVE", colour:"", used:["CC-B1*-WIR"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-57",     desc:"Wired curtain motor", colour:"", used:["CC-B3??"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-61-xx",  desc:"24V 2.5A adapter", colour:"", used:["CC-B1*-WIR"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-xx",     desc:"Remote control", colour:"", used:["RM01"], excl:[], colourCode:"", qty:()=>1},
+  {code:"PU12-1000-MBK", desc:"Pull wand 8mm", colour:"black", used:["PUL8"], excl:["OVL"], colourCode:"BK", qty:(c)=>c.center?2:1},
+  {code:"PU12-1000-MW",  desc:"Pull wand 8mm", colour:"white", used:["PUL8"], excl:["OVL"], colourCode:"WH", qty:(c)=>c.center?2:1},
+  {code:"PU14",      desc:"Pull wand connector", colour:"transparent", used:["PUL8"], excl:["OVL"], colourCode:"", qty:(c)=>c.center?4:2},
+  {code:"WPPC25-BK", desc:"Pulling cord 1.7mm", colour:"black", used:["PUL8"], excl:["OVL"], colourCode:"BK", qty:(c)=>c.center?2:1},
+  {code:"WPPC25-W",  desc:"Pulling cord 1.7mm", colour:"white", used:["PUL8"], excl:["OVL"], colourCode:"WH", qty:(c)=>c.center?2:1},
+];
+
+function getPartsList(articleCode, calcResult, numberOfSystems){
+  const mult = numberOfSystems||1;
+  return PARTS.map(p=>{
+    const used = p.used.some(pat=>wildcardMatch(pat, articleCode));
+    if(!used) return null;
+    const excluded = p.excl.some(pat=>wildcardMatch(pat, articleCode));
+    if(excluded) return null;
+    const colourOk = !p.colourCode || wildcardMatch(p.colourCode, articleCode);
+    if(!colourOk) return null;
+    const qty = p.qty(calcResult)*mult;
+    if(!qty || qty<=0) return null;
+    return {code:p.code, desc:p.desc, colour:p.colour, qty: Math.round(qty*100)/100};
+  }).filter(Boolean);
+}
+
+// ============ ROMAN BLIND (Absolute Roman) ENGINE ============
+
+const RS_MECH = {
+  "RSC-A10 chain":      {code:"RSC-A10", letter:"A", controlSide:"LR", maxWeight:3,   tubeDed:50,  profileDed:15, midrailDed:4},
+  "RSC-B10 motorised":  {code:"RSC-B10", letter:"B", controlSide:"N",  maxWeight:3.5, tubeDed:200, profileDed:4,  midrailDed:4},
+  "RSC-I10 twin pull":  {code:"RSC-I10", letter:"I", controlSide:"LR", maxWeight:2,   tubeDed:120, profileDed:15, midrailDed:4},
+};
+
+const RS_MOTORS = {
+  "CM-06":          {code:"CM06",  maxTube:741},
+  "CM-06-E-R":      {code:"CM06E", maxTube:741},
+  "CM-09-C":        {code:"CMTD14",maxTube:582},
+  "CM-09-C120":     {code:"CMTD15",maxTube:582},
+  "CM-09-MC":       {code:"CMTD16",maxTube:468},
+  "CM-09-MC120":    {code:"CMTD17",maxTube:468},
+  "CM-09-QC":       {code:"CMTD18",maxTube:549},
+  "CM-09-QC120":    {code:"CMTD19",maxTube:555},
+  "CM-09-QMC":      {code:"CMTD20",maxTube:555},
+  "CM-10-QC":       {code:"CMTD22",maxTube:599},
+  "CM-10-QC120":    {code:"CMTD23",maxTube:599},
+  "CM-10-QMC":      {code:"CMTD24",maxTube:555},
+  "CM-10-QMC120":   {code:"CMTD25",maxTube:555},
+  "Somfy Concept 40": {code:"MTD13", maxTube:600},
+};
+
+const RS_FABRICS = {
+  "light 200gr":"FAB1","light 300gr":"FAB2","normal 400 gr":"FAB3","normal 500 gr":"FAB4",
+  "heavy 600 gr":"FAB5","heavy 800 gr":"FAB6","heavy 1200 gr":"FAB7","heavy 1600 gr":"FAB8",
+};
+const RS_COLOURS = {"White":"WH","Anodized":"GR"};
+const RS_CONTROL_SIDE = {"Left":"QL","Right":"QR"};
+const RS_OPTIONS = {
+  "Safety tensioner (CSD-23)": {code:"CSD23"},
+  "Safety wallbracket (CSD-24)": {code:"CSD24"},
+  "Plastic ballchain": {code:"CHP"},
+  "Metal ballchain": {code:"CHM"},
+  "Remote control": {code:"RM01"},
+  "Transformer 12VDC": {code:"PWR1"},
+  "Battery tube short (PWR7)": {code:"PWR7"},
+  "Battery tube large (PWR8)": {code:"PWR8"},
+};
+
+function romanValidate(input){
+  const {width, height, mechKey} = input;
+  const errors=[], warnings=[];
+  if(width<330 && mechKey==="RSC-B10 motorised"){
+    errors.push(`Lățimea (${width}mm) e sub minimul pentru mecanism motorizat (330mm).`);
+  }
+  if(width>3600){
+    errors.push(`Lățimea (${width}mm) depășește maximul admis (3600mm).`);
+  }
+  if(height>3500){
+    errors.push(`Înălțimea (${height}mm) depășește maximul admis (3500mm).`);
+  }
+  return {errors, warnings};
+}
+
+function romanCalc(input){
+  const {width,height,installHeight,mechKey,motorKey,fabricKey,colourKey,controlSide,cordsSpools,options} = input;
+  const mech = RS_MECH[mechKey];
+  const isMotor = mechKey==="RSC-B10 motorised";
+  const isTwin = mechKey==="RSC-I10 twin pull";
+
+  const tubelength = width - mech.tubeDed;
+  const profilelength = width - mech.profileDed;
+  const btbrailLength = width - mech.midrailDed;
+
+  const maxDistSpools=800, overhangSpools=160;
+  const spoolsRaw = Math.ceil((width-2*overhangSpools)/maxDistSpools);
+  const spoolsAuto = (spoolsRaw<=1?2:spoolsRaw+1);
+  const numberSpools = (cordsSpools==="Auto"||!cordsSpools) ? spoolsAuto : Number(cordsSpools);
+
+  const maxDistClips=800, overhangClips=100;
+  const clipsRaw = Math.ceil((width-2*overhangClips)/maxDistClips);
+  const numberClips = clipsRaw===1?2:clipsRaw+1;
+
+  let tiltrod1, tiltrod2=null;
+  if(isMotor){
+    if(numberSpools%2===0){ tiltrod1=tubelength/2; } else { tiltrod1=(tubelength/2)-(0.5*maxDistSpools); }
+    tiltrod2 = tubelength - tiltrod1;
+  } else {
+    tiltrod1 = tubelength;
+  }
+
+  const cordConsumption = 2600;
+
+  const widthCode="W"+(width<1000?"0":"")+width+"-";
+  const heightCode="H"+(height<1000?"0":"")+height+"-";
+  const mhCode="MH"+(installHeight?(installHeight<1000?"0":""):"9999")+(installHeight||"")+"-";
+  const colourCode2=RS_COLOURS[colourKey];
+  const controlCode=isMotor?"":(RS_CONTROL_SIDE[controlSide]||"");
+  const fabricCode=RS_FABRICS[fabricKey];
+  const motorCode = isMotor ? (RS_MOTORS[motorKey]?RS_MOTORS[motorKey].code+"-":"") : "";
+  const optCodes=(options||[]).map(o=>RS_OPTIONS[o].code+"-").join("");
+
+  const articleCode = mech.code+"-"+colourCode2+"-"+widthCode+heightCode+mhCode+motorCode+optCodes+"SPL"+numberSpools+"-"+(controlCode?controlCode+"-":"")+fabricCode;
+
+  return {articleCode, headrail:Math.round(profilelength), tiltrod1:Math.round(tiltrod1), tiltrod2:tiltrod2?Math.round(tiltrod2):null,
+    bottombar:Math.round(btbrailLength), spools:numberSpools, clips:numberClips, cordConsumption, isMotor, isTwin, mech};
+}
+
+const PARTS_ROMAN = [
+  {code:"RSC21-RAS04", desc:"Șină rotundă absolute (lipită velcro)", colour:"white", used:["RSC-A10","RSC-B10","RSC-I10"], excl:[], colourCode:"WH", qty:(c)=>c.headrail/1000},
+  {code:"RSC21-RAS04-BK", desc:"Șină rotundă absolute (lipită velcro)", colour:"black", used:["RSC-A10","RSC-B10","RSC-I10"], excl:[], colourCode:"BK", qty:(c)=>c.headrail/1000},
+  {code:"PTB25-W-300", desc:"Bară de jos (bottombar)", colour:"white", used:["RSC"], excl:[], colourCode:"WH", qty:(c)=>c.bottombar/1000},
+  {code:"PTB25-A-300", desc:"Bară de jos anodizată", colour:"anodized", used:["RSC"], excl:[], colourCode:"GR", qty:(c)=>c.bottombar/1000},
+  {code:"RSC08", desc:"Consolă (bracket)", colour:"white", used:["RSC-A","RSC-B","RSC-I10"], excl:[], colourCode:"WH", qty:(c)=>c.clips},
+  {code:"RSC08-BK", desc:"Consolă (bracket)", colour:"black", used:["RSC-A","RSC-B","RSC-I10"], excl:[], colourCode:"BK", qty:(c)=>c.clips},
+  {code:"RSC05-06", desc:"Rolă bandă + suport (spool)", colour:"", used:["RSC-A"], excl:[], colourCode:"", qty:(c)=>c.spools},
+  {code:"RAS09", desc:"Șnur 1.3mm", colour:"", used:["RSC-A"], excl:[], colourCode:"", qty:(c)=>c.cordConsumption/1000},
+  {code:"RSC17-W", desc:"Șnur 350cm în pungă", colour:"", used:["RSC-A"], excl:[], colourCode:"", qty:(c)=>c.spools},
+  {code:"CM-06", desc:"Motor CM-06 (baterie USB-C)", colour:"", used:["CM06"], excl:["CM06E"], colourCode:"", qty:()=>1},
+  {code:"CM-06-E-R", desc:"Motor CM-06-E-R (baterie EVE)", colour:"", used:["CM06E"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-09-C", desc:"Motor CM-09-C", colour:"", used:["CMTD14"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-09-C120", desc:"Motor CM-09-C120", colour:"", used:["CMTD15"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-09-MC", desc:"Motor CM-09-MC", colour:"", used:["CMTD16"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-09-MC120", desc:"Motor CM-09-MC120", colour:"", used:["CMTD17"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-09-QC", desc:"Motor CM-09-QC", colour:"", used:["CMTD18"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-09-QC120", desc:"Motor CM-09-QC120", colour:"", used:["CMTD19"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-09-QMC", desc:"Motor CM-09-QMC", colour:"", used:["CMTD20"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-10-QC", desc:"Motor CM-10-QC", colour:"", used:["CMTD22"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-10-QC120", desc:"Motor CM-10-QC120", colour:"", used:["CMTD23"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-10-QMC", desc:"Motor CM-10-QMC", colour:"", used:["CMTD24"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-10-QMC120", desc:"Motor CM-10-QMC120", colour:"", used:["CMTD25"], excl:[], colourCode:"", qty:()=>1},
+  {code:"Somfy Motor", desc:"Motor Somfy Concept 40", colour:"", used:["MTD13"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-21", desc:"Transformator 12VDC", colour:"", used:["PWR1"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-38", desc:"Tub baterie USB-C scurt", colour:"", used:["PWR7"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-39", desc:"Tub baterie USB-C lung", colour:"", used:["PWR8"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-xx", desc:"Telecomandă", colour:"", used:["RM01"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CSD23-TR", desc:"Tensor de siguranță lanț (transparent)", colour:"", used:["CSD23"], excl:[], colourCode:"", qty:(c)=>1},
+  {code:"CSD24-TR", desc:"Tensor de siguranță perete (transparent)", colour:"", used:["CSD24"], excl:[], colourCode:"", qty:(c)=>1},
+  {code:"RBxx-DP", desc:"Lanț plastic Ø4,5", colour:"", used:["CHP"], excl:[], colourCode:"", qty:(c)=>(c.cordConsumption/1000)*2},
+  {code:"RBxx-M", desc:"Lanț metalic Ø4,5", colour:"", used:["CHM"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC23-ABC", desc:"Adaptor șină motor central", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>2},
+  {code:"RSC24-ABC", desc:"Adaptor tub 5x5mm", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>2},
+  {code:"RSC03", desc:"Capac cu logo", colour:"white", used:["RSC-B10"], excl:[], colourCode:"WH", qty:(c)=>c.tiltrod2?1:2},
+  {code:"RSC03-BK", desc:"Capac cu logo", colour:"black", used:["RSC-B10"], excl:[], colourCode:"BK", qty:(c)=>c.tiltrod2?1:2},
+  {code:"V10YW", desc:"Inel alamă", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>2},
+  {code:"RSC25-W", desc:"Roman TwinPull 1:1 absolute", colour:"white", used:["RSC-I10"], excl:[], colourCode:"WH", qty:()=>1},
+  {code:"RSC25-BK", desc:"Roman TwinPull 1:1 absolute", colour:"black", used:["RSC-I10"], excl:[], colourCode:"BK", qty:()=>1},
+];
+
+function getRomanPartsList(articleCode, calcResult){
+  return PARTS_ROMAN.map(p=>{
+    const used = p.used.some(pat=>wildcardMatch(pat, articleCode));
+    if(!used) return null;
+    const excluded = p.excl.some(pat=>wildcardMatch(pat, articleCode));
+    if(excluded) return null;
+    const colourOk = !p.colourCode || wildcardMatch(p.colourCode, articleCode);
+    if(!colourOk) return null;
+    const qty = p.qty(calcResult);
+    if(!qty || qty<=0) return null;
+    return {code:p.code, desc:p.desc, colour:p.colour, qty: Math.round(qty*100)/100};
+  }).filter(Boolean);
+}
+
+function validateCoulisseInput(input){
+  const {width, railSegments, packKey} = input;
+  const pack = PACK_SIDES[packKey];
+  const rs = Number(railSegments);
+  const errors=[], warnings=[];
+  if(width<400){
+    errors.push(`Lățimea (${width}mm) e sub minimul admis de sistem (400mm).`);
+  }
+  if(width>10000){
+    errors.push(`Lățimea (${width}mm) depășește maximul admis de sistem (10000mm).`);
+  }
+  if(input.height>5000){
+    errors.push(`Înălțimea (${input.height}mm) depășește maximul admis de sistem (5000mm).`);
+  }
+  if(width>5800 && rs===1){
+    errors.push(`Lățimea (${width}mm) depășește lungimea maximă a unei șine dintr-o bucată (5800mm). Alege minim 2 segmente de șină.`);
+  }
+  const uzuraNecentralaMultiSeg = rs>=2 && pack && !pack.center;
+  const uzuraCentrala3Seg = pack && pack.center && rs===3;
+  if(uzuraNecentralaMultiSeg){
+    warnings.push(`Cu șină în ${rs} segmente și împachetare ${packKey} (nu centrală), căruciorul principal trece peste îmbinarea șinei — risc de uzură/blocare. Se recomandă "Center opening" pentru șine îmbinate.`);
+  } else if(uzuraCentrala3Seg){
+    warnings.push(`Chiar și cu deschidere centrală, la 3 segmente de șină un cărucior tot traversează o îmbinare — risc de uzură/blocare. Recomandat maxim 2 segmente.`);
+  }
+  return {errors, warnings};
+}
+
+function coulisseCalc(input){
+  const {width, height, motorKey, gliderKey, packKey, colourKey, railSegments, options} = input;
+  const motor = MOTORS[motorKey];
+  const glider = GLIDER_TYPES[gliderKey];
+  const pack = PACK_SIDES[packKey];
+  const colourCode = COLOURS[colourKey];
+  const motorized = motor.prefix.startsWith("CC-B");
+  const center = pack.center;
+
+  const railOffset = motor.railOffset;
+  const rail = width - railOffset;
+  const belt = motorized ? (width*2 + motor.beltOffset) : 0;
+
+  let glidersRaw;
+  if(glider.type==="pleat"){
+    const spacing = 1000/(glider.perMeter-1);
+    glidersRaw = center ? Math.ceil(width/spacing/2) : Math.ceil(width/spacing);
+  } else {
+    glidersRaw = center ? excelOdd(width/glider.spacing/2) : excelOdd(width/glider.spacing);
+  }
+  const gliders = glidersRaw;
+  const hooks = center ? gliders+1 : (glider.type==="pleat" ? gliders+2 : gliders+1);
+
+  const D53 = 500;
+  const brackets = railSegments===2
+    ? Math.ceil((((width-(motor.firstBracket*2))/D53)+1)/2)*2
+    : Math.ceil((width-(motor.firstBracket*2))/D53)+1;
+
+  const stackwidth = motor.endcapW + 43 + gliders*glider.pitch;
+
+  const configCode = motor.prefix + glider.digit + pack.digit;
+  const widthCode = "W"+(width<1000?"0":"")+width+"-";
+  const heightCode = "H"+(height<1000?"0":"")+height+"-";
+  const railSegCode = railSegments===2?"SGM2-":(railSegments===3?"SGM3-":"");
+  const optCodes = (options||[]).map(o=>OPTIONS[o].code+"-").join("");
+  const glidersCode = "RNR"+gliders+"-";
+  const bracketsCode = "CLP"+brackets;
+
+  const articleCode = configCode+"-"+motor.codeAdd+widthCode+heightCode+glider.code+"-"+colourCode+"-"+railSegCode+pack.code+"-"+optCodes+glidersCode+bracketsCode;
+
+  return {articleCode, rail, belt, gliders, hooks, brackets, stackwidth, motorized, center};
+}
+
+
 function tagTask(task) {
   const t=(typeof task==="object"?task.title:task).toLowerCase();
   if(t.includes("montaj")||t.includes("programeaza")) return {label:"Montaj",bg:"#EEF2EE",color:"#3D5C3D"};
@@ -149,6 +521,23 @@ function tagTask(task) {
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const tday=()=>{const f=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Bucharest",year:"numeric",month:"2-digit",day:"2-digit"});return f.format(new Date());};
 const dateToKey=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+function printHtmlDoc(html){
+  const iframe=document.createElement("iframe");
+  iframe.style.position="fixed";
+  iframe.style.right="0";
+  iframe.style.bottom="0";
+  iframe.style.width="0";
+  iframe.style.height="0";
+  iframe.style.border="0";
+  document.body.appendChild(iframe);
+  const doc=iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  setTimeout(()=>{
+    try{ iframe.contentWindow.focus(); iframe.contentWindow.print(); }catch(e){ alert("Nu am putut deschide printarea. Încearcă din nou sau folosește Chrome."); }
+    setTimeout(()=>{ if(iframe.parentNode) document.body.removeChild(iframe); },1000);
+  },300);
+}
 const tmrw=()=>{const d=new Date();d.setDate(d.getDate()+1);return dateToKey(d);};
 const fmtD=s=>{if(!s)return"";const[y,m,d]=s.split("-");return`${d}.${m}.${y}`;};
 const isOvd=(dl,done)=>!!(dl&&!done&&dl<tday());
@@ -532,11 +921,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
         ${rows}
       </table>
     </body></html>`;
-    const w=window.open("","_blank");
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(()=>w.print(),300);
+    printHtmlDoc(html);
   };
 
   return <div>
@@ -623,6 +1008,477 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
           <button onClick={addConsum} style={{fontSize:12,color:"#2A2118",border:"none",padding:"6px 12px",background:"#5C6B65",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă consum</button>
           {(client.consumuri||[]).length>0&&<button onClick={printConsum} style={{width:"100%",fontSize:12,fontWeight:600,padding:"8px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează consum</button>}
         </div>
+      </div>
+    </div>}
+  </div>;
+}
+
+function TabConfigurator({C,clients,setClients,clientIdFixat}){
+  const [width,setWidth]=React.useState(2000);
+  const [height,setHeight]=React.useState(2500);
+  const [motorKey,setMotorKey]=React.useState("CM-57");
+  const [gliderKey,setGliderKey]=React.useState("Pleat");
+  const [packKey,setPackKey]=React.useState("Right");
+  const [colourKey,setColourKey]=React.useState("White");
+  const [railSegments,setRailSegments]=React.useState(1);
+  const [quantity,setQuantity]=React.useState(1);
+  const [options,setOptions]=React.useState([]);
+  const [clientId,setClientId]=React.useState(clientIdFixat||"");
+  const [camera,setCamera]=React.useState("");
+  const [observatii,setObservatii]=React.useState("");
+  const [savedMsg,setSavedMsg]=React.useState("");
+
+  const toggleOption=(opt)=>setOptions(p=>p.includes(opt)?p.filter(o=>o!==opt):[...p,opt]);
+
+  let result=null, parts=[], error=null;
+  try{
+    result=coulisseCalc({width:Number(width),height:Number(height),motorKey,gliderKey,packKey,colourKey,railSegments:Number(railSegments),options});
+    parts=getPartsList(result.articleCode,result,Number(quantity)||1);
+  }catch(e){ error="Verifică valorile introduse."; }
+  const {errors:validErrors,warnings:validWarnings}=validateCoulisseInput({width:Number(width),height:Number(height),railSegments:Number(railSegments),packKey});
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  const clientObj=clients&&clients.find(c=>c.id===clientId);
+
+  const buildPrintHtml=(cfg)=>{
+    const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+    return `<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;">
+      <h2>Configurator Coulisse SmartCurtain</h2>
+      ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}${cfg.camera?" · "+cfg.camera:""}</p>`:""}
+      ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
+      <p><b>Cod articol:</b> ${cfg.result.articleCode}</p>
+      <p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Segmente șină: ${cfg.input.railSegments} · Cantitate: ${cfg.input.quantity}</p>
+      <p>Șină de tăiat: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets} · Stackwidth: ${Math.round(cfg.result.stackwidth)}mm</p>
+      <table style="border-collapse:collapse;width:100%;margin-top:14px;">
+        <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
+        ${rows}
+      </table>
+    </body></html>`;
+  };
+
+  const printParts=()=>{
+    if(!result) return;
+    const html=buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:{width,height,motorKey,gliderKey,packKey,colourKey,railSegments,quantity},result,parts});
+    printHtmlDoc(html);
+  };
+
+  const printSaved=(cfg)=>{
+    const html=buildPrintHtml(cfg);
+    printHtmlDoc(html);
+  };
+
+  const salveazaLaClient=()=>{
+    if(!clientId||!result) return;
+    if(validErrors.length>0){ alert("Nu poți salva — sunt erori de validare care trebuie corectate întâi:\n\n"+validErrors.join("\n")); return; }
+    if(validWarnings.length>0 && !window.confirm("Atenție:\n\n"+validWarnings.join("\n")+"\n\nSigur vrei să salvezi oricum?")) return;
+    const cfg={
+      id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
+      input:{width:Number(width),height:Number(height),motorKey,gliderKey,packKey,colourKey,railSegments:Number(railSegments),quantity:Number(quantity)||1,options},
+      result, parts
+    };
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:[...(c.configuratiiSina||[]),cfg]}));
+    setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    setCamera(""); setObservatii("");
+    setTimeout(()=>setSavedMsg(""),3000);
+  };
+
+  return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator șină Coulisse SmartCurtain</div>
+
+    {clients&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+      <div><label style={lblStyle}>Client</label>
+        <select value={clientId} onChange={e=>setClientId(e.target.value)} style={selStyle} disabled={!!clientIdFixat}>
+          <option value="">— alege client —</option>
+          {clients.slice().sort((a,b)=>a.name.localeCompare(b.name,"ro")).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <div><label style={lblStyle}>Cameră</label>
+        <input value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+      </div>
+      <div style={{gridColumn:"1 / -1"}}><label style={lblStyle}>Observații pentru Dan</label>
+        <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} placeholder="ex: atenție la colțul din stânga, geamul e strâmb..." rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
+      </div>
+    </div>}
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:16}}>
+      <div><label style={lblStyle}>Lățime (mm)</label><input type="number" value={width} onChange={e=>setWidth(e.target.value)} style={selStyle}/></div>
+      <div><label style={lblStyle}>Înălțime (mm)</label><input type="number" value={height} onChange={e=>setHeight(e.target.value)} style={selStyle}/></div>
+      <div><label style={lblStyle}>Motor</label>
+        <select value={motorKey} onChange={e=>setMotorKey(e.target.value)} style={selStyle}>
+          {Object.keys(MOTORS).map(m=><option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+      <div><label style={lblStyle}>Tip glisor</label>
+        <select value={gliderKey} onChange={e=>setGliderKey(e.target.value)} style={selStyle}>
+          {Object.keys(GLIDER_TYPES).map(g=><option key={g} value={g}>{g}</option>)}
+        </select>
+      </div>
+      <div><label style={lblStyle}>Parte împachetare</label>
+        <select value={packKey} onChange={e=>setPackKey(e.target.value)} style={selStyle}>
+          {Object.keys(PACK_SIDES).map(p=><option key={p} value={p}>{p}</option>)}
+        </select>
+      </div>
+      <div><label style={lblStyle}>Culoare</label>
+        <select value={colourKey} onChange={e=>setColourKey(e.target.value)} style={selStyle}>
+          {Object.keys(COLOURS).map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      <div><label style={lblStyle}>Segmente șină</label>
+        <select value={railSegments} onChange={e=>setRailSegments(e.target.value)} style={selStyle}>
+          <option value={1}>1 (o bucată)</option>
+          <option value={2}>2 (o îmbinare)</option>
+          <option value={3}>3 (două îmbinări)</option>
+        </select>
+      </div>
+      <div><label style={lblStyle}>Cantitate (buc. identice)</label><input type="number" min="1" value={quantity} onChange={e=>setQuantity(e.target.value)} style={selStyle}/></div>
+    </div>
+
+    <div style={{marginBottom:16}}>
+      <label style={lblStyle}>Opțiuni suplimentare</label>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+        {Object.keys(OPTIONS).map(opt=>
+          <label key={opt} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.textSub,background:C.bg,padding:"5px 10px",cursor:"pointer"}}>
+            <input type="checkbox" checked={options.includes(opt)} onChange={()=>toggleOption(opt)}/>
+            {opt}
+          </label>
+        )}
+      </div>
+    </div>
+
+    {error&&<div style={{fontSize:13,color:C.text,padding:"10px 0"}}>{error}</div>}
+
+    {validErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+      <div style={{fontWeight:700,marginBottom:6}}>⚠ Configurație imposibilă:</div>
+      {validErrors.map((e,i)=><div key={i} style={{marginBottom:4}}>{e}</div>)}
+    </div>}
+    {validErrors.length===0&&validWarnings.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+      <div style={{fontWeight:700,marginBottom:6}}>Atenție:</div>
+      {validWarnings.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
+    </div>}
+
+    {result&&<div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:16}}>
+      <div style={{padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
+        <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:4}}>Cod articol {Number(quantity)>1?`(× ${quantity} buc.)`:""}</div>
+        <div style={{fontSize:14,fontWeight:600,color:C.text,wordBreak:"break-all"}}>{result.articleCode}</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:0,padding:"14px 16px"}}>
+        {[["Șină de tăiat",result.rail+" mm"],["Curea",result.belt+" mm"],["Glisoare / buc.",result.gliders],["Cârlige / buc.",result.hooks],["Console / buc.",result.brackets],["Stackwidth",Math.round(result.stackwidth)+" mm"]].map(([l,v])=>
+          <div key={l} style={{marginBottom:8}}>
+            <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l}</div>
+            <div style={{fontSize:15,fontWeight:600,color:C.text}}>{v}</div>
+          </div>
+        )}
+      </div>
+    </div>}
+
+    {result&&clients&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+      <button onClick={salveazaLaClient} disabled={!clientId} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:clientId?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:clientId?"pointer":"default"}}>💾 Salvează configurația la client</button>
+      {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
+      {!clientId&&<span style={{fontSize:11,color:C.textMuted}}>Alege un client mai sus ca să poți salva.</span>}
+    </div>}
+
+    {result&&<div style={{marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:8}}>
+        <div style={{flex:1,fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Listă piese de comandat ({parts.length})</div>
+        <button onClick={printParts} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
+      </div>
+      {parts.map(p=><div key={p.code} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+        <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{p.code}</span>
+        <span style={{fontSize:12,color:C.text,flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
+        <span style={{fontSize:12,fontWeight:600,color:C.text,flexShrink:0}}>{p.qty}</span>
+      </div>)}
+    </div>}
+
+    {clientObj&&(clientObj.configuratiiSina||[]).length>0&&<div>
+      <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Configurații salvate la {clientObj.name} ({(clientObj.configuratiiSina||[]).length})</div>
+      {(clientObj.configuratiiSina||[]).map(cfg=>
+        <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})}/>
+      )}
+    </div>}
+  </div>;
+}
+
+function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint}){
+  const [open,setOpen]=React.useState(false);
+  const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>x.id!==cfg.id)}));
+  const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
+  const {errors:vErrors,warnings:vWarnings}=validateCoulisseInput(cfg.input);
+  return <div style={{border:`1px solid ${vErrors.length?"#3A3128":C.border}`,marginBottom:6,background:C.surface}}>
+    <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
+      <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
+      <div style={{flex:1}}>
+        <span style={{fontSize:13,fontWeight:600,color:cfg.produs?C.textMuted:C.text}}>{cfg.camera||"(fără cameră)"}</span>
+        <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.width}×{cfg.input.height}mm{cfg.input.quantity>1?` · ×${cfg.input.quantity} buc.`:""}</span>
+        {vErrors.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#3A3128",padding:"2px 8px",marginLeft:8}}>⚠ imposibil</span>}
+        {vErrors.length===0&&vWarnings.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#2A2118",background:"#B8A88F",padding:"2px 8px",marginLeft:8}}>atenție</span>}
+        {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>📝 observație</span>}
+      </div>
+      <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
+    </div>
+    {open&&<div style={{padding:"12px 14px"}}>
+      {cfg.observatii&&<div style={{background:"#5C6B65",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:500}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,opacity:0.85}}>📝 Observație pentru Dan</div>
+        {cfg.observatii}
+      </div>}
+      {vErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
+        <div style={{fontWeight:700,marginBottom:4}}>⚠ Configurație imposibilă:</div>
+        {vErrors.map((e,i)=><div key={i}>{e}</div>)}
+      </div>}
+      {vErrors.length===0&&vWarnings.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"10px 14px",marginBottom:12,fontSize:12}}>
+        <div style={{fontWeight:700,marginBottom:4}}>Atenție:</div>
+        {vWarnings.map((w,i)=><div key={i}>{w}</div>)}
+      </div>}
+      <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:10,wordBreak:"break-all",background:C.accentLight,padding:"8px 10px"}}>{cfg.result.articleCode}</div>
+
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Date introduse</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14}}>
+        {[["Lățime",cfg.input.width+" mm"],["Înălțime",cfg.input.height+" mm"],["Motor",cfg.input.motorKey],["Tip glisor",cfg.input.gliderKey],["Împachetare",cfg.input.packKey],["Culoare",cfg.input.colourKey],["Segmente șină",cfg.input.railSegments],["Cantitate",cfg.input.quantity+" buc."]].map(([l,v])=>
+          <div key={l} style={{marginBottom:8}}>
+            <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
+            <div style={{fontSize:13,fontWeight:600,color:C.text}}>{v}</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Rezultat calcul</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14,background:C.bg,padding:"10px"}}>
+        {[["Șină de tăiat",cfg.result.rail+" mm"],["Curea",cfg.result.belt+" mm"],["Glisoare / buc.",cfg.result.gliders],["Cârlige / buc.",cfg.result.hooks],["Console / buc.",cfg.result.brackets],["Stackwidth",Math.round(cfg.result.stackwidth)+" mm"]].map(([l,v])=>
+          <div key={l} style={{marginBottom:8}}>
+            <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
+            <div style={{fontSize:15,fontWeight:700,color:C.text}}>{v}</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Piese de comandat ({cfg.parts.length})</div>
+      {cfg.parts.map(p=><div key={p.code} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
+        <span style={{fontWeight:600,color:C.accent,minWidth:90}}>{p.code}</span>
+        <span style={{flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
+        <span style={{fontWeight:600,color:C.text}}>{p.qty}</span>
+      </div>)}
+      <div style={{display:"flex",gap:10,marginTop:12}}>
+        <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
+        <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
+      </div>
+    </div>}
+  </div>;
+}
+
+function TabConfiguratorRoman({C,clients,setClients}){
+  const [width,setWidth]=React.useState(1000);
+  const [height,setHeight]=React.useState(1000);
+  const [installHeight,setInstallHeight]=React.useState(1000);
+  const [mechKey,setMechKey]=React.useState("RSC-A10 chain");
+  const [motorKey,setMotorKey]=React.useState("CM-06");
+  const [fabricKey,setFabricKey]=React.useState("normal 500 gr");
+  const [colourKey,setColourKey]=React.useState("White");
+  const [controlSide,setControlSide]=React.useState("Left");
+  const [cordsSpools,setCordsSpools]=React.useState("Auto");
+  const [options,setOptions]=React.useState([]);
+  const [clientId,setClientId]=React.useState("");
+  const [camera,setCamera]=React.useState("");
+  const [observatii,setObservatii]=React.useState("");
+  const [savedMsg,setSavedMsg]=React.useState("");
+
+  const isMotor = mechKey==="RSC-B10 motorised";
+  const toggleOption=(opt)=>setOptions(p=>p.includes(opt)?p.filter(o=>o!==opt):[...p,opt]);
+
+  let result=null, parts=[], error=null;
+  try{
+    result=romanCalc({width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,motorKey,fabricKey,colourKey,controlSide,cordsSpools,options});
+    parts=getRomanPartsList(result.articleCode,result);
+  }catch(e){ error="Verifică valorile introduse."; }
+  const {errors:validErrors,warnings:validWarnings}=romanValidate({width:Number(width),height:Number(height),mechKey});
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+  const clientObj=clients&&clients.find(c=>c.id===clientId);
+
+  const buildPrintHtml=(cfg)=>{
+    const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+    return `<html><head><title>Comandă Stor Roman ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;">
+      <h2>Configurator Absolute Roman</h2>
+      ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}${cfg.camera?" · "+cfg.camera:""}</p>`:""}
+      ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
+      <p><b>Cod articol:</b> ${cfg.result.articleCode}</p>
+      <p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Înălțime montaj: ${cfg.input.installHeight}mm · Mecanism: ${cfg.input.mechKey}${cfg.input.motorKey&&cfg.result.isMotor?" · Motor: "+cfg.input.motorKey:""} · Țesătură: ${cfg.input.fabricKey} · Culoare: ${cfg.input.colourKey}</p>
+      <p>Șină: ${cfg.result.headrail}mm · Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?" + "+cfg.result.tiltrod2+"mm (2 bucăți)":""} · Bară de jos: ${cfg.result.bottombar}mm · Bobine: ${cfg.result.spools} · Console: ${cfg.result.clips}</p>
+      <table style="border-collapse:collapse;width:100%;margin-top:14px;">
+        <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
+        ${rows}
+      </table>
+    </body></html>`;
+  };
+  const printParts=()=>{ if(!result) return; printHtmlDoc(buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:{width,height,installHeight,mechKey,motorKey,fabricKey,colourKey},result,parts})); };
+  const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
+
+  const salveazaLaClient=()=>{
+    if(!clientId||!result) return;
+    if(validErrors.length>0){ alert("Nu poți salva — erori de validare:\n\n"+validErrors.join("\n")); return; }
+    const cfg={id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
+      input:{width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,motorKey,fabricKey,colourKey,controlSide,cordsSpools,options},
+      result, parts};
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:[...(c.configuratiiRoman||[]),cfg]}));
+    setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    setCamera(""); setObservatii("");
+    setTimeout(()=>setSavedMsg(""),3000);
+  };
+
+  return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator Stor Roman (Absolute Roman)</div>
+
+    {clients&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+      <div><label style={lblStyle}>Client</label>
+        <select value={clientId} onChange={e=>setClientId(e.target.value)} style={selStyle}>
+          <option value="">— alege client —</option>
+          {clients.slice().sort((a,b)=>a.name.localeCompare(b.name,"ro")).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <div><label style={lblStyle}>Cameră</label>
+        <input value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living, dormitor" style={selStyle}/>
+      </div>
+      <div style={{gridColumn:"1 / -1"}}><label style={lblStyle}>Observații pentru Dan</label>
+        <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} placeholder="ex: atenție la colțul din stânga, geamul e strâmb..." rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
+      </div>
+    </div>}
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:16}}>
+      <div><label style={lblStyle}>Lățime (mm)</label><input type="number" value={width} onChange={e=>setWidth(e.target.value)} style={selStyle}/></div>
+      <div><label style={lblStyle}>Înălțime (mm)</label><input type="number" value={height} onChange={e=>setHeight(e.target.value)} style={selStyle}/></div>
+      <div><label style={lblStyle}>Înălțime montaj (mm)</label><input type="number" value={installHeight} onChange={e=>setInstallHeight(e.target.value)} style={selStyle}/></div>
+      <div><label style={lblStyle}>Mecanism</label>
+        <select value={mechKey} onChange={e=>setMechKey(e.target.value)} style={selStyle}>
+          {Object.keys(RS_MECH).map(m=><option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>
+      {isMotor&&<div><label style={lblStyle}>Motor</label>
+        <select value={motorKey} onChange={e=>setMotorKey(e.target.value)} style={selStyle}>
+          {Object.keys(RS_MOTORS).map(m=><option key={m} value={m}>{m}</option>)}
+        </select>
+      </div>}
+      <div><label style={lblStyle}>Țesătură</label>
+        <select value={fabricKey} onChange={e=>setFabricKey(e.target.value)} style={selStyle}>
+          {Object.keys(RS_FABRICS).map(f=><option key={f} value={f}>{f}</option>)}
+        </select>
+      </div>
+      <div><label style={lblStyle}>Culoare profil</label>
+        <select value={colourKey} onChange={e=>setColourKey(e.target.value)} style={selStyle}>
+          {Object.keys(RS_COLOURS).map(c=><option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+      {!isMotor&&<div><label style={lblStyle}>Parte comandă</label>
+        <select value={controlSide} onChange={e=>setControlSide(e.target.value)} style={selStyle}>
+          {Object.keys(RS_CONTROL_SIDE).map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>}
+      <div><label style={lblStyle}>Bobine (spools)</label>
+        <select value={cordsSpools} onChange={e=>setCordsSpools(e.target.value)} style={selStyle}>
+          <option value="Auto">Auto</option>
+          {[2,3,4,5,6,7,8,9,10].map(n=><option key={n} value={n}>{n}</option>)}
+        </select>
+      </div>
+    </div>
+
+    <div style={{marginBottom:16}}>
+      <label style={lblStyle}>Opțiuni suplimentare</label>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+        {Object.keys(RS_OPTIONS).map(opt=>
+          <label key={opt} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.textSub,background:C.bg,padding:"5px 10px",cursor:"pointer"}}>
+            <input type="checkbox" checked={options.includes(opt)} onChange={()=>toggleOption(opt)}/>
+            {opt}
+          </label>
+        )}
+      </div>
+    </div>
+
+    {error&&<div style={{fontSize:13,color:C.text,padding:"10px 0"}}>{error}</div>}
+    {validErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+      <div style={{fontWeight:700,marginBottom:6}}>⚠ Configurație imposibilă:</div>
+      {validErrors.map((e,i)=><div key={i} style={{marginBottom:4}}>{e}</div>)}
+    </div>}
+
+    {result&&<div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:16}}>
+      <div style={{padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
+        <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:4}}>Cod articol</div>
+        <div style={{fontSize:14,fontWeight:600,color:C.text,wordBreak:"break-all"}}>{result.articleCode}</div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:0,padding:"14px 16px"}}>
+        {[["Șină",result.headrail+" mm"],result.tiltrod2?["Tub/tijă 1",result.tiltrod1+" mm"]:["Tub/tijă",result.tiltrod1+" mm"],...(result.tiltrod2?[["Tub/tijă 2",result.tiltrod2+" mm"]]:[]),["Bară de jos",result.bottombar+" mm"],["Bobine",result.spools],["Console",result.clips]].map(([l,v])=>
+          <div key={l} style={{marginBottom:8}}>
+            <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l}</div>
+            <div style={{fontSize:15,fontWeight:600,color:C.text}}>{v}</div>
+          </div>
+        )}
+      </div>
+      {result.tiltrod2&&<div style={{padding:"0 16px 12px",fontSize:11,color:C.textMuted}}>Mecanism motorizat — tubul se taie în 2 bucăți (motorul intră central).</div>}
+    </div>}
+
+    {result&&clients&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+      <button onClick={salveazaLaClient} disabled={!clientId} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:clientId?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:clientId?"pointer":"default"}}>💾 Salvează configurația la client</button>
+      {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
+    </div>}
+
+    {result&&<div style={{marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:8}}>
+        <div style={{flex:1,fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Listă piese de comandat ({parts.length})</div>
+        <button onClick={printParts} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
+      </div>
+      {parts.map(p=><div key={p.code} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+        <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{p.code}</span>
+        <span style={{fontSize:12,color:C.text,flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
+        <span style={{fontSize:12,fontWeight:600,color:C.text,flexShrink:0}}>{p.qty}</span>
+      </div>)}
+    </div>}
+
+    {clientObj&&(clientObj.configuratiiRoman||[]).length>0&&<div>
+      <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Storuri romane salvate la {clientObj.name} ({(clientObj.configuratiiRoman||[]).length})</div>
+      {(clientObj.configuratiiRoman||[]).map(cfg=>
+        <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})}/>
+      )}
+    </div>}
+  </div>;
+}
+
+function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
+  const [open,setOpen]=React.useState(false);
+  const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).filter(x=>x.id!==cfg.id)}));
+  const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
+  return <div style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface}}>
+    <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
+      <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
+      <div style={{flex:1}}>
+        <span style={{fontSize:13,fontWeight:600,color:cfg.produs?C.textMuted:C.text}}>{cfg.camera||"(fără cameră)"}</span>
+        <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.width}×{cfg.input.height}mm · {cfg.input.mechKey}</span>
+        {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>📝 observație</span>}
+      </div>
+      <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
+    </div>
+    {open&&<div style={{padding:"12px 14px"}}>
+      {cfg.observatii&&<div style={{background:"#5C6B65",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:500}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,opacity:0.85}}>📝 Observație pentru Dan</div>
+        {cfg.observatii}
+      </div>}
+      <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:10,wordBreak:"break-all",background:C.accentLight,padding:"8px 10px"}}>{cfg.result.articleCode}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14,background:C.bg,padding:"10px"}}>
+        {[["Șină",cfg.result.headrail+" mm"],["Tub/tijă",cfg.result.tiltrod1+(cfg.result.tiltrod2?" + "+cfg.result.tiltrod2:"")+" mm"],["Bară de jos",cfg.result.bottombar+" mm"],["Bobine",cfg.result.spools],["Console",cfg.result.clips]].map(([l,v])=>
+          <div key={l} style={{marginBottom:8}}>
+            <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
+            <div style={{fontSize:14,fontWeight:700,color:C.text}}>{v}</div>
+          </div>
+        )}
+      </div>
+      {cfg.parts.map(p=><div key={p.code} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
+        <span style={{fontWeight:600,color:C.accent,minWidth:90}}>{p.code}</span>
+        <span style={{flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
+        <span style={{fontWeight:600,color:C.text}}>{p.qty}</span>
+      </div>)}
+      <div style={{display:"flex",gap:10,marginTop:12}}>
+        <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
+        <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
   </div>;
@@ -764,6 +1620,16 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi șină / sisteme de produs</div>
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>
+        {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
+          {(client.configuratiiSina||[]).map(cfg=>
+            <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onPrint={()=>{
+              const rows=cfg.parts.map(p=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+              const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}${cfg.camera?" · "+cfg.camera:""}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
+              printHtmlDoc(html);
+            }}/>
+          )}
+        </div>}
       </div>
     </div>}
   </div>;
@@ -2041,9 +2907,13 @@ function App() {
       <div style={{display:"flex",gap:6,marginBottom:16}}>
         <button onClick={()=>setDanView("dan")} style={{padding:"7px 14px",border:`1px solid ${danView==="dan"?C.accent:C.border}`,background:danView==="dan"?C.accentLight:"transparent",color:danView==="dan"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="dan"?500:400}}>Montaje</button>
         <button onClick={()=>setDanView("mb")} style={{padding:"7px 14px",border:`1px solid ${danView==="mb"?C.accent:C.border}`,background:danView==="mb"?C.accentLight:"transparent",color:danView==="mb"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="mb"?500:400}}>MotionBlinds</button>
+        <button onClick={()=>setDanView("cfg")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfg"?C.accent:C.border}`,background:danView==="cfg"?C.accentLight:"transparent",color:danView==="cfg"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfg"?500:400}}>Configurator șină</button>
+        <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:danView==="cfgroman"?C.accentLight:"transparent",color:danView==="cfgroman"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
       </div>
       {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)}/>:
-      <TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
+      danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
+      danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients}/>:
+      <TabConfiguratorRoman C={C} clients={clients} setClients={setClients}/>}
     </div>;
   }
 
@@ -2725,7 +3595,14 @@ function App() {
     </div>}
 
     {tab==="dan"&&<div>
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)}/>
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        <button onClick={()=>setDanView("dan")} style={{padding:"7px 14px",border:`1px solid ${danView==="dan"?C.accent:C.border}`,background:danView==="dan"?C.accentLight:"transparent",color:danView==="dan"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="dan"?500:400}}>Montaje</button>
+        <button onClick={()=>setDanView("cfg")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfg"?C.accent:C.border}`,background:danView==="cfg"?C.accentLight:"transparent",color:danView==="cfg"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfg"?500:400}}>Configurator șină</button>
+        <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:danView==="cfgroman"?C.accentLight:"transparent",color:danView==="cfgroman"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
+      </div>
+      {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients}/>:
+      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients}/>:
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)}/>}
     </div>}
 
     {tab==="achizitii"&&<div>
