@@ -163,8 +163,8 @@ const GLIDER_TYPES = {
 const PACK_SIDES = {
   "Left":                       {code:"QPL-QML", digit:0, center:false},
   "Right":                      {code:"QPR-QMR", digit:0, center:false},
-  "Center opening motor left":  {code:"QPS-QML", digit:2, center:true},
-  "Center opening motor right": {code:"QPS-QMR", digit:2, center:true},
+  "Center opening - left":      {code:"QPS-QML", digit:2, center:true},
+  "Center opening - right":     {code:"QPS-QMR", digit:2, center:true},
 };
 
 const COLOURS = {"White":"WH","Black":"BK"};
@@ -498,7 +498,7 @@ function rulouCalc(inp){
   for(const ff of RULOU_DATA.forceFactors){ if(wildcardMatch(ff.pat, code)) force += effTorque*ff.f; }
 
   const cfgd = RULOU_DATA.configs[cfg];
-  const warns=[];
+  const warns=[]; const errs=[];
   const maxRoll = numOrZero(ded.maxRoll) || null;
   if(maxRoll && roll.diam>maxRoll) warns.push(`Diametrul ruloului (${roll.diam.toFixed(1)}mm) depășește maximul sistemului (${maxRoll}mm) — alege alt sistem/țesătură.`);
   const tp = RULOU_DATA.tubePhysics.find(t=>t.name===inp.tube);
@@ -517,19 +517,19 @@ function rulouCalc(inp){
       break;
     }
   }
-  if(minTW && tubeL<=minTW) warns.push(`Lățime prea mică: tubul (${tubeL}mm) trebuie să fie > ${minTW}mm pentru mecanismul ales.`);
-  if(cfgd && cfgd.maxW && W>cfgd.maxW) warns.push(`Lățimea depășește maximul sistemului (${cfgd.maxW}mm).`);
-  if(cfgd && cfgd.maxH && H>cfgd.maxH) warns.push(`Înălțimea depășește maximul sistemului (${cfgd.maxH}mm).`);
-  if(code.includes("SPA") && (W<500 || H>3500)) warns.push("Springassist: lățime min. 500mm, înălțime max. 3500mm.");
+  if(minTW && tubeL<=minTW) errs.push(`Lățime prea mică: tubul (${tubeL}mm) trebuie să fie > ${minTW}mm pentru mecanismul ales.`);
+  if(cfgd && cfgd.maxW && W>cfgd.maxW) errs.push(`Lățimea depășește maximul sistemului (${cfgd.maxW}mm).`);
+  if(cfgd && cfgd.maxH && H>cfgd.maxH) errs.push(`Înălțimea depășește maximul sistemului (${cfgd.maxH}mm).`);
+  if(code.includes("SPA") && (W<500 || H>3500)) errs.push("Springassist: lățime min. 500mm, înălțime max. 3500mm.");
   if(H/W>3) warns.push("Raport H:L peste 3:1 — verifică stabilitatea.");
-  if(roll.halfTurns/2 > 18*(isDR?2:1)) warns.push("Numărul de rotații depășește limita mecanismului (18).");
+  if(roll.halfTurns/2 > 18*(isDR?2:1)) errs.push("Numărul de rotații depășește limita mecanismului (18).");
 
   const isChainCfg = /RC-.?A/.test(cfg);
-  if(isChainCfg && !/CH(P|M|EP|EM|K)/.test(code)) warns.push("Alege un lanț de acționare (Plastic/Metal ballchain).");
-  if(isChainCfg && !code.includes("CSD")) warns.push("Alege un dispozitiv de siguranță copii (CSD).");
+  if(isChainCfg && !/CH(P|M|EP|EM|K)/.test(code)) errs.push("Alege un lanț de acționare (Plastic/Metal ballchain) — obligatoriu, fără el ruloul nu poate fi acționat.");
+  if(isChainCfg && !code.includes("CSD")) errs.push("Alege un dispozitiv de siguranță copii (CSD) — obligatoriu.");
   const needsBracket = inp.system==="10" || inp.system==="11" || String(inp.system).startsWith("7");
   const hasJ = (inp.options||[]).some(o=>{ const c=RULOU_NAME2CODE[o]; return c && c.startsWith("J"); });
-  if(needsBracket && !hasJ) warns.push("Alege un bracket (opțiunile J) — obligatoriu pentru acest sistem.");
+  if(needsBracket && !hasJ) errs.push("Alege un bracket (opțiunile J) — obligatoriu pentru acest sistem.");
 
   const dayNight = RULOU_DATA.dayNightPatterns.some(p=>wildcardMatch(p, code));
   let bstX=null;
@@ -541,7 +541,7 @@ function rulouCalc(inp){
     sideprofile:Math.round(sideprofile*10)/10, bottomprofile:Math.round(bottomprofile*10)/10, sidecable:Math.round(sidecable*10)/10,
     screws, chain, clips, midsupport, vibration,
     rolDiam:Math.round(roll.diam*10)/10, torque:roll.torque, effTorque, force,
-    defl, warns, dayNight, isDR};
+    defl, warns, errs, dayNight, isDR};
 }
 
 function rulouPartsList(inp, res, qty){
@@ -2083,6 +2083,8 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
 
   const salveazaLaClient=()=>{
     if(!clientId||!result) return;
+    if(result.errs&&result.errs.length>0){ alert("Nu poți salva — lipsesc opțiuni obligatorii sau valorile depășesc limitele sistemului:\n\n"+result.errs.join("\n")+"\n\nAlege ce lipsește și încearcă din nou."); return; }
+    if(result.warns&&result.warns.length>0 && !window.confirm("Atenție:\n\n"+result.warns.join("\n")+"\n\nSigur vrei să salvezi oricum?")) return;
     if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
     if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())){
       setCamereLista(p=>[...p,camera.trim()]);
@@ -2253,6 +2255,10 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
     </div>
 
     {calcError&&<div style={{fontSize:13,color:C.text,padding:"10px 0"}}>{calcError}</div>}
+    {result&&result.errs&&result.errs.length>0&&<div style={{background:"#5C2A2A",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+      <div style={{fontWeight:700,marginBottom:6}}>⛔ Lipsesc opțiuni obligatorii — nu poți salva:</div>
+      {result.errs.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
+    </div>}
     {result&&result.warns.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
       <div style={{fontWeight:700,marginBottom:6}}>⚠ Atenție:</div>
       {result.warns.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
@@ -2284,7 +2290,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
     </div>}
 
     {result&&clients&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-      <button onClick={salveazaLaClient} disabled={!clientId} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:clientId?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:clientId?"pointer":"default"}}>💾 Salvează configurația la client</button>
+      <button onClick={salveazaLaClient} disabled={!clientId||(result.errs&&result.errs.length>0)} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:(clientId&&!(result.errs&&result.errs.length>0))?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:(clientId&&!(result.errs&&result.errs.length>0))?"pointer":"default"}}>💾 Salvează configurația la client</button>
       {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
     </div>}
 
@@ -2353,7 +2359,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Rezultat calcul</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14,background:C.bg,padding:"10px"}}>
-        {[["Tub tăiat",cfg.result.tubeL+" mm"],["Stofă L×H",cfg.result.fabricW+"×"+cfg.result.fabricH+" mm"],["Bottombar",cfg.result.btbL+" mm"],["Diametru",cfg.result.rolDiam+" mm"]].map(([l,v])=>
+        {[["Tub tăiat",cfg.result.tubeL+" mm"],["Lățime stofă",cfg.result.fabricW+" mm"],["Lungime stofă",cfg.result.fabricH+" mm"],["Bottombar",cfg.result.btbL+" mm"],["Diametru",cfg.result.rolDiam+" mm"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{v}</div>
