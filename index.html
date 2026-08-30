@@ -702,7 +702,7 @@ function buildRomanPrintHtml(cfg){
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
       <div style="line-height:1.9;">
-        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Înălțime montaj: ${cfg.input.installHeight}mm<br/>Mecanism: ${cfg.input.mechKey}${cfg.input.motorKey&&cfg.result.isMotor?"<br/>Motor: "+cfg.input.motorKey:""}<br/>Țesătură: ${cfg.input.fabricKey}<br/>Culoare: ${cfg.input.colourKey}
+        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Înălțime montaj: ${cfg.input.installHeight}mm<br/>Mecanism: ${cfg.input.mechKey}<br/>Țesătură: ${cfg.input.fabricKey}${!cfg.result.isMotor?"<br/>Parte comandă: "+cfg.input.controlSide:""}<br/>Opțiuni: ${(cfg.input.options||[]).length?cfg.input.options.join(", "):"—"}
       </div>
     </div>
     <p><b>Rezultat calcul:</b> Șină: ${cfg.result.headrail}mm · Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?" + "+cfg.result.tiltrod2+"mm (2 bucăți)":""} · Bară de jos: ${cfg.result.bottombar}mm · Bobine: ${cfg.result.spools} · Console: ${cfg.result.clips}</p>
@@ -736,50 +736,41 @@ function buildRulouPrintHtml(cfg){
 // ============ ROMAN BLIND (Absolute Roman) ENGINE ============
 
 const RS_MECH = {
-  "RSC-A10 chain":      {code:"RSC-A10", letter:"A", controlSide:"LR", maxWeight:3,   tubeDed:50,  profileDed:15, midrailDed:4},
-  "RSC-B10 motorised":  {code:"RSC-B10", letter:"B", controlSide:"N",  maxWeight:3.5, tubeDed:200, profileDed:4,  midrailDed:4},
-  "RSC-I10 twin pull":  {code:"RSC-I10", letter:"I", controlSide:"LR", maxWeight:2,   tubeDed:120, profileDed:15, midrailDed:4},
+  "RSC-A10 chain":      {code:"RSC-A10", letter:"A", controlSide:"LR", maxWeight:3,   tubeDed:50,  profileDed:15, midrailDed:4, spoolOverhang:60,  minWidth:330},
+  "RSC-B10 motorised":  {code:"RSC-B10", letter:"B", controlSide:"N",  maxWeight:3.5, tubeDed:200, profileDed:4,  midrailDed:4, spoolOverhang:20,  minWidth:440},
+  "RSC-I10 twin pull":  {code:"RSC-I10", letter:"I", controlSide:"LR", maxWeight:2,   tubeDed:100, profileDed:15, midrailDed:4, spoolOverhang:120, minWidth:400},
 };
-
-const RS_MOTORS = {
-  "CM-06":          {code:"CM06",  maxTube:741},
-  "CM-06-E-R":      {code:"CM06E", maxTube:741},
-  "CM-09-C":        {code:"CMTD14",maxTube:582},
-  "CM-09-C120":     {code:"CMTD15",maxTube:582},
-  "CM-09-MC":       {code:"CMTD16",maxTube:468},
-  "CM-09-MC120":    {code:"CMTD17",maxTube:468},
-  "CM-09-QC":       {code:"CMTD18",maxTube:549},
-  "CM-09-QC120":    {code:"CMTD19",maxTube:555},
-  "CM-09-QMC":      {code:"CMTD20",maxTube:555},
-  "CM-10-QC":       {code:"CMTD22",maxTube:599},
-  "CM-10-QC120":    {code:"CMTD23",maxTube:599},
-  "CM-10-QMC":      {code:"CMTD24",maxTube:555},
-  "CM-10-QMC120":   {code:"CMTD25",maxTube:555},
-  "Somfy Concept 40": {code:"MTD13", maxTube:600},
-};
-
-const RS_FABRICS = {
-  "light 200gr":"FAB1","light 300gr":"FAB2","normal 400 gr":"FAB3","normal 500 gr":"FAB4",
-  "heavy 600 gr":"FAB5","heavy 800 gr":"FAB6","heavy 1200 gr":"FAB7","heavy 1600 gr":"FAB8",
-};
-const RS_COLOURS = {"White":"WH","Anodized":"GR"};
+const RS_FABRICS = {"light 200gr":"FAB1","light 300gr":"FAB2","normal 400 gr":"FAB3","normal 500 gr":"FAB4","heavy 600 gr":"FAB5"};
 const RS_CONTROL_SIDE = {"Left":"QL","Right":"QR"};
-const RS_OPTIONS = {
-  "Safety tensioner (CSD-23)": {code:"CSD23"},
-  "Safety wallbracket (CSD-24)": {code:"CSD24"},
-  "Plastic ballchain": {code:"CHP"},
-  "Metal ballchain": {code:"CHM"},
-  "Remote control": {code:"RM01"},
-  "Transformer 12VDC": {code:"PWR1"},
-  "Battery tube short (PWR7)": {code:"PWR7"},
-  "Battery tube large (PWR8)": {code:"PWR8"},
+// opțiuni disponibile per mecanism — validate 1:1 contra Excel "Abs Roman Calculation.xlsm" (RSC-A10/B10/I10, fără XL)
+const RS_MECHOPTIONS = {
+  "RSC-A10 chain": [
+    ["RSC02 (1:1)","K1"],["RSC02-RH (1:4)","K2"],
+    ["SafetyTensioner w. spring CSD04","CSD04"],["SafetyClip plastic CSD06","CSD06"],["SafetyClip metal CDS07","CSD07"],
+    ["Plastic ballchain","CHP"],["Metal ballchain","CHM"],
+    ["Cord orb childsafe","RSC22"],["Ball chain breakaway 4.5mm","CSD11"],
+  ],
+  "RSC-B10 motorised": [
+    ["CM-07 DC midmotor","CM07"],
+    ["Remote control CM-11-BK","RM6"],["Remote control CM-12-BK","RM7"],["Remote control CM-13-BK","RM8"],
+    ["Wall switch radio USA CM-15-W","RM10"],["Wall switch radio Design CM-16-BK","RM11"],["Table remote Design CM-17-BK","RM12"],
+    ["CM-21-EU Adapter","PWR4"],["Cord orb childsafe","RSC22"],
+    ["CM-38 battery tube USB-C short","PWR7"],["CM-39 battery tube USB-C long","PWR8"],["CM-41 USB-C cable 3 meter","PWR9"],
+  ],
+  "RSC-I10 twin pull": [
+    ["RSC25 (1:1)","K1"],["RSC25-RH (1:4)","K2"],
+    ["Plastic ballchain","CHP"],["Metal ballchain","CHM"],
+    ["Pulling cord tassel plastic","PU01"],["Pulling cord tassel metal","PU02"],["Pull wand","PU10"],
+  ],
 };
+function rsMechOptCode(mechKey, label){ const f=(RS_MECHOPTIONS[mechKey]||[]).find(x=>x[0]===label); return f?f[1]:null; }
 
 function romanValidate(input){
   const {width, height, mechKey} = input;
+  const mech = RS_MECH[mechKey];
   const errors=[], warnings=[];
-  if(width<330 && mechKey==="RSC-B10 motorised"){
-    errors.push(`Lățimea (${width}mm) e sub minimul pentru mecanism motorizat (330mm).`);
+  if(mech && width<mech.minWidth){
+    errors.push(`Lățimea (${width}mm) e sub minimul pentru ${mechKey} (${mech.minWidth}mm).`);
   }
   if(width>3600){
     errors.push(`Lățimea (${width}mm) depășește maximul admis (3600mm).`);
@@ -791,18 +782,22 @@ function romanValidate(input){
 }
 
 function romanCalc(input){
-  const {width,height,installHeight,mechKey,motorKey,fabricKey,colourKey,controlSide,cordsSpools,options} = input;
+  const {width,height,installHeight,mechKey,fabricKey,controlSide,cordsSpools,options} = input;
   const mech = RS_MECH[mechKey];
   const isMotor = mechKey==="RSC-B10 motorised";
   const isTwin = mechKey==="RSC-I10 twin pull";
+  const optCodesRaw = (options||[]).map(o=>rsMechOptCode(mechKey,o)).filter(Boolean);
+  const optCodes = (isMotor && !optCodesRaw.includes("CM07")) ? ["CM07",...optCodesRaw] : optCodesRaw;
 
   const tubelength = width - mech.tubeDed;
   const profilelength = width - mech.profileDed;
   const btbrailLength = width - mech.midrailDed;
 
-  const maxDistSpools=800, overhangSpools=160;
-  const spoolsRaw = Math.ceil((width-2*overhangSpools)/maxDistSpools);
-  const spoolsAuto = (spoolsRaw<=1?2:spoolsRaw+1);
+  const battShort = isMotor && optCodes.includes("PWR7");
+  const overhang = isMotor ? (battShort?160:20) : mech.spoolOverhang;
+  const maxDistSpools=500;
+  const spoolsRaw = Math.ceil((width-2*overhang)/maxDistSpools);
+  const spoolsAuto = spoolsRaw<=1 ? 2 : spoolsRaw;
   const numberSpools = (cordsSpools==="Auto"||!cordsSpools) ? spoolsAuto : Number(cordsSpools);
 
   const maxDistClips=800, overhangClips=100;
@@ -811,68 +806,79 @@ function romanCalc(input){
 
   let tiltrod1, tiltrod2=null;
   if(isMotor){
-    if(numberSpools%2===0){ tiltrod1=tubelength/2; } else { tiltrod1=(tubelength/2)-(0.5*maxDistSpools); }
-    tiltrod2 = tubelength - tiltrod1;
+    if(battShort){
+      const j33 = width<750?180:230;
+      const j32 = profilelength - j33 - (2*overhang) - 80;
+      tiltrod1 = j32; tiltrod2 = j33;
+    } else {
+      tiltrod1 = spoolsAuto%2===0 ? tubelength/2 : (tubelength/2)-(0.5*maxDistSpools);
+      tiltrod2 = tubelength - tiltrod1;
+    }
   } else {
     tiltrod1 = tubelength;
   }
 
-  const cordConsumption = 2600;
+  // lungime lanț adăugată de anumite dispozitive de siguranță (CSD04/06/07/11) — formulă exactă din Excel
+  let chainlen = 0;
+  if(installHeight){
+    for(const t of ["CSD07","CSD04","CSD06"]) if(optCodes.includes(t)) chainlen += (installHeight-1500);
+    for(const t of ["CSD11","K3"]) if(optCodes.includes(t)) chainlen += (2/3*height);
+  } else {
+    for(const t of ["CSD07","CSD04","CSD06"]) if(optCodes.includes(t)) chainlen += 1000;
+    for(const t of ["CSD11","K3"]) if(optCodes.includes(t)) chainlen += (2/3*height);
+  }
 
   const widthCode="W"+(width<1000?"0":"")+width+"-";
   const heightCode="H"+(height<1000?"0":"")+height+"-";
   const mhCode="MH"+(installHeight?(installHeight<1000?"0":""):"9999")+(installHeight||"")+"-";
-  const colourCode2=RS_COLOURS[colourKey];
   const controlCode=isMotor?"":(RS_CONTROL_SIDE[controlSide]||"");
   const fabricCode=RS_FABRICS[fabricKey];
-  const motorCode = isMotor ? (RS_MOTORS[motorKey]?RS_MOTORS[motorKey].code+"-":"") : "";
-  const optCodes=(options||[]).map(o=>RS_OPTIONS[o].code+"-").join("");
+  const optSeg = optCodes.map(c=>c+"-").join("");
 
-  const articleCode = mech.code+"-"+colourCode2+"-"+widthCode+heightCode+mhCode+motorCode+optCodes+"SPL"+numberSpools+"-"+(controlCode?controlCode+"-":"")+fabricCode;
+  const articleCode = mech.code+"-"+widthCode+heightCode+mhCode+optSeg+"SPL"+numberSpools+"-"+(controlCode?controlCode+"-":"")+fabricCode;
 
   return {articleCode, headrail:Math.round(profilelength), tiltrod1:Math.round(tiltrod1), tiltrod2:tiltrod2?Math.round(tiltrod2):null,
-    bottombar:Math.round(btbrailLength), spools:numberSpools, clips:numberClips, cordConsumption, isMotor, isTwin, mech};
+    bottombar:Math.round(btbrailLength), spools:numberSpools, clips:numberClips, chainlen, isMotor, isTwin, optCodes, mech};
 }
 
 const PARTS_ROMAN = [
-  {code:"RSC21-RAS04", desc:"Șină rotundă absolute (lipită velcro)", colour:"white", used:["RSC-A10","RSC-B10","RSC-I10"], excl:[], colourCode:"WH", qty:(c)=>c.headrail/1000},
-  {code:"RSC21-RAS04-BK", desc:"Șină rotundă absolute (lipită velcro)", colour:"black", used:["RSC-A10","RSC-B10","RSC-I10"], excl:[], colourCode:"BK", qty:(c)=>c.headrail/1000},
-  {code:"PTB25-W-300", desc:"Bară de jos (bottombar)", colour:"white", used:["RSC"], excl:[], colourCode:"WH", qty:(c)=>c.bottombar/1000},
-  {code:"PTB25-A-300", desc:"Bară de jos anodizată", colour:"anodized", used:["RSC"], excl:[], colourCode:"GR", qty:(c)=>c.bottombar/1000},
-  {code:"RSC08", desc:"Consolă (bracket)", colour:"white", used:["RSC-A","RSC-B","RSC-I10"], excl:[], colourCode:"WH", qty:(c)=>c.clips},
-  {code:"RSC08-BK", desc:"Consolă (bracket)", colour:"black", used:["RSC-A","RSC-B","RSC-I10"], excl:[], colourCode:"BK", qty:(c)=>c.clips},
-  {code:"RSC05-06", desc:"Rolă bandă + suport (spool)", colour:"", used:["RSC-A"], excl:[], colourCode:"", qty:(c)=>c.spools},
-  {code:"RAS09", desc:"Șnur 1.3mm", colour:"", used:["RSC-A"], excl:[], colourCode:"", qty:(c)=>c.cordConsumption/1000},
-  {code:"RSC17-W", desc:"Șnur 350cm în pungă", colour:"", used:["RSC-A"], excl:[], colourCode:"", qty:(c)=>c.spools},
-  {code:"CM-06", desc:"Motor CM-06 (baterie USB-C)", colour:"", used:["CM06"], excl:["CM06E"], colourCode:"", qty:()=>1},
-  {code:"CM-06-E-R", desc:"Motor CM-06-E-R (baterie EVE)", colour:"", used:["CM06E"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-09-C", desc:"Motor CM-09-C", colour:"", used:["CMTD14"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-09-C120", desc:"Motor CM-09-C120", colour:"", used:["CMTD15"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-09-MC", desc:"Motor CM-09-MC", colour:"", used:["CMTD16"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-09-MC120", desc:"Motor CM-09-MC120", colour:"", used:["CMTD17"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-09-QC", desc:"Motor CM-09-QC", colour:"", used:["CMTD18"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-09-QC120", desc:"Motor CM-09-QC120", colour:"", used:["CMTD19"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-09-QMC", desc:"Motor CM-09-QMC", colour:"", used:["CMTD20"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-10-QC", desc:"Motor CM-10-QC", colour:"", used:["CMTD22"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-10-QC120", desc:"Motor CM-10-QC120", colour:"", used:["CMTD23"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-10-QMC", desc:"Motor CM-10-QMC", colour:"", used:["CMTD24"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-10-QMC120", desc:"Motor CM-10-QMC120", colour:"", used:["CMTD25"], excl:[], colourCode:"", qty:()=>1},
-  {code:"Somfy Motor", desc:"Motor Somfy Concept 40", colour:"", used:["MTD13"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-21", desc:"Transformator 12VDC", colour:"", used:["PWR1"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC21-RAS04", desc:"Șină rotundă absolute (lipită velcro)", colour:"", used:["RSC-A10","RSC-B10","RSC-I10"], excl:[], colourCode:"", qty:(c)=>c.headrail/1000},
+  {code:"RSC20 / RSC08", desc:"Consolă (bracket)", colour:"", used:["RSC-A","RSC-B","RSC-I10"], excl:[], colourCode:"", qty:(c)=>c.clips},
+  {code:"RSC05-06", desc:"Rolă bandă + suport (spool)", colour:"", used:["RSC-A","RSC-B","RSC-I"], excl:[], colourCode:"", qty:(c)=>c.spools},
+  {code:"RSC17-W", desc:"Șnur 350cm în pungă", colour:"", used:["RSC-A","RSC-B","RSC-I"], excl:[], colourCode:"", qty:(c)=>c.spools},
+  {code:"CM-07", desc:"Motor CM-07 (mid-motor 24mm 12VDC)", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-11-BK", desc:"Telecomandă", colour:"", used:["RM6"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-12-BK", desc:"Telecomandă", colour:"", used:["RM7"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-13-BK", desc:"Telecomandă", colour:"", used:["RM8"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-15-W", desc:"Întrerupător de perete radio USA", colour:"", used:["RM10"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-16-BK", desc:"Întrerupător de perete radio Design", colour:"", used:["RM11"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-17-BK", desc:"Telecomandă de masă Design", colour:"", used:["RM12"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-21", desc:"Adaptor/Transformator 12VDC", colour:"", used:["PWR4"], excl:[], colourCode:"", qty:()=>1},
   {code:"CM-38", desc:"Tub baterie USB-C scurt", colour:"", used:["PWR7"], excl:[], colourCode:"", qty:()=>1},
   {code:"CM-39", desc:"Tub baterie USB-C lung", colour:"", used:["PWR8"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CM-xx", desc:"Telecomandă", colour:"", used:["RM01"], excl:[], colourCode:"", qty:()=>1},
-  {code:"CSD23-TR", desc:"Tensor de siguranță lanț (transparent)", colour:"", used:["CSD23"], excl:[], colourCode:"", qty:(c)=>1},
-  {code:"CSD24-TR", desc:"Tensor de siguranță perete (transparent)", colour:"", used:["CSD24"], excl:[], colourCode:"", qty:(c)=>1},
-  {code:"RBxx-DP", desc:"Lanț plastic Ø4,5", colour:"", used:["CHP"], excl:[], colourCode:"", qty:(c)=>(c.cordConsumption/1000)*2},
-  {code:"RBxx-M", desc:"Lanț metalic Ø4,5", colour:"", used:["CHM"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CM-41", desc:"Cablu USB-C 3 metri", colour:"", used:["PWR9"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC22", desc:"Cord orb childsafe", colour:"", used:["RSC22"], excl:[], colourCode:"", qty:(c)=>c.spools},
+  {code:"CSD04", desc:"Safety tensioner", colour:"", used:["CSD04"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CSD06", desc:"Safety clip plastic", colour:"", used:["CSD06"], excl:[], colourCode:"", qty:()=>1},
+  {code:"CSD07", desc:"Safety clip alloy", colour:"", used:["CSD07"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC02", desc:"Mecanism 1:1", colour:"", used:["RSC-A10*K1"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC02-RH", desc:"Mecanism 1:4", colour:"", used:["RSC-A10*K2"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC25-W", desc:"Roman TwinPull 1:1", colour:"", used:["RSC-I10*K1"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC25-RH-W", desc:"Roman TwinPull 1:4", colour:"", used:["RSC-I10*K2"], excl:[], colourCode:"", qty:()=>1},
+  {code:"V15DP-xx", desc:"Lanț plastic 4.5mm (lungime)", colour:"", used:["CHP"], excl:[], colourCode:"", qty:(c)=>c.chainlen/1000*2},
+  {code:"V15DP-xx", desc:"Lanț plastic 4.5mm (conector)", colour:"", used:["RSC-I10*CHP"], excl:[], colourCode:"", qty:()=>1},
+  {code:"V15M-xx", desc:"Lanț metalic 4.45mm (lungime)", colour:"", used:["CHM"], excl:[], colourCode:"", qty:(c)=>c.chainlen/1000*2},
+  {code:"V15M-xx", desc:"Lanț metalic 4.45mm (conector)", colour:"", used:["RSC-I10*CHM"], excl:[], colourCode:"", qty:()=>1},
+  {code:"V16PCT-TR", desc:"Clemă conectare plastic", colour:"", used:["RSC-I10"], excl:["RSC-I10*PU10"], colourCode:"", qty:()=>2},
+  {code:"PU01-xx", desc:"Ciucure tragere plastic", colour:"", used:["RSC-I10*PU01"], excl:[], colourCode:"", qty:()=>2},
+  {code:"PU02-xx", desc:"Ciucure tragere metal", colour:"", used:["RSC-I10*PU02"], excl:[], colourCode:"", qty:()=>2},
+  {code:"PU04-xx", desc:"Baghetă tragere (pull wand)", colour:"", used:["RSC-I10*PU10"], excl:[], colourCode:"", qty:()=>2},
   {code:"RSC23-ABC", desc:"Adaptor șină motor central", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>2},
   {code:"RSC24-ABC", desc:"Adaptor tub 5x5mm", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>2},
-  {code:"RSC03", desc:"Capac cu logo", colour:"white", used:["RSC-B10"], excl:[], colourCode:"WH", qty:(c)=>c.tiltrod2?1:2},
-  {code:"RSC03-BK", desc:"Capac cu logo", colour:"black", used:["RSC-B10"], excl:[], colourCode:"BK", qty:(c)=>c.tiltrod2?1:2},
+  {code:"RSC03", desc:"Capac cu logo", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:(c)=>c.optCodes.includes("PWR7")?1:2},
+  {code:"RSC26-W", desc:"Capac tub baterie", colour:"", used:["RSC-B10*PWR7"], excl:[], colourCode:"", qty:()=>1},
+  {code:"RSC19", desc:"Clemă tub baterie", colour:"", used:["RSC-B10*PWR8"], excl:[], colourCode:"", qty:()=>2},
   {code:"V10YW", desc:"Inel alamă", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>2},
-  {code:"RSC25-W", desc:"Roman TwinPull 1:1 absolute", colour:"white", used:["RSC-I10"], excl:[], colourCode:"WH", qty:()=>1},
-  {code:"RSC25-BK", desc:"Roman TwinPull 1:1 absolute", colour:"black", used:["RSC-I10"], excl:[], colourCode:"BK", qty:()=>1},
 ];
 
 function getRomanPartsList(articleCode, calcResult){
@@ -881,8 +887,6 @@ function getRomanPartsList(articleCode, calcResult){
     if(!used) return null;
     const excluded = p.excl.some(pat=>wildcardMatch(pat, articleCode));
     if(excluded) return null;
-    const colourOk = !p.colourCode || wildcardMatch(p.colourCode, articleCode);
-    if(!colourOk) return null;
     const qty = p.qty(calcResult);
     if(!qty || qty<=0) return null;
     return {code:p.code, desc:p.desc, colour:p.colour, qty: Math.round(qty*100)/100};
@@ -1765,9 +1769,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
   const [height,setHeight]=React.useState(1000);
   const [installHeight,setInstallHeight]=React.useState(1000);
   const [mechKey,setMechKey]=React.useState("RSC-A10 chain");
-  const [motorKey,setMotorKey]=React.useState("CM-06");
   const [fabricKey,setFabricKey]=React.useState("normal 500 gr");
-  const [colourKey,setColourKey]=React.useState("White");
   const [controlSide,setControlSide]=React.useState("Left");
   const [cordsSpools,setCordsSpools]=React.useState("Auto");
   const [options,setOptions]=React.useState([]);
@@ -1777,11 +1779,17 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
   const [savedMsg,setSavedMsg]=React.useState("");
 
   const isMotor = mechKey==="RSC-B10 motorised";
-  const toggleOption=(opt)=>setOptions(p=>p.includes(opt)?p.filter(o=>o!==opt):[...p,opt]);
+  const availOptions = RS_MECHOPTIONS[mechKey].map(x=>x[0]).filter(o=>o!=="CM-07 DC midmotor");
+  React.useEffect(()=>{ setOptions(p=>p.filter(o=>availOptions.includes(o))); },[mechKey]);
+  const toggleOption=(opt)=>setOptions(p=>{
+    if(p.includes(opt)) return p.filter(o=>o!==opt);
+    if(p.length>=5) return p;
+    return [...p,opt];
+  });
 
   let result=null, parts=[], error=null;
   try{
-    result=romanCalc({width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,motorKey,fabricKey,colourKey,controlSide,cordsSpools,options});
+    result=romanCalc({width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,fabricKey,controlSide,cordsSpools,options});
     parts=getRomanPartsList(result.articleCode,result);
   }catch(e){ error="Verifică valorile introduse."; }
   const {errors:validErrors,warnings:validWarnings}=romanValidate({width:Number(width),height:Number(height),mechKey});
@@ -1791,7 +1799,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
   const clientObj=clients&&clients.find(c=>c.id===clientId);
 
   const buildPrintHtml=buildRomanPrintHtml;
-  const printParts=()=>{ if(!result) return; printHtmlDoc(buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:{width,height,installHeight,mechKey,motorKey,fabricKey,colourKey},result,parts})); };
+  const printParts=()=>{ if(!result) return; printHtmlDoc(buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:{width,height,installHeight,mechKey,fabricKey,controlSide,options},result,parts})); };
   const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
 
   const salveazaLaClient=()=>{
@@ -1802,7 +1810,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
       setCamereLista(p=>[...p,camera.trim()]);
     }
     const cfg={id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
-      input:{width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,motorKey,fabricKey,colourKey,controlSide,cordsSpools,options},
+      input:{width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,fabricKey,controlSide,cordsSpools,options},
       result, parts};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:[...(c.configuratiiRoman||[]),cfg]}));
     setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
@@ -1839,18 +1847,13 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
         </select>
       </div>
       {isMotor&&<div><label style={lblStyle}>Motor</label>
-        <select value={motorKey} onChange={e=>setMotorKey(e.target.value)} style={selStyle}>
-          {Object.keys(RS_MOTORS).map(m=><option key={m} value={m}>{m}</option>)}
+        <select value="CM-07 DC midmotor" disabled style={{...selStyle,color:C.textMuted}}>
+          <option>CM-07 DC midmotor</option>
         </select>
       </div>}
       <div><label style={lblStyle}>Țesătură</label>
         <select value={fabricKey} onChange={e=>setFabricKey(e.target.value)} style={selStyle}>
           {Object.keys(RS_FABRICS).map(f=><option key={f} value={f}>{f}</option>)}
-        </select>
-      </div>
-      <div><label style={lblStyle}>Culoare profil</label>
-        <select value={colourKey} onChange={e=>setColourKey(e.target.value)} style={selStyle}>
-          {Object.keys(RS_COLOURS).map(c=><option key={c} value={c}>{c}</option>)}
         </select>
       </div>
       {!isMotor&&<div><label style={lblStyle}>Parte comandă</label>
@@ -1867,11 +1870,11 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
     </div>
 
     <div style={{marginBottom:16}}>
-      <label style={lblStyle}>Opțiuni suplimentare</label>
+      <label style={lblStyle}>Opțiuni (max 5) — mecanism, siguranță, telecomandă, baterie etc.</label>
       <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-        {Object.keys(RS_OPTIONS).map(opt=>
-          <label key={opt} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.textSub,background:C.bg,padding:"5px 10px",cursor:"pointer"}}>
-            <input type="checkbox" checked={options.includes(opt)} onChange={()=>toggleOption(opt)}/>
+        {availOptions.map(opt=>
+          <label key={opt} style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:C.textSub,background:C.bg,padding:"5px 10px",cursor:"pointer",opacity:(!options.includes(opt)&&options.length>=5)?0.4:1}}>
+            <input type="checkbox" checked={options.includes(opt)} disabled={!options.includes(opt)&&options.length>=5} onChange={()=>toggleOption(opt)}/>
             {opt}
           </label>
         )}
@@ -1952,8 +1955,8 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Date introduse</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14}}>
         {[["Lățime",cfg.input.width+" mm"],["Înălțime",cfg.input.height+" mm"],["Înălțime montaj",cfg.input.installHeight?cfg.input.installHeight+" mm":"—"],
-          ["Mecanism",cfg.input.mechKey],...(cfg.result.isMotor?[["Motor",cfg.input.motorKey]]:[]),
-          ["Țesătură",cfg.input.fabricKey],["Culoare",cfg.input.colourKey],
+          ["Mecanism",cfg.input.mechKey],
+          ["Țesătură",cfg.input.fabricKey],
           ...(!cfg.result.isMotor?[["Parte comandă",cfg.input.controlSide]]:[]),
           ["Bobine",cfg.input.cordsSpools],["Opțiuni",(cfg.input.options||[]).length?cfg.input.options.join(", "):"—"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
