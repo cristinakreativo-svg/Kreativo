@@ -1707,8 +1707,10 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
 
 function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint}){
   const [open,setOpen]=React.useState(false);
+  const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
+  const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
   const {errors:vErrors,warnings:vWarnings}=validateCoulisseInput(cfg.input);
   return <div style={{border:`1px solid ${vErrors.length?"#3A3128":C.border}`,marginBottom:6,background:C.surface}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
@@ -1723,10 +1725,12 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint}){
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
     {open&&<div style={{padding:"12px 14px"}}>
-      {cfg.observatii&&<div style={{background:"#5C6B65",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:500}}>
-        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,opacity:0.85}}>📝 Observație pentru Dan</div>
-        {cfg.observatii}
-      </div>}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,color:C.textMuted}}>📝 Observație pentru Dan</div>
+        <textarea value={obsText} onChange={e=>setObsText(e.target.value)} placeholder="adaugă o observație (ex: atenție la colțul din stânga)..." rows={2}
+          style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
+        {obsText!==(cfg.observatii||"")&&<button onClick={saveObs} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>💾 Salvează observația</button>}
+      </div>
       {vErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
         <div style={{fontWeight:700,marginBottom:4}}>⚠ Configurație imposibilă:</div>
         {vErrors.map((e,i)=><div key={i}>{e}</div>)}
@@ -1941,8 +1945,10 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
 
 function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
   const [open,setOpen]=React.useState(false);
+  const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
+  const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
   return <div style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
@@ -1954,10 +1960,12 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
     {open&&<div style={{padding:"12px 14px"}}>
-      {cfg.observatii&&<div style={{background:"#5C6B65",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:500}}>
-        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,opacity:0.85}}>📝 Observație pentru Dan</div>
-        {cfg.observatii}
-      </div>}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,color:C.textMuted}}>📝 Observație pentru Dan</div>
+        <textarea value={obsText} onChange={e=>setObsText(e.target.value)} placeholder="adaugă o observație (ex: atenție la colțul din stânga)..." rows={2}
+          style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
+        {obsText!==(cfg.observatii||"")&&<button onClick={saveObs} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>💾 Salvează observația</button>}
+      </div>
       <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:10,wordBreak:"break-all",background:C.accentLight,padding:"8px 10px"}}>{cfg.result.articleCode}</div>
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Date introduse</div>
@@ -2327,8 +2335,10 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
 
 function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
   const [open,setOpen]=React.useState(false);
+  const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
+  const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
   return <div style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
@@ -2340,10 +2350,12 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
     {open&&<div style={{padding:"12px 14px"}}>
-      {cfg.observatii&&<div style={{background:"#5C6B65",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:13,fontWeight:500}}>
-        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,opacity:0.85}}>📝 Observație pentru Dan</div>
-        {cfg.observatii}
-      </div>}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,color:C.textMuted}}>📝 Observație pentru Dan</div>
+        <textarea value={obsText} onChange={e=>setObsText(e.target.value)} placeholder="adaugă o observație (ex: atenție la colțul din stânga)..." rows={2}
+          style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
+        {obsText!==(cfg.observatii||"")&&<button onClick={saveObs} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>💾 Salvează observația</button>}
+      </div>
       <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:10,wordBreak:"break-all",background:C.accentLight,padding:"8px 10px"}}>{cfg.result.code}</div>
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Date introduse</div>
