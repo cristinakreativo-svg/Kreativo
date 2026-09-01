@@ -530,6 +530,7 @@ function rulouCalc(inp){
   if(cfgd && cfgd.maxH && H>cfgd.maxH) errs.push(`Înălțimea depășește maximul sistemului (${cfgd.maxH}mm).`);
   if(code.includes("SPA") && (W<500 || H>3500)) errs.push("Springassist: lățime min. 500mm, înălțime max. 3500mm.");
   if(H/W>3) warns.push("Raport H:L peste 3:1 — verifică stabilitatea.");
+  if(fabricH>2800) warns.push(`Înălțimea stofă necesară (${fabricH.toFixed(1)}mm) depășește 2800mm — majoritatea materialelor au lățimea de rolă de 2800mm, verifică disponibilitatea la furnizor.`);
   if(roll.halfTurns/2 > 18*(isDR?2:1)) errs.push("Numărul de rotații depășește limita mecanismului (18).");
 
   const isChainCfg = /RC-.?A/.test(cfg);
