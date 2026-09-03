@@ -2056,8 +2056,9 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
       <div><label style={lblStyle}>Nr. panouri (opțional — suprascrie automat)</label>
         <input type="number" min="1" value={numPanelsOverride} onChange={e=>setNumPanelsOverride(e.target.value)} placeholder={String(PN_PANELS_BY_TRACKS[sys.panelGrp][Number(tracks)])} style={selStyle}/>
       </div>
-      <div><label style={lblStyle}>Suprapunere (cm)</label>
+      <div><label style={lblStyle}>Suprapunere totală per panou (cm)</label>
         <input type="number" step="0.5" value={overlapCm} onChange={e=>setOverlapCm(e.target.value)} style={selStyle}/>
+        <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>= {(Number(overlapCm)/2).toFixed(1)}cm pe fiecare parte (stânga + dreapta = {overlapCm}cm)</div>
       </div>
       <div><label style={lblStyle}>Parte comandă</label>
         <select value={controlSide} onChange={e=>setControlSide(e.target.value)} style={selStyle}>
