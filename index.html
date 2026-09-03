@@ -2041,10 +2041,11 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
           {[1,2,3].map(n=><option key={n} value={n}>{n}</option>)}
         </select>
       </div>
-      <div><label style={lblStyle}>Nr. track-uri (panouri)</label>
+      <div><label style={lblStyle}>Nr. canale (track-uri)</label>
         <select value={tracks} onChange={e=>setTracks(e.target.value)} style={selStyle}>
           {[2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}
         </select>
+        <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>→ {PN_PANELS_BY_TRACKS[sys.panelGrp][Number(tracks)]} panouri (calculat automat, nu se alege separat)</div>
       </div>
       <div><label style={lblStyle}>Parte comandă</label>
         <select value={controlSide} onChange={e=>setControlSide(e.target.value)} style={selStyle}>
