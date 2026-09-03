@@ -82,7 +82,6 @@ const IEK = "kreativo_iesiri_v1";
 const INK = "kreativo_intrari_v1";
 const BLK = "kreativo_bilete_v1";
 const TRK = "kreativo_trezorerie_v1";
-const OFK = "kreativo_oferte_v1";
 const LGK = "kreativo_log_v1";
 const ENK = "kreativo_energie_v1";
 
@@ -2865,39 +2864,6 @@ function LogDiscutii({id,log,setLog,C,inp,btnP,gid,tday,fmtD}){
   </div>;
 }
 
-function OfertaAddTask({onAdd,inp,btnP,tday}){
-  const [open,setOpen]=React.useState(false);
-  const [task,setTask]=React.useState("");
-  const [tip,setTip]=React.useState("Comandă");
-  const [data,setData]=React.useState("");
-  const TIPURI=["Comandă","Ofertă","Măsurătoare","Montaj","Livrare","Plată","Alt task"];
-  if(!open) return <button onClick={()=>setOpen(true)} style={{fontSize:11,color:"#2A2118",border:"none",padding:"5px 12px",background:"#5C6B65",cursor:"pointer",marginTop:6,width:"100%"}}>+ adaugă sarcină</button>;
-  return <div style={{marginTop:6,padding:"10px",background:"#F5F0E8",border:"1px solid #E0D8CC"}}>
-    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-      <input autoFocus value={task} onChange={e=>setTask(e.target.value)} onKeyDown={e=>e.key==="Escape"&&setOpen(false)} placeholder="Descriere sarcină..." style={{...inp,flex:2,minWidth:120,padding:"6px 10px",fontSize:12}}/>
-      <select value={tip} onChange={e=>setTip(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",padding:"6px 8px",background:"#FAF8F4",outline:"none"}}>
-        {TIPURI.map(t=><option key={t} value={t}>{t}</option>)}
-      </select>
-      <input type="date" value={data} onChange={e=>setData(e.target.value)} style={{fontSize:12,border:"1px solid #E0D8CC",padding:"6px 8px",background:"#FAF8F4",outline:"none"}}/>
-    </div>
-    <div style={{display:"flex",gap:6}}>
-      <button onClick={()=>{if(task.trim()){onAdd({title:task.trim(),tip,date:data});setTask("");setTip("Comandă");setData("");setOpen(false);}}} style={{...btnP(),fontSize:11,padding:"5px 12px"}}>+ Adaugă</button>
-      <button onClick={()=>setOpen(false)} style={{fontSize:11,padding:"5px 10px",border:"1px solid #E0D8CC",background:"transparent",cursor:"pointer",color:"#A8998A"}}>Anulează</button>
-    </div>
-  </div>;
-}
-
-function AddOfertaForm({onAdd,inp,btnP,btnS,C}){
-  const [open,setOpen]=React.useState(false);
-  const [name,setName]=React.useState("");
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ ofertă nouă</button>;
-  return <div style={{display:"flex",gap:6}}>
-    <input autoFocus value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&name.trim()){onAdd(name.trim());setName("");setOpen(false);}if(e.key==="Escape")setOpen(false);}} placeholder="Nume client / ofertă..." style={{...inp,flex:1}}/>
-    <button onClick={()=>{if(name.trim()){onAdd(name.trim());setName("");setOpen(false);}}} style={btnP()}>Adaugă</button>
-    <button onClick={()=>setOpen(false)} style={btnS}>✕</button>
-  </div>;
-}
-
 function AddBiletForm({furnizori,onAdd,onAddFurnizor}){
   const [open,setOpen]=React.useState(false);
   const [numar,setNumar]=React.useState("");
@@ -3378,9 +3344,7 @@ function App() {
   const [furnizoriLista,setFurnizoriLista]=useState(["Coulisse","Benjamin Moore","Darstar","Duval"]);
   const [rulouMateriale,setRulouMateriale]=useState([]);
   const [camereLista,setCamereLista]=useState(["Living","Dormitor","Dormitor 2","Bucătărie","Hol","Baie","Birou","Cameră copil","Terasă","Dressing"]);
-  const [oferte,setOferte]=useState([]);
   const [log,setLog]=useState({});
-  const [ofertaSubtab,setOfertaSubtab]=useState("lista"); // {clientId: [{text, data, ora}]}
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
   const [loading,setLoading]=useState(false);
@@ -3472,7 +3436,6 @@ function App() {
           const ie=await sbGet(IEK); if(ie){setIesiri(ie);gotAnyData=true;}
           const intr=await sbGet(INK); if(intr){setIntrari(intr);gotAnyData=true;}
           const bl=await sbGet(BLK); if(bl){setBilete(bl);gotAnyData=true;}
-          const of=await sbGet(OFK); if(of){setOferte(of);gotAnyData=true;}
           const lg=await sbGet(LGK); if(lg){setLog(lg);gotAnyData=true;}
           const tr=await sbGet(TRK); if(tr){setTrezorerie(tr);gotAnyData=true;}
           const en=await sbGet(ENK); if(en){setEnergie(en);gotAnyData=true;}
@@ -3491,8 +3454,8 @@ function App() {
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,OFK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setOferte,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -3528,7 +3491,6 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(IEK,iesiri);},[iesiri,loaded]);
   useEffect(()=>{if(loaded) sbSave(INK,intrari);},[intrari,loaded]);
   useEffect(()=>{if(loaded) sbSave(BLK,bilete);},[bilete,loaded]);
-  useEffect(()=>{if(loaded) sbSave(OFK,oferte);},[oferte,loaded]);
   useEffect(()=>{if(loaded) sbSave(LGK,log);},[log,loaded]);
   useEffect(()=>{if(loaded) sbSave(TRK,trezorerie);},[trezorerie,loaded]);
   useEffect(()=>{if(loaded) sbSave(ENK,energie);},[energie,loaded]);
@@ -3571,7 +3533,7 @@ function App() {
   const updCliDate=(ci,ti,v)=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const d=Array.from({length:c.tasks.length},(_,j)=>(c.dates||[])[j]||"");d[ti]=v;return {...c,dates:d};}));
   const delCliTask=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:c.tasks.filter((_,j)=>j!==ti),done:c.done.filter((_,j)=>j!==ti),dates:(c.dates||[]).filter((_,j)=>j!==ti)}));
   const delCli=(ci)=>setClients(p=>p.filter((_,i)=>i!==ci));
-  const addCli=()=>{const n=newCliName.trim();if(!n) return;setClients(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],motoare:[],open:false}]);setNewCliName("");setAddingCli(false);};
+  const addCli=()=>{const n=newCliName.trim();if(!n) return;setClients(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],motoare:[],open:false,...(tab==="oferte"?{stadiu:"oferta"}:{})}]);setNewCliName("");setAddingCli(false);};
 
   const togTudor=(ti_,si)=>{setTudor(p=>p.map((t,i)=>i!==ti_?t:{...t,done:t.done.map((d,j)=>j===si?!d:d)}));};
   const addTudorTask=(ti_)=>{const v=(newTudorTask[ti_]||"").trim();if(!v) return;setTudor(p=>p.map((t,i)=>i!==ti_?t:{...t,tasks:[...t.tasks,v],done:[...t.done,false],dates:[...(t.dates||[]),""],obs:[...(t.obs||[]),""]}));setNewTudorTask(p=>({...p,[ti_]:""}));setAddingToTudor(null);};
@@ -3648,12 +3610,6 @@ function App() {
     data.events.forEach(e=>items.push({date:e.date,time:e.time||"",title:e.title,source:"Program",loc:e.loc||"",eventId:e.id,id:e.id}));
     clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const date=(c.dates||[])[ti]||"";const taskTitle=typeof task==="object"?task.title:task;if(date&&!(c.done||[])[ti])items.push({date,time:(c.oraTask||[])[ti]||"",title:`${c.name} · ${taskTitle}`,source:"Client",clientName:c.name,ti,id:`${c.id}-${ti}`});}));
     proiecte.forEach((p,pi)=>(p.tasks||[]).forEach((task,ti)=>{const date=(p.dates||[])[ti]||"";if(date&&!(p.done||[])[ti])items.push({date,time:"",title:`${p.name} · ${task}`,source:"Personal",proiectName:p.name,ti,id:`pr-${p.id}-${ti}`});}));
-    oferte.forEach((o,oi)=>(o.tasks||[]).forEach((task,ti)=>{      const date=typeof task==="object"?task.date:(o.dates||[])[ti]||"";
-      if(date&&!(o.done||[])[ti]){
-        const title=typeof task==="object"?task.title:task;
-        items.push({date,time:"",title:`[Ofertă] ${o.name} · ${title}`,source:"Ofertă",ofertaId:o.id,oi,ti,id:`of-${o.id}-${ti}`});
-      }
-    }));
     ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.title,source:s.charAt(0).toUpperCase()+s.slice(1),id:t.id});}));
     data.tasks.filter(t=>!t.done&&t.deadline).forEach(t=>items.push({date:t.deadline,time:"",title:t.title,source:t.cat,id:t.id}));
     perdele.forEach((e,ei)=>e.taskuri.forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.text.slice(0,50),source:"Perdele",id:t.id,ei});}));
@@ -3669,7 +3625,6 @@ function App() {
     else if(item.source==="Personal"){const pi=proiecte.findIndex(p=>p.name===item.proiectName);if(pi!==-1)togPr(pi,item.ti);}
     else if(["Contabilitate","Administrativ","Marketing","Personal"].includes(item.source)) togAdmin(item.source.toLowerCase(),item.id);
     else if(item.source==="Perdele") togP(item.ei,item.id);
-    else if(item.source==="Ofertă") setOferte(p=>p.map((o,i)=>{if(i!==item.oi)return o;const d=[...(o.done||[])];d[item.ti]=true;return {...o,done:d};}));
     else if(data.tasks.find(t=>t.id===item.id)) togTask(item.id);
   };
   const reschedCal=(item,nd,ntime)=>{
@@ -3678,13 +3633,6 @@ function App() {
     else if(item.source==="Personal"){const pi=proiecte.findIndex(p=>p.name===item.proiectName);if(pi!==-1)updPrDate(pi,item.ti,nd);}
     else if(["Contabilitate","Administrativ","Marketing","Personal"].includes(item.source)) updAdmin(item.source.toLowerCase(),item.id,"deadline",nd);
     else if(item.source==="Perdele") updP(item.ei,item.id,"deadline",nd);
-    else if(item.source==="Ofertă") setOferte(p=>p.map((o,i)=>{
-      if(i!==item.oi)return o;
-      const t=[...(o.tasks||[])];
-      if(typeof t[item.ti]==="object") t[item.ti]={...t[item.ti],date:nd};
-      else{const d=[...(o.dates||Array(t.length).fill(""))];d[item.ti]=nd;return {...o,dates:d};}
-      return {...o,tasks:t};
-    }));
   };
 
   const top3=()=>{const all=[];data.tasks.filter(t=>!t.done).forEach(t=>all.push({title:t.title,score:impactScore(t.title,t.cat,t.prio),source:t.cat,resp:t.resp||"Cristina"}));Object.entries(admin).forEach(([s,arr])=>(arr||[]).filter(t=>!t.done).forEach(t=>all.push({title:t.title,score:impactScore(t.title,s,"Normal"),source:s,resp:t.resp||"Cristina"})));return all.sort((a,b)=>b.score-a.score).slice(0,3);};
@@ -3699,7 +3647,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[OFK]:oferte,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -3733,7 +3681,6 @@ function App() {
         if(d[INK]) setIntrari(d[INK]);
         if(d[BLK]) setBilete(d[BLK]);
         if(d[TRK]) setTrezorerie(d[TRK]);
-        if(d[OFK]) setOferte(d[OFK]);
         if(d[LGK]) setLog(d[LGK]);
         if(d[PRK]) setProiecte(d[PRK]);
         if(d[FLK]) setFurnizoriLista(d[FLK]);
@@ -3773,7 +3720,16 @@ function App() {
   const totCl=clients.reduce((s,c)=>s+c.tasks.length,0);
   const donCl=clients.reduce((s,c)=>s+c.done.filter(Boolean).length,0);
   const pct=totCl?Math.round(donCl/totCl*100):0;
-  const filtCl=clients.filter(c=>{const m=c.name.toLowerCase().includes(search.toLowerCase());if(cliFilter==="pending") return m&&c.tasks.some((_,i)=>!c.done[i]);if(cliFilter==="done") return m&&c.tasks.length>0&&c.done.every(Boolean);return m;}).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
+  const filtCl=clients.filter(c=>{
+    const m=c.name.toLowerCase().includes(search.toLowerCase());
+    if(tab==="oferte") return c.stadiu==="oferta"&&m;
+    if(c.stadiu==="oferta") return false;
+    if(cliFilter==="finalizate") return c.stadiu==="finalizat"&&m;
+    if(c.stadiu==="finalizat") return false;
+    if(cliFilter==="pending") return m&&c.tasks.some((_,i)=>!c.done[i]);
+    if(cliFilter==="done") return m&&c.tasks.length>0&&c.done.every(Boolean);
+    return m;
+  }).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
   const jAzi=jurnal[tday()]||[];
   const recAzi=recurente.filter(r=>nxtRecur(r)<=tday());
 
@@ -3812,7 +3768,6 @@ function App() {
     if(t==="clients") setClients(p=>p.map(c=>({...c,open:false})));
     if(t==="tudor") setTudor(p=>p.map(t2=>({...t2,open:false})));
     if(t==="motionblinds") setOpenModel({});
-    if(t==="oferte") setOferte(p=>p.map(o=>({...o,open:false})));
   };
 
   const recLabel=(r)=>{if(r.type==="lunar_zi") return `Lunar, ziua ${r.day}`;if(r.type==="lunar_inceput") return "Lunar, prima zi";if(r.type==="lunar_sfarsit") return "Lunar, ultima zi";if(r.type==="saptamanal") return `Săptămânal, ${r.day}`;return "";};
@@ -4213,16 +4168,17 @@ function App() {
       })()}
     </div>}
 
-    {tab==="clients"&&<div>
+    {(tab==="clients"||tab==="oferte")&&<div>
       {/* Subtaburi */}
-      <div style={{display:"flex",gap:6,marginBottom:14}}>
-        {[["lista","Clienți"],["valori","Valori comenzi"],["calendar","Calendar"]].map(([id,l])=>{
-          const activeCliTab=cliFilter==="valori"?"valori":cliFilter==="calendar"?"calendar":"lista";
-          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":id==="calendar"?"calendar":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
+      {tab==="clients"&&<div style={{display:"flex",gap:6,marginBottom:14}}>
+        {[["lista","Clienți"],["valori","Valori comenzi"],["calendar","Calendar"],["finalizate","Proiecte finalizate"]].map(([id,l])=>{
+          const activeCliTab=["valori","calendar","finalizate"].includes(cliFilter)?cliFilter:"lista";
+          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":id==="calendar"?"calendar":id==="finalizate"?"finalizate":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
         })}
-      </div>
+      </div>}
+      {tab==="oferte"&&<div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:14}}>Oferte — potențiali clienți, măsurători și poze</div>}
 
-      {cliFilter==="calendar"&&(()=>{
+      {tab==="clients"&&cliFilter==="calendar"&&(()=>{
         const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
         const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
         const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
@@ -4275,7 +4231,7 @@ function App() {
       })()}
 
       {/* Tab Valori */}
-      {cliFilter==="valori"&&<div>
+      {tab==="clients"&&cliFilter==="valori"&&<div>
         <div style={{...card,marginBottom:12}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
             <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Situație valori comenzi</div>
@@ -4326,7 +4282,7 @@ function App() {
       </div>}
 
       {/* Tab Lista clienți */}
-      {cliFilter!=="valori"&&cliFilter!=="calendar"&&<div>
+      {(tab==="oferte"||(cliFilter!=="valori"&&cliFilter!=="calendar"))&&<div>
       <div style={{marginBottom:16}}>
         <div style={{...row,marginBottom:6}}>
           <span style={{fontSize:11,color:C.textMuted,flex:1}}>{donCl} din {totCl} · {pct}%</span>
@@ -4369,7 +4325,7 @@ function App() {
           <div style={{padding:"12px 16px"}}>
             {/* Valoare comandă */}
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg}}>
-              <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Valoare comandă:</span>
+              <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>{tab==="oferte"?"Valoare ofertă:":"Valoare comandă:"}</span>
               <input type="number" value={client.valoare||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
               <span style={{fontSize:12,color:C.textMuted}}>RON</span>
             </div>
@@ -4387,6 +4343,18 @@ function App() {
                 <input type="checkbox" checked={!!client.alocatDan} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,alocatDan:e.target.checked}))}/>
                 <span style={{fontSize:12,color:C.textSub}}>Dan</span>
               </label>
+              {tab==="oferte"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer",background:"#5C6B65",padding:"4px 10px"}}>
+                <input type="checkbox" checked={false} onChange={()=>{if(window.confirm(`Muți "${client.name}" din Oferte în Clienți?`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:undefined,open:false}));}}/>
+                <span style={{fontSize:12,color:"#fff",fontWeight:600}}>Mută în clienți</span>
+              </label>}
+              {tab==="clients"&&cliFilter!=="finalizate"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+                <input type="checkbox" checked={client.stadiu==="finalizat"} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:e.target.checked?"finalizat":undefined,open:e.target.checked?false:c.open}))}/>
+                <span style={{fontSize:12,color:C.textSub}}>Proiect terminat</span>
+              </label>}
+              {tab==="clients"&&cliFilter==="finalizate"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+                <input type="checkbox" checked={true} onChange={()=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:undefined,open:false}))}/>
+                <span style={{fontSize:12,color:C.textSub}}>Proiect terminat (debifează pt. redeschidere)</span>
+              </label>}
             </div>
             {contactOpen[client.id]&&<>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:0,padding:"10px 14px",background:C.bg}}>
@@ -4424,116 +4392,14 @@ function App() {
       </div>
       <div style={{marginTop:12}}>
         {addingCli?<div style={row}>
-          <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder="Nume client nou..." style={{...inp,flex:1}}/>
+          <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder={tab==="oferte"?"Nume client / ofertă nouă...":"Nume client nou..."} style={{...inp,flex:1}}/>
           <button onClick={addCli} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingCli(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ client nou</button>}
+        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>{tab==="oferte"?"+ ofertă nouă":"+ client nou"}</button>}
       </div>
       </div>}
     </div>}
 
-    {tab==="oferte"&&<div>
-      {/* Subtaburi */}
-      <div style={{display:"flex",gap:6,marginBottom:14}}>
-        {[["lista","Oferte"],["valori","Valori oferte"]].map(([id,l])=>{
-          const activeTab=ofertaSubtab||"lista";
-          return <button key={id} onClick={()=>setOfertaSubtab(id)} style={{padding:"7px 14px",border:`1px solid ${id===activeTab?C.accent:C.border}`,background:id===activeTab?C.accentLight:"transparent",color:id===activeTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeTab?500:400}}>{l}</button>;
-        })}
-      </div>
-
-      {/* Tab Valori oferte */}
-      {(ofertaSubtab||"lista")==="valori"&&<div>
-        <div style={{...card,marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-            <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Situație valori oferte</div>
-            <div style={{fontSize:18,fontWeight:700,color:C.accent}}>
-              {oferte.filter(o=>o.valoare).reduce((s,o)=>s+Number(o.valoare||0),0).toLocaleString("ro-RO")} RON
-            </div>
-          </div>
-          <div style={{fontSize:11,color:C.textMuted,marginBottom:10}}>Total pipeline · {oferte.filter(o=>o.valoare).length} oferte cu valoare</div>
-          {oferte.filter(o=>Number(o.valoare||0)>0).sort((a,b)=>Number(b.valoare||0)-Number(a.valoare||0)).map((o,i)=><div key={o.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:i%2===0?C.bg:C.surface,marginBottom:4}}>
-            <div style={{width:8,height:8,background:CC[oferte.indexOf(o)%CC.length],flexShrink:0}}/>
-            <span style={{flex:1,fontSize:13,color:C.text,fontWeight:500}}>{o.name}</span>
-            <span style={{fontSize:11,color:C.textMuted,marginRight:8}}>{fmtD(o.data)}</span>
-            <span style={{fontSize:14,fontWeight:700,color:C.accent}}>{Number(o.valoare).toLocaleString("ro-RO")} RON</span>
-          </div>)}
-          {oferte.filter(o=>!o.valoare||o.valoare==="0"||o.valoare==="").length>0&&<div style={{marginTop:10,padding:"8px 12px",background:C.bg,fontSize:12,color:C.textMuted}}>
-            {oferte.filter(o=>!o.valoare||o.valoare==="0"||o.valoare==="").length} oferte fără valoare estimată
-          </div>}
-        </div>
-      </div>}
-
-      {/* Tab Lista oferte */}
-      {(ofertaSubtab||"lista")==="lista"&&<div>
-      <div style={{marginBottom:12,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>
-          Oferte active — {oferte.filter(o=>!o.renuntat).length}
-        </div>
-      </div>
-
-      {oferte.filter(o=>!o.renuntat).map((oferta,oi)=>{
-        const color=CC[oi%CC.length];
-        const pending=(oferta.done||[]).filter(d=>!d).length;
-        const allDone=(oferta.tasks||[]).length>0&&(oferta.done||[]).every(Boolean);
-        return <div key={oferta.id} style={{border:`1px solid ${C.border}`,marginBottom:8,background:C.surface,overflow:"hidden"}}>
-          <div onClick={()=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,open:!o.open}))} style={{display:"flex",alignItems:"center",gap:10,padding:"13px 16px",background:color,cursor:"pointer",userSelect:"none"}}>
-            <div style={{flex:1,fontSize:13,fontWeight:500,color:oi%2===0?"#fff":C.text}}>{oferta.name}</div>
-            <div style={{fontSize:11,background:oi%2===0?"rgba(255,255,255,0.22)":"rgba(0,0,0,0.1)",color:oi%2===0?"#fff":C.text,padding:"3px 10px"}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>
-            <div style={{fontSize:11,color:oi%2===0?"rgba(255,255,255,0.7)":C.textSub}}>{oferta.open?"▾":"▸"}</div>
-          </div>
-
-          {oferta.open&&<div style={{padding:"12px"}}>
-            {/* Valoare — identic cu clienti */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg}}>
-              <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Valoare estimată:</span>
-              <input type="number" value={oferta.valoare||""} onChange={e=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
-              <span style={{fontSize:12,color:C.textMuted}}>RON</span>
-            </div>
-
-            {/* Taskuri — identic cu clienti */}
-            {(oferta.tasks||[]).map((task,ti)=>{
-              const taskTitle=typeof task==="object"?task.title:task;
-              const taskDate=typeof task==="object"?task.date||"":"";
-              const isDone=(oferta.done||[])[ti];
-              const tg=tagTask(taskTitle);
-              const ov=taskDate&&taskDate<tday();
-              return <div key={ti} style={{background:C.surface,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"10px 14px",marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <input type="checkbox" checked={isDone||false} onChange={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const d=[...(o.done||[])];d[ti]=!d[ti];return {...o,done:d};}))} style={{cursor:"pointer",width:15,height:15,flexShrink:0,accentColor:C.accent}}/>
-                  <span style={{flex:1,fontSize:13,color:isDone?C.textMuted:C.text,textDecoration:isDone?"line-through":"none"}}>{taskTitle}</span>
-                  <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
-                  <input type="date" value={taskDate} onChange={e=>{const v=e.target.value;setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];t[ti]=typeof t[ti]==="object"?{...t[ti],date:v}:{title:t[ti],tip:"Comandă",date:v};return {...o,tasks:t};}));}}
-                    style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>
-                  <button onClick={()=>setOferte(p=>p.map((o,i)=>{if(i!==oi)return o;const t=[...(o.tasks||[])];const d=[...(o.done||[])];t.splice(ti,1);d.splice(ti,1);return {...o,tasks:t,done:d};}))} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
-                </div>
-              </div>;
-            })}
-
-            <OfertaAddTask onAdd={(task)=>setOferte(p=>p.map((o,i)=>i!==oi?o:{...o,tasks:[...(o.tasks||[]),task],done:[...(o.done||[]),false]}))} inp={inp} btnP={btnP} tday={tday}/>
-
-            <div style={{display:"flex",gap:8,marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`,flexWrap:"wrap"}}>
-              <button onClick={()=>{
-                const taskStrings=(oferta.tasks||[]).map(t=>typeof t==="object"?t.title:t);
-                const taskDates=(oferta.tasks||[]).map(t=>typeof t==="object"?t.date||"":"");
-                const client={id:gid(),name:oferta.name,tasks:taskStrings,done:(oferta.done||[]),dates:taskDates,open:false,motoare:[],valoare:oferta.valoare||""};
-                setClients(p=>[...p,client]);
-                setOferte(p=>p.filter((_,i)=>i!==oi));
-              }} style={{...btnP(),fontSize:12}}>✓ Acceptat — mută în Clienți</button>
-              <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.name}?`)) setOferte(p=>p.filter((_,i)=>i!==oi));}} style={{padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textMuted}}>× Renunțat — șterge</button>
-            </div>
-            <LogDiscutii id={`oferta_${oferta.id}`} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
-          </div>}
-        </div>;
-      })}
-
-      {/* Ofertă nouă */}
-      <div style={{marginTop:12}}>
-        <AddOfertaForm onAdd={(name)=>setOferte(p=>[...p,{id:gid(),name,tasks:[],done:[],open:false,data:tday()}])} inp={inp} btnP={btnP} btnS={btnS} C={C}/>
-      </div>
-
-      {oferte.filter(o=>!o.renuntat).length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nicio ofertă activă. Adaugă prima ofertă.</div>}
-      </div>}
-    </div>}
 
     {tab==="nico"&&<div>
       <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)}/>
