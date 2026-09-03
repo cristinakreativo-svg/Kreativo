@@ -782,8 +782,10 @@ const PN_PTB25_SIZES = [
 
 function pnBuildResult(size){
   const sys = PN_SYSTEMS[size.system];
-  const panels = PN_PANELS_BY_TRACKS[sys.panelGrp][size.tracks];
-  const panelWidth = Math.round(size.width/panels + 40);
+  const panelsAuto = PN_PANELS_BY_TRACKS[sys.panelGrp][size.tracks];
+  const panels = Number(size.numPanels) || panelsAuto;
+  const overlapMm = size.overlapCm!=null ? Number(size.overlapCm)*10 : 40;
+  const panelWidth = Math.round(size.width/panels + overlapMm);
   const cutHeadrail = Math.round((size.width - sys.endcap)/size.segments * 10)/10;
   const cutPVC = panelWidth - 2;
   const panelHeight = size.height - 20 - 10;
@@ -810,7 +812,7 @@ function pnBuildResult(size){
     (size.mountHeadrail==="Wall bracket" ? (trackInfo.bracket==="60"?"WBRS":"WBRM") : PN_MOUNTHEADRAIL_CODE[size.mountHeadrail]),
     colourCode].filter(Boolean).join("-");
 
-  return {code, sys, panels, panelWidth, cutHeadrail, cutPVC, panelHeight, fabricCutLen, cordLen,
+  return {code, sys, panels, panelsAuto, overlapMm, panelWidth, cutHeadrail, cutPVC, panelHeight, fabricCutLen, cordLen,
     numClips, numConnectors, runnersPerPanel, runnersTotal, trackInfo, mountCode, colourCode,
     bottomrailLen: Math.round((panelWidth*panels/1000)*100)/100};
 }
@@ -1937,7 +1939,7 @@ function buildPanouPrintHtml(cfg){
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
       <div style="line-height:1.9;">
-        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Sistem: ${cfg.input.system}<br/>Track-uri: ${cfg.input.tracks}<br/>Montaj panou: ${cfg.input.mountPanel}<br/>Culoare: ${cfg.input.colour}${cfg.input.material?"<br/>Material: "+cfg.input.material:""}<br/>Cantitate: ${cfg.qty}
+        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Sistem: ${cfg.input.system}<br/>Track-uri (canale): ${cfg.input.tracks}<br/>${cfg.input.numPanelsOverride?"Nr. panouri (manual): "+cfg.input.numPanelsOverride+"<br/>":""}${cfg.input.overlapCm?"Suprapunere: "+cfg.input.overlapCm+" cm<br/>":""}Montaj panou: ${cfg.input.mountPanel}<br/>Culoare: ${cfg.input.colour}${cfg.input.material?"<br/>Material: "+cfg.input.material:""}<br/>Cantitate: ${cfg.qty}
       </div>
     </div>
     <p><b>Rezultat calcul:</b> Nr. panouri: ${cfg.result.panels} · Lățime panou: ${cfg.result.panelWidth}mm · Șină tăiată: ${cfg.result.cutHeadrail}mm · Înălțime panou: ${cfg.result.panelHeight}mm · Tăiere material: ${cfg.result.fabricCutLen}mm</p>
@@ -1962,6 +1964,8 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
   const [colour,setColour]=React.useState("White");
   const [cordWeight,setCordWeight]=React.useState("Netedă (smooth)");
   const [material,setMaterial]=React.useState("");
+  const [numPanelsOverride,setNumPanelsOverride]=React.useState("");
+  const [overlapCm,setOverlapCm]=React.useState(4);
   const [qty,setQty]=React.useState(1);
   const [coulisse,setCoulisse]=React.useState(true);
   const [clientId,setClientId]=React.useState("");
@@ -1979,7 +1983,8 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
   let result=null, parts=[], error=null;
   try{
     result = pnBuildResult({width:Number(width),height:Number(height),installHeight:Number(installHeight),
-      system,segments:Number(segments),tracks:Number(tracks),controlSide,packSide,mountPanel,mountHeadrail,colour});
+      system,segments:Number(segments),tracks:Number(tracks),controlSide,packSide,mountPanel,mountHeadrail,colour,
+      numPanels:numPanelsOverride?Number(numPanelsOverride):undefined, overlapCm:Number(overlapCm)});
     parts = pnPartsList({segments:Number(segments),cordWeight}, result, Number(qty)||1);
   }catch(e){ error="Verifică valorile introduse."; }
 
@@ -1988,7 +1993,7 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
   const clientObj=clients&&clients.find(c=>c.id===clientId);
 
   const buildPrintHtml=buildPanouPrintHtml;
-  const printParts=()=>{ if(!result) return; printHtmlDoc(buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:{width,height,system,tracks,mountPanel,colour,material},qty,result,parts})); };
+  const printParts=()=>{ if(!result) return; printHtmlDoc(buildPrintHtml({clientName:clientObj&&clientObj.name,camera,input:{width,height,system,tracks,mountPanel,colour,material,numPanelsOverride:numPanelsOverride?Number(numPanelsOverride):null,overlapCm:Number(overlapCm)},qty,result,parts})); };
   const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
 
   const salveazaLaClient=()=>{
@@ -2000,7 +2005,8 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
     const cfg={id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
       qty:Number(qty)||1, coulisse,
       input:{width:Number(width),height:Number(height),installHeight:Number(installHeight),system,segments:Number(segments),
-        tracks:Number(tracks),controlSide,packSide,mountPanel,mountHeadrail,colour,cordWeight,material:material.trim()},
+        tracks:Number(tracks),controlSide,packSide,mountPanel,mountHeadrail,colour,cordWeight,material:material.trim(),
+        numPanelsOverride:numPanelsOverride?Number(numPanelsOverride):null, overlapCm:Number(overlapCm)},
       result, parts};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiPanou:[...(c.configuratiiPanou||[]),cfg]}));
     setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
@@ -2045,7 +2051,13 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
         <select value={tracks} onChange={e=>setTracks(e.target.value)} style={selStyle}>
           {[2,3,4,5,6].map(n=><option key={n} value={n}>{n}</option>)}
         </select>
-        <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>→ {PN_PANELS_BY_TRACKS[sys.panelGrp][Number(tracks)]} panouri (calculat automat, nu se alege separat)</div>
+        <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>→ implicit {PN_PANELS_BY_TRACKS[sys.panelGrp][Number(tracks)]} panouri (poți suprascrie mai jos)</div>
+      </div>
+      <div><label style={lblStyle}>Nr. panouri (opțional — suprascrie automat)</label>
+        <input type="number" min="1" value={numPanelsOverride} onChange={e=>setNumPanelsOverride(e.target.value)} placeholder={String(PN_PANELS_BY_TRACKS[sys.panelGrp][Number(tracks)])} style={selStyle}/>
+      </div>
+      <div><label style={lblStyle}>Suprapunere (cm)</label>
+        <input type="number" step="0.5" value={overlapCm} onChange={e=>setOverlapCm(e.target.value)} style={selStyle}/>
       </div>
       <div><label style={lblStyle}>Parte comandă</label>
         <select value={controlSide} onChange={e=>setControlSide(e.target.value)} style={selStyle}>
@@ -2171,8 +2183,10 @@ function ConfigPanouSalvataRow({cfg,clientId,setClients,C,onPrint}){
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Date introduse</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14}}>
         {[["Lățime",cfg.input.width+" mm"],["Înălțime",cfg.input.height+" mm"],["Sistem",cfg.input.system],
-          ["Track-uri",cfg.input.tracks],["Segmente",cfg.input.segments],["Montaj panou",cfg.input.mountPanel],
+          ["Track-uri (canale)",cfg.input.tracks],["Segmente",cfg.input.segments],["Montaj panou",cfg.input.mountPanel],
           ["Montaj șină",cfg.input.mountHeadrail],["Culoare",cfg.input.colour],
+          ...(cfg.input.numPanelsOverride?[["Nr. panouri (manual)",cfg.input.numPanelsOverride]]:[]),
+          ...(cfg.input.overlapCm?[["Suprapunere",cfg.input.overlapCm+" cm"]]:[]),
           ...(cfg.input.material?[["Material",cfg.input.material]]:[]),["Cantitate",cfg.qty+" buc."]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
