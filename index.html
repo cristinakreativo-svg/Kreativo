@@ -2004,6 +2004,67 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
   </div>;
 }
 
+function ListaTaiereRulouri({clients,C}){
+  const rows=[];
+  (clients||[]).forEach(client=>{
+    (client.configuratiiRulou||[]).forEach(cfg=>{
+      if(cfg.produs) return; // deja realizat — nu apare la tăiere
+      const material = cfg.input.fabricManual ? (cfg.input.materialName||"material custom") : cfg.input.fabric;
+      rows.push({
+        material, latime: cfg.result.fabricW, inaltime: cfg.result.fabricH,
+        gabaritL: cfg.input.width, gabaritH: cfg.input.height,
+        sistem: RULOU_SYSTEM_LABELS[cfg.input.system]||cfg.input.system,
+        cantitate: cfg.qty||1, client: client.name, camera: cfg.camera||"—",
+        clientId: client.id, cfgId: cfg.id
+      });
+    });
+  });
+  const grupuri={};
+  rows.forEach(r=>{ (grupuri[r.material]=grupuri[r.material]||[]).push(r); });
+  const materiale=Object.keys(grupuri).sort((a,b)=>a.localeCompare(b,"ro"));
+  const totalBuc=rows.reduce((s,r)=>s+Number(r.cantitate||1),0);
+
+  return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>📐 Listă tăiere — rulouri nerealizate încă</div>
+    <div style={{fontSize:12,color:C.textMuted,marginBottom:16}}>{rows.length} bucăți de tăiat ({totalBuc} buc. total) · {materiale.length} materiale diferite · grupate ca să tai tot dintr-un material deodată</div>
+    {materiale.length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nimic de tăiat — toate rulourile salvate sunt deja marcate „produs".</div>}
+    {materiale.map(mat=>{
+      const items=grupuri[mat].sort((a,b)=>a.client.localeCompare(b.client,"ro"));
+      const subtotalBuc=items.reduce((s,r)=>s+Number(r.cantitate||1),0);
+      return <div key={mat} style={{border:`1px solid ${C.border}`,marginBottom:14,background:C.surface}}>
+        <div style={{padding:"10px 14px",background:C.accentLight,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span style={{fontSize:13,fontWeight:600,color:C.text}}>{mat}</span>
+          <span style={{fontSize:11,color:C.textMuted}}>{items.length} bucăți · {subtotalBuc} buc. total</span>
+        </div>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead>
+            <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+              <th style={{textAlign:"left",padding:"6px 14px"}}>Lățime stofă</th>
+              <th style={{textAlign:"left",padding:"6px 14px"}}>Înălțime stofă</th>
+              <th style={{textAlign:"left",padding:"6px 14px"}}>Gabarit rulou</th>
+              <th style={{textAlign:"left",padding:"6px 14px"}}>Sistem</th>
+              <th style={{textAlign:"right",padding:"6px 14px"}}>Buc.</th>
+              <th style={{textAlign:"left",padding:"6px 14px"}}>Client</th>
+              <th style={{textAlign:"left",padding:"6px 14px"}}>Cameră</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((r,i)=><tr key={r.cfgId+i} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
+              <td style={{padding:"7px 14px",fontWeight:600,color:C.text}}>{r.latime} mm</td>
+              <td style={{padding:"7px 14px",fontWeight:600,color:C.text}}>{r.inaltime} mm</td>
+              <td style={{padding:"7px 14px",color:C.textSub}}>{r.gabaritL}×{r.gabaritH} mm</td>
+              <td style={{padding:"7px 14px",color:C.textSub}}>{r.sistem}</td>
+              <td style={{padding:"7px 14px",textAlign:"right",fontWeight:600,color:C.text}}>{r.cantitate}</td>
+              <td style={{padding:"7px 14px",color:C.textSub}}>{r.client}</td>
+              <td style={{padding:"7px 14px",color:C.textMuted}}>{r.camera}</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>;
+    })}
+  </div>;
+}
+
 function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale,camereLista,setCamereLista}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1500);
@@ -3808,11 +3869,13 @@ function App() {
         <button onClick={()=>setDanView("cfg")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfg"?C.accent:C.border}`,background:danView==="cfg"?C.accentLight:"transparent",color:danView==="cfg"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfg"?500:400}}>Configurator șină</button>
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:danView==="cfgroman"?C.accentLight:"transparent",color:danView==="cfgroman"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
         <button onClick={()=>setDanView("cfgrulou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgrulou"?C.accent:C.border}`,background:danView==="cfgrulou"?C.accentLight:"transparent",color:danView==="cfgrulou"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgrulou"?500:400}}>Configurator rulou</button>
+        <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>📐 Listă tăiere</button>
       </div>
       {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>}
     </div>;
   }
@@ -4411,10 +4474,12 @@ function App() {
         <button onClick={()=>setDanView("cfg")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfg"?C.accent:C.border}`,background:danView==="cfg"?C.accentLight:"transparent",color:danView==="cfg"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfg"?500:400}}>Configurator șină</button>
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:danView==="cfgroman"?C.accentLight:"transparent",color:danView==="cfgroman"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
         <button onClick={()=>setDanView("cfgrulou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgrulou"?C.accent:C.border}`,background:danView==="cfgrulou"?C.accentLight:"transparent",color:danView==="cfgrulou"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="cfgrulou"?500:400}}>Configurator rulou</button>
+        <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>📐 Listă tăiere</button>
       </div>
       {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>}
     </div>}
 
