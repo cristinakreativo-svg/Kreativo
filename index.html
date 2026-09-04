@@ -2830,6 +2830,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
             <button onClick={()=>vizualizeaza(htmlFor(contract))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
             <button onClick={()=>printeaza(htmlFor(contract))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
             <button onClick={()=>descarca(htmlFor(contract), contract.numarContract)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
+            <button onClick={()=>{if(window.confirm(`Ștergi contractul ${contract.numarContract}? Nu poate fi recuperat.`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,contracte:(c.contracte||[]).filter(x=>x.id!==contract.id)}));}} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"5px 6px"}}>🗑</button>
           </div>
         )}
       </div>}
@@ -2879,7 +2880,7 @@ function extrageDateFacturaPDF(file){
         const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dataFact);
         if(m) dataIso=`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
 
-        resolve({serie, data:dataIso, denumire:produse.join(", ")});
+        resolve({serie, data:dataIso, denumire:produse.join("\n")});
       }catch(e){ reject(e); }
     };
     reader.onerror=()=>reject(new Error("Nu s-a putut citi fișierul."));
@@ -2906,9 +2907,12 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
     setPdfLoadingIdx(null);
   };
 
-  const rowsHtml=(list)=>list.filter(f=>f.serie.trim()||f.denumire.trim()).map(f=>
-    `<tr><td style="padding:5px 8px 5px 0;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${f.serie||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${f.data?fmtD(f.data):"—"}</td><td style="padding:5px 0 5px 8px;border-bottom:1px solid #E4DCCD">${f.denumire||"—"}</td></tr>`
-  ).join("");
+  const rowsHtml=(list)=>list.filter(f=>f.serie.trim()||f.denumire.trim()).map(f=>{
+    const produseHtml = f.denumire.trim()
+      ? f.denumire.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>`<div style="padding:2px 0">• ${l}</div>`).join("")
+      : "—";
+    return `<tr><td style="padding:5px 8px 5px 0;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD;vertical-align:top">${f.serie||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD;vertical-align:top">${f.data?fmtD(f.data):"—"}</td><td style="padding:5px 0 5px 8px;border-bottom:1px solid #E4DCCD">${produseHtml}</td></tr>`;
+  }).join("");
 
   const vizualizeaza=(html)=>{
     const blob=new Blob([html],{type:"text/html"});
@@ -2967,11 +2971,12 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
             <span style={{fontSize:11,color:C.textMuted,flex:1}}>completează automat seria, data și produsele — verifică înainte de generare</span>
             {facturi.length>1&&<button onClick={()=>delFactura(idx)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"120px 130px 1fr",gap:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"120px 130px",gap:8,marginBottom:8}}>
             <input value={f.serie} onChange={e=>updFactura(idx,"serie",e.target.value)} placeholder="Serie factură" style={selStyle}/>
             <input type="date" value={f.data} onChange={e=>updFactura(idx,"data",e.target.value)} style={selStyle}/>
-            <input value={f.denumire} onChange={e=>updFactura(idx,"denumire",e.target.value)} placeholder="ex: Draperii living, stor baie" style={selStyle}/>
           </div>
+          <label style={{...lblStyle,marginBottom:3}}>Produse (câte unul pe rând)</label>
+          <textarea value={f.denumire} onChange={e=>updFactura(idx,"denumire",e.target.value)} placeholder={"ex:\nDraperii living\nStor baie"} rows={3} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
         </div>
       )}
       <button onClick={addFactura} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>+ adaugă altă factură</button>
@@ -2990,6 +2995,7 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
           <button onClick={()=>vizualizeaza(htmlFor(pv))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
           <button onClick={()=>printeaza(htmlFor(pv))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
           <button onClick={()=>descarca(htmlFor(pv),pv.numar)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
+          <button onClick={()=>{if(window.confirm(`Ștergi procesul verbal ${pv.numar}? Nu poate fi recuperat.`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,proceseVerbale:(c.proceseVerbale||[]).filter(x=>x.id!==pv.id)}));}} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"5px 6px"}}>🗑</button>
         </div>
       )}
     </div>}
