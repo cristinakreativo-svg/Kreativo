@@ -782,10 +782,12 @@ function buildContractPF(data){
 </div>
 <div style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty">
 
-<div style="background:#D4C9B8;padding:20px 20px 18px;margin:15px 0 0">
-<img alt="Kreativo Studio" src="${LOGO_URI}" style="height:60px;width:auto;display:block;margin-bottom:16px"/>
+<div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
+<div style="flex:1;min-width:0">
 <h1 style="margin:0;font:400 2.5em/1.12 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:-.005em;color:#2A2118;text-wrap:balance">Contract de furnizare și montaj</h1>
 <div style="margin-top:8px;font:400 1.05em/1.3 'Source Serif 4',Cambria,Georgia,serif;font-style:italic;color:#4A3F31">perdele, draperii, șine și sisteme de umbrire</div>
+</div>
+<img alt="Kreativo Studio" src="${LOGO_URI}" style="height:42px;width:auto;flex:none;margin-top:2px"/>
 </div>
 <div style="margin:9px 0 0;font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5C6B65">
 <span>Contract destinat persoanelor fizice</span>
@@ -815,7 +817,7 @@ function buildContractPF(data){
 <h2 style="margin:9px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">01</span>Părțile contractante</h2>
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.1.</span> S.C. 3P DESIGN S.R.L., cu sediul social în Str. Principală nr. 872, sat Tărlungeni, comuna Tărlungeni, jud. Brașov, cod poștal 507220, CUI RO17633996, J08/1360/2005, cont RO42INGB0000999908475918 deschis la ING Bank, reprezentată prin dl. Proca Radu Dumitru, administrator, denumită în continuare «Furnizorul».</p>
 
-<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.2.</span> Dl./Dna. ${data.numeClient}, domiciliat(ă) în ${data.loculMontaj}${data.identificare}, denumit(ă) în continuare «Clientul».</p>
+<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.2.</span> Dl./Dna. ${data.numeClientMare}, domiciliat(ă) în ${data.loculMontaj}${data.identificare}, denumit(ă) în continuare «Clientul».</p>
 
 
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.3.</span> Furnizorul și Clientul sunt denumiți împreună «Părțile».</p>
@@ -945,10 +947,12 @@ function buildContractPJ(data){
 </div>
 <div style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty">
 
-<div style="background:#D4C9B8;padding:20px 20px 18px;margin:15px 0 0">
-<img alt="Kreativo Studio" src="${LOGO_URI}" style="height:60px;width:auto;display:block;margin-bottom:16px"/>
+<div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
+<div style="flex:1;min-width:0">
 <h1 style="margin:0;font:400 2.5em/1.12 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:-.005em;color:#2A2118;text-wrap:balance">Contract de furnizare și montaj</h1>
 <div style="margin-top:8px;font:400 1.05em/1.3 'Source Serif 4',Cambria,Georgia,serif;font-style:italic;color:#4A3F31">perdele, draperii, șine și sisteme de umbrire</div>
+</div>
+<img alt="Kreativo Studio" src="${LOGO_URI}" style="height:42px;width:auto;flex:none;margin-top:2px"/>
 </div>
 <div style="margin:9px 0 0;font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5C6B65">
 
@@ -979,7 +983,7 @@ function buildContractPJ(data){
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.1.</span> S.C. 3P DESIGN S.R.L., cu sediul social în Str. Principală nr. 872, sat Tărlungeni, comuna Tărlungeni, jud. Brașov, cod poștal 507220, CUI RO17633996, J08/1360/2005, cont RO42INGB0000999908475918 deschis la ING Bank, reprezentată prin dl. Proca Radu Dumitru, administrator, denumită în continuare «Furnizorul».</p>
 
 
-<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.2.</span> ${data.numeClient}, cu sediul în ${data.loculMontaj}${data.identificare}, denumită în continuare «Clientul».</p>
+<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.2.</span> ${data.numeClientMare}, cu sediul în ${data.loculMontaj}${data.identificare}, denumită în continuare «Clientul».</p>
 
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.3.</span> Furnizorul și Clientul sunt denumiți împreună «Părțile».</p>
 <h2 style="margin:9px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">02</span>Obiectul contractului</h2>
@@ -1123,7 +1127,7 @@ function buildProcesVerbal(data){
 
   <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">01</span>Părțile</h2>
   <p style="margin:0 0 3.4px"><b>Furnizor:</b> S.C. 3P DESIGN S.R.L., CUI RO17633996, J08/1360/2005, cu sediul în Str. Principală nr. 872, sat Tărlungeni, jud. Brașov.</p>
-  <p style="margin:0 0 3.4px"><b>Cumpărător:</b> ${data.numeClient}</p>
+  <p style="margin:0 0 3.4px"><b>Cumpărător:</b> ${data.numeClientMare}</p>
 
   <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">02</span>Produse / servicii predate</h2>
   <table style="width:100%;border-collapse:collapse;margin:6px 0 4px">
@@ -2728,7 +2732,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
       numarContract, dataContractFmt,
       loculMontaj: loculMontaj.trim()||"—",
       valoare: valoare.trim(), tva, termenLivrare: termenLivrare.trim(), tipZile,
-      numeClient: numeClient.trim(), identificare,
+      numeClient: toTitleCaseRo(numeClient), numeClientMare: numeClient.trim().toUpperCase(), identificare,
       avans: avans.trim()||"0", diferenta: String(Math.max(val-av,0)),
       scadenta: scadenta==="altă variantă"?(scadentaCustom.trim()||"altă variantă agreată cu Clientul"):scadenta,
       garantieLuni: garantieLuni.trim()||"24",
@@ -2801,7 +2805,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
       numarContract: contract.numarContract, dataContractFmt: fmtD(contract.dataContract),
       loculMontaj: contract.loculMontaj||"—", valoare: contract.valoare, tva: contract.tva||"neinclus",
       termenLivrare: contract.termenLivrare, tipZile: contract.tipZile||"lucrătoare",
-      numeClient: contract.numeClient, identificare,
+      numeClient: toTitleCaseRo(contract.numeClient), numeClientMare: (contract.numeClient||"").toUpperCase(), identificare,
       avans: contract.avans||"0", diferenta: String(Math.max(val-av,0)), scadenta: contract.scadenta||"cu 1 zi înainte de livrare",
       garantieLuni: contract.garantieLuni||"24",
     };
@@ -2890,6 +2894,11 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
         )}
       </div>}
   </div>;
+}
+
+function toTitleCaseRo(s){
+  if(!s) return s;
+  return s.trim().toLowerCase().replace(/(^|[\s\-])\p{L}/gu, c=>c.toUpperCase());
 }
 
 function extrageDateFacturaPDF(file){
@@ -3013,7 +3022,7 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url),30000);
   };
-  const htmlFor=(pv)=>buildProcesVerbal({numar:pv.numar, dataFmt:fmtD(pv.data), numeClient:pv.numeClient,
+  const htmlFor=(pv)=>buildProcesVerbal({numar:pv.numar, dataFmt:fmtD(pv.data), numeClient:toTitleCaseRo(pv.numeClient), numeClientMare:(pv.numeClient||"").toUpperCase(),
     facturiRows: rowsHtml(pv.facturi)});
 
   const genereaza=()=>{
