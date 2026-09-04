@@ -3252,7 +3252,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
 
 function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
   const [numeClient,setNumeClient]=React.useState(client.name||"");
-  const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, produse:[{id:gid(), geam:1, lungime:"", inaltime:"", tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
+  const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null
 
   const catalogMap=React.useMemo(()=>{
@@ -3261,24 +3261,28 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     return m;
   },[catalogMateriale]);
 
-  const golProdus=(geamNr)=>({id:gid(), geam:geamNr, lungime:"", inaltime:"", tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"});
-  const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, produse:[golProdus(1)]}]);
+  const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"});
+  const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
   const setNrGeamuri=(camId,n)=>setCamere(p=>p.map(c=>{
     if(c.id!==camId) return c;
     const nr=Math.max(1,Math.min(30,Number(n)||1));
-    let produse=c.produse.slice();
-    if(nr>produse.length){
-      for(let i=produse.length;i<nr;i++) produse.push(golProdus(i+1));
-    } else if(nr<produse.length){
-      const trailing=produse.slice(nr);
-      const areData=trailing.some(pr=>pr.material.trim()||pr.lungime||pr.inaltime);
-      if(areData && !window.confirm(`Reduci la ${nr} geamuri — se șterg datele deja completate la geamurile ${nr+1}-${produse.length}. Continui?`)) return c;
-      produse=produse.slice(0,nr);
+    let geamuri=c.geamuri.slice();
+    if(nr>geamuri.length){
+      for(let i=geamuri.length;i<nr;i++) geamuri.push(golGeam(i+1));
+    } else if(nr<geamuri.length){
+      const trailing=geamuri.slice(nr);
+      const areData=trailing.some(g=>g.lungime||g.inaltime);
+      if(areData && !window.confirm(`Reduci la ${nr} geamuri — se șterg dimensiunile deja completate la geamurile ${nr+1}-${geamuri.length}. Continui?`)) return c;
+      geamuri=geamuri.slice(0,nr);
     }
-    return {...c, nrGeamuri:nr, produse};
+    return {...c, nrGeamuri:nr, geamuri};
   }));
+  const updGeam=(camId,geamId,field,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,geamuri:c.geamuri.map(g=>g.id!==geamId?g:{...g,[field]:val})}));
+  const addProdus=(camId)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:[...c.produse,golProdus()]}));
+  const delProdus=(camId,prodId)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.length<=1?c.produse:c.produse.filter(pr=>pr.id!==prodId)}));
   const updProdus=(camId,prodId,field,val)=>setCamere(p=>p.map(c=>{
     if(c.id!==camId) return c;
     return {...c,produse:c.produse.map(pr=>{
@@ -3301,17 +3305,17 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const valoareBanda=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretBanda)||0):0;
   const valoareManopera=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretManopera)||0):0;
   const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr);
-  const sumaLungimi=(c)=>c.produse.reduce((s,pr)=>s+(Number(pr.lungime)||0),0);
+  const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
   const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
 
   const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
-      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">Geam ${pr.geam}${pr.lungime&&pr.inaltime?` (${pr.lungime}×${pr.inaltime} cm)`:""}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.tip||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${pr.tip||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
-      const rBanda=`<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">↳ Bandă fronsare</td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.cantitate||0} m</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.pretBanda||0} lei</td><td style="padding:3px 0 3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
-      const rManopera=`<tr><td style="padding:3px 8px 3px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">↳ Manoperă</td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.cantitate||0} m</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.pretManopera||0} lei</td><td style="padding:3px 0 3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
-      const rTotal=`<tr><td colSpan="6" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${pr.tip}, Geam ${pr.geam}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+      const rBanda=`<tr><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">↳ Bandă fronsare</td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.cantitate||0} m</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.pretBanda||0} lei</td><td style="padding:3px 0 3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
+      const rManopera=`<tr><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">↳ Manoperă</td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.cantitate||0} m</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.pretManopera||0} lei</td><td style="padding:3px 0 3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
+      const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${pr.tip}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
       return rMaterial+rBanda+rManopera+rTotal;
     }).join("");
     const numar=String(idx+1).padStart(2,"0");
@@ -3319,8 +3323,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     <div>
     <table style="width:100%;border-collapse:collapse;margin:6px 0 4px">
       <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64">
-        <td style="padding:5px 8px 5px 0;border-bottom:1px solid #D4C9B8">Geam</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Tip</td>
+        <td style="padding:5px 8px 5px 0;border-bottom:1px solid #D4C9B8">Tip</td>
         <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Material</td>
         <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Culoare</td>
         <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D4C9B8">Cantitate</td>
@@ -3376,7 +3379,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:[...(c.oferte||[]),oferta]}));
     setOfertaCounter(p=>p+1);
     vizualizeaza(html);
-    setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, produse:[golProdus(1)]}]);
+    setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   };
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
@@ -3394,22 +3397,32 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
 
     {camere.map((c,ci2)=>
       <div key={c.id} style={{border:`1px solid ${C.border}`,padding:12,marginBottom:10,background:C.surface}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
           <input list="oferta-camere-dl" value={c.numeCamera} onChange={e=>updCameraName(c.id,e.target.value)} placeholder="Cameră (ex: Living)" style={{...selStyle,fontWeight:600,flex:1}}/>
-          <span style={{fontSize:11,color:C.textMuted,whiteSpace:"nowrap"}}>Nr. geamuri:</span>
-          <input type="number" min="1" max="30" value={c.nrGeamuri} onChange={e=>setNrGeamuri(c.id,e.target.value)} style={{...selStyle,width:60}}/>
           {camere.length>1&&<button onClick={()=>delCamera(c.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
         </div>
-        <div style={{fontSize:11,color:C.textMuted,marginBottom:10}}>Lungime totală cameră (doar pentru tine, nu apare în ofertă): <b style={{color:C.textSub}}>{sumaLungimi(c)} cm</b></div>
+
+        <div style={{background:C.bg,padding:10,marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+            <span style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",fontWeight:600}}>Dimensiuni geamuri (doar pentru tine — nu apar în ofertă)</span>
+            <span style={{fontSize:11,color:C.textMuted,whiteSpace:"nowrap",marginLeft:"auto"}}>Nr. geamuri:</span>
+            <input type="number" min="1" max="30" value={c.nrGeamuri} onChange={e=>setNrGeamuri(c.id,e.target.value)} style={{...selStyle,width:60}}/>
+          </div>
+          {c.geamuri.map(g=>
+            <div key={g.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+              <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:56}}>Geam {g.nr}</span>
+              <input value={g.lungime} onChange={e=>updGeam(c.id,g.id,"lungime",e.target.value)} placeholder="Lățime (cm)" style={{...selStyle,maxWidth:120}}/>
+              <span style={{fontSize:14,color:C.textMuted}}>×</span>
+              <input value={g.inaltime} onChange={e=>updGeam(c.id,g.id,"inaltime",e.target.value)} placeholder="Înălțime (cm)" style={{...selStyle,maxWidth:120}}/>
+            </div>
+          )}
+          <div style={{fontSize:11,color:C.textMuted,marginTop:6}}>Lungime totală: <b style={{color:C.textSub}}>{sumaLungimi(c)} cm</b> — folosește-o ca reper să calculezi cantitatea de material de mai jos.</div>
+        </div>
+
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",fontWeight:600,marginBottom:8}}>Materiale / produse pentru toată camera</div>
         {c.produse.map(pr=>
           <div key={pr.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:8,background:C.bg}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-            <span style={{fontSize:12,fontWeight:700,color:C.text,minWidth:56}}>Geam {pr.geam}</span>
-            <input value={pr.lungime} onChange={e=>updProdus(c.id,pr.id,"lungime",e.target.value)} placeholder="Lățime (cm)" style={{...selStyle,maxWidth:110}}/>
-            <span style={{fontSize:14,color:C.textMuted}}>×</span>
-            <input value={pr.inaltime} onChange={e=>updProdus(c.id,pr.id,"inaltime",e.target.value)} placeholder="Înălțime (cm)" style={{...selStyle,maxWidth:110}}/>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px",gap:8,alignItems:"center"}}>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
@@ -3421,8 +3434,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
             <input value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} placeholder="Culoare" style={selStyle}/>
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="m" style={selStyle}/>
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
+            {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          {esteTextil(pr)&&<div style={{display:"flex",alignItems:"center",gap:14,marginTop:8,padding:"8px 10px",background:C.bg,flexWrap:"wrap"}}>
+          {esteTextil(pr)&&<div style={{display:"flex",alignItems:"center",gap:14,marginTop:8,padding:"8px 10px",background:C.surface,flexWrap:"wrap"}}>
             <span style={{fontSize:11,color:C.textMuted}}>↳ Bandă fronsare ({pr.cantitate||0} m ×</span>
             <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={{...selStyle,width:60}}/>
             <span style={{fontSize:11,color:C.textMuted}}>lei) = <b style={{color:C.textSub}}>{valoareBanda(pr).toFixed(0)} lei</b></span>
@@ -3454,6 +3468,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
           </div>}
           </div>
         )}
+        <button onClick={()=>addProdus(c.id)} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:8}}>+ adaugă produs</button>
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
           <span style={{fontSize:12,color:C.textMuted}}>Subtotal: <b style={{color:C.text}}>{subtotalCamera(c).toFixed(0)} lei</b></span>
         </div>
