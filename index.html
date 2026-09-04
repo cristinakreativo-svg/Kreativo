@@ -52,6 +52,8 @@ button:active{transform:scale(0.98);}
 <div id="root"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window['pdfjsLib']) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
 
@@ -72,6 +74,7 @@ const FLK = "kreativo_furnizori_lista_v1";
 const RMK = "kreativo_rulou_materiale_v1";
 const CMK = "kreativo_camere_lista_v1";
 const CTK = "kreativo_contract_counter_v1";
+const PVK = "kreativo_pv_counter_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -1066,6 +1069,109 @@ function buildContractPJ(data){
 <span>CUI RO17633996 · J08/1360/2005</span>
 </div>
 
+</div>
+</body>
+</html>`;
+}
+
+// ============ PROCES VERBAL DE PREDARE-PRIMIRE ============
+function buildProcesVerbal(data){
+  const LOGO_URI = CONTRACT_LOGO_URI, SIG_URI = CONTRACT_SIG_URI;
+  return `<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<title>Proces verbal ${data.numar}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0.55in; }
+  html,body { margin:0; padding:0; background:#F2EFE9; }
+  .sheet { max-width: 7.5in; margin: 0 auto; background:#F2EFE9; }
+</style>
+</head>
+<body>
+<div class="sheet">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid #D4C9B8;padding-bottom:7px;font:400 .72em/1.4 'Source Sans 3',Calibri,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8A7A64">
+  <span style="display:block;font-size:9.6px;letter-spacing:.14em">S.C. 3P Design S.R.L. · Brașov</span>
+  <span style="display:block;font-size:9.6px;letter-spacing:.14em">kreativobv@gmail.com</span>
+</div>
+<div style="font:400 10.5px/1.34 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left">
+  <div style="background:#D4C9B8;padding:16px 20px 15px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-end;gap:28px">
+    <div style="flex:1;min-width:0">
+      <div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:#6E6151;margin-bottom:9px">Kreativo Studio</div>
+      <h1 style="margin:0;font:400 2.5em/1.12 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:-.005em;color:#2A2118">Proces verbal de predare-primire</h1>
+      <div style="margin-top:8px;font:400 1.05em/1.3 'Source Serif 4',Cambria,Georgia,serif;font-style:italic;color:#4A3F31">perdele, draperii, șine și sisteme de umbrire</div>
+    </div>
+    <img src="${LOGO_URI}" alt="Kreativo Studio" style="height:26px;width:auto;flex:none;margin-bottom:4px" />
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0 22px;margin:12px 0 2px;padding:8px 0;border-top:1px solid #D4C9B8;border-bottom:1px solid #D4C9B8">
+    <div>
+      <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Nr. proces verbal</div>
+      <div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numar}</div>
+    </div>
+    <div>
+      <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Data</div>
+      <div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.dataFmt}</div>
+    </div>
+  </div>
+
+  <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">01</span>Părțile</h2>
+  <p style="margin:0 0 3.4px"><b>Furnizor:</b> S.C. 3P DESIGN S.R.L., CUI RO17633996, J08/1360/2005, cu sediul în Str. Principală nr. 872, sat Tărlungeni, jud. Brașov.</p>
+  <p style="margin:0 0 3.4px"><b>Cumpărător:</b> ${data.numeClient}</p>
+
+  <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">02</span>Produse / servicii predate</h2>
+  <table style="width:100%;border-collapse:collapse;margin:6px 0 4px">
+    <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64">
+      <td style="padding:5px 8px 5px 0;border-bottom:1px solid #D4C9B8">Factură nr.</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Data</td>
+      <td style="padding:5px 0 5px 8px;border-bottom:1px solid #D4C9B8">Denumire produse / servicii</td>
+    </tr></thead>
+    <tbody>${data.facturiRows}</tbody>
+  </table>
+
+  <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">03</span>Observații</h2>
+  <div style="min-height:44px;background:#E7E0D3;border-left:2px solid #5C6B65;padding:11px 14px 12px;margin:0 0 6px">
+    <p style="margin:0">${data.observatii}</p>
+  </div>
+
+  <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">04</span>Declarație</h2>
+  <p style="margin:0 0 3.4px">Cumpărătorul confirmă predarea-primirea produselor/serviciilor de mai sus, fără a afecta drepturile legale privind garanția și eventualele neconformități ulterior constatate.</p>
+
+  <div style="break-inside:avoid;margin:16px 0 0;padding-top:9px;border-top:1px solid #D4C9B8">
+    <div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#5C6B65;margin-bottom:11px">Semnături</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 34px">
+      <div style="display:flex;flex-direction:column">
+        <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:6px">Furnizor</div>
+        <div style="font:400 1.2em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">3P Design S.R.L.</div>
+        <div>Proca Radu Dumitru — administrator</div>
+        <div style="margin-top:auto;padding-top:8px">
+          <div style="height:96px;display:flex;align-items:flex-end;justify-content:flex-start;padding-left:6px">
+            <img src="${SIG_URI}" alt="Semnătură și ștampilă" style="height:96px;width:auto;margin-bottom:-14px" />
+          </div>
+          <div style="border-bottom:1px solid #A99C86;height:1px"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;gap:16px;margin-top:5px;font-size:.85em;color:#6E6151">
+          <span>Semnătură</span><span>Data: ${data.dataFmt}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column">
+        <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:6px">Cumpărător</div>
+        <div style="font:400 1.2em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numeClient}</div>
+        <div style="border-bottom:1px solid #A99C86;height:1px;margin-top:auto;padding-top:100px"></div>
+        <div style="display:flex;justify-content:space-between;gap:16px;margin-top:5px;font-size:.85em;color:#6E6151">
+          <span>Semnătură</span><span>Data: ${data.dataFmt}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div style="display:flex;justify-content:space-between;gap:24px;border-top:1px solid #D4C9B8;padding-top:6px;margin-top:14px;font:400 9px/1.3 'Source Sans 3',Calibri,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#9A8C76">
+  <span>Proces verbal de predare-primire · Kreativo Studio</span>
+  <span>CUI RO17633996 · J08/1360/2005</span>
+</div>
 </div>
 </body>
 </html>`;
@@ -2718,6 +2824,161 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
   </div>;
 }
 
+function extrageDateFacturaPDF(file){
+  return new Promise((resolve,reject)=>{
+    if(!window.pdfjsLib){ reject(new Error("Motorul de citire PDF nu s-a încărcat.")); return; }
+    const reader=new FileReader();
+    reader.onload=async(ev)=>{
+      try{
+        const data=new Uint8Array(ev.target.result);
+        const doc=await pdfjsLib.getDocument({data}).promise;
+        const page=await doc.getPage(1);
+        const content=await page.getTextContent();
+        const items=content.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5]})).filter(i=>i.str.trim());
+        items.sort((a,b)=>b.y-a.y||a.x-b.x);
+        const lines=[]; const TOL=3;
+        for(const it of items){
+          let line=lines.find(l=>Math.abs(l.y-it.y)<=TOL);
+          if(!line){ line={y:it.y,items:[]}; lines.push(line); }
+          line.items.push(it);
+        }
+        for(const line of lines) line.items.sort((a,b)=>a.x-b.x);
+        const rows=lines.map(l=>l.items.map(i=>i.str.trim()).filter(Boolean));
+
+        let serie="", dataFact="", produse=[];
+        let inTable=false;
+        for(const row of rows){
+          if(!row.length) continue;
+          if(row[0]==="Serie" && row[1]) serie=row[1];
+          if(row[0] && row[0].startsWith("Data (ziua") && row[1]) dataFact=row[1];
+          if(row.includes("crt.") || row.some(c=>c.includes("Denumirea produselor"))) { inTable=true; continue; }
+          if(inTable){
+            if(/^\d+$/.test(row[0])){
+              const denumire=row[1]||"";
+              const um=row[2]||"";
+              const cant=row[3]||"";
+              if(denumire) produse.push(um&&cant?`${denumire} (${cant} ${um})`:denumire);
+            } else if(row[0] && row[0].toLowerCase().startsWith("acest document")){
+              inTable=false;
+            }
+          }
+        }
+        let dataIso="";
+        const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dataFact);
+        if(m) dataIso=`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+
+        resolve({serie, data:dataIso, denumire:produse.join(", ")});
+      }catch(e){ reject(e); }
+    };
+    reader.onerror=()=>reject(new Error("Nu s-a putut citi fișierul."));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounter}){
+  const [numeClient,setNumeClient]=React.useState(client.name||"");
+  const [facturi,setFacturi]=React.useState([{serie:"",data:"",denumire:""}]);
+  const [observatii,setObservatii]=React.useState("");
+  const [pdfLoadingIdx,setPdfLoadingIdx]=React.useState(null);
+
+  const updFactura=(idx,field,val)=>setFacturi(p=>p.map((f,i)=>i!==idx?f:{...f,[field]:val}));
+  const addFactura=()=>setFacturi(p=>[...p,{serie:"",data:"",denumire:""}]);
+  const delFactura=(idx)=>setFacturi(p=>p.length<=1?p:p.filter((_,i)=>i!==idx));
+  const incarcaPdf=async(idx,file)=>{
+    if(!file) return;
+    setPdfLoadingIdx(idx);
+    try{
+      const r=await extrageDateFacturaPDF(file);
+      setFacturi(p=>p.map((f,i)=>i!==idx?f:{serie:r.serie||f.serie, data:r.data||f.data, denumire:r.denumire||f.denumire}));
+      if(!r.serie && !r.denumire) alert("Nu am reușit să găsesc datele facturii în acest PDF — te rog verifică și completează manual câmpurile.");
+    }catch(e){ alert("Nu am putut citi acest PDF. Completează manual câmpurile."); }
+    setPdfLoadingIdx(null);
+  };
+
+  const rowsHtml=(list)=>list.filter(f=>f.serie.trim()||f.denumire.trim()).map(f=>
+    `<tr><td style="padding:5px 8px 5px 0;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${f.serie||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${f.data?fmtD(f.data):"—"}</td><td style="padding:5px 0 5px 8px;border-bottom:1px solid #E4DCCD">${f.denumire||"—"}</td></tr>`
+  ).join("");
+
+  const vizualizeaza=(html)=>{
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  };
+  const descarca=(html,numar)=>{
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=`ProcesVerbal_${numar.replace("/","-")}_${(numeClient||client.name).replace(/[^a-zA-Z0-9]+/g,"_")}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  };
+  const htmlFor=(pv)=>buildProcesVerbal({numar:pv.numar, dataFmt:fmtD(pv.data), numeClient:pv.numeClient,
+    facturiRows: rowsHtml(pv.facturi), observatii: pv.observatii||"Fără observații."});
+
+  const genereaza=()=>{
+    if(!numeClient.trim()){ alert("Completează numele cumpărătorului."); return; }
+    const valid=facturi.filter(f=>f.serie.trim());
+    if(!valid.length){ alert("Adaugă cel puțin o factură (serie)."); return; }
+    const numar=`${pvCounter}/${new Date().getFullYear()}`;
+    const pv={id:gid(), numar, data:tday(), numeClient:numeClient.trim(), facturi:valid, observatii:observatii.trim()};
+    const html=htmlFor(pv);
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,proceseVerbale:[...(c.proceseVerbale||[]),pv]}));
+    setPvCounter(p=>p+1);
+    vizualizeaza(html);
+    setFacturi([{serie:"",data:"",denumire:""}]); setObservatii("");
+  };
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  return <div>
+    <div style={{marginBottom:12}}>
+      <label style={lblStyle}>Nume cumpărător (ca pe factură)</label>
+      <input value={numeClient} onChange={e=>setNumeClient(e.target.value)} style={selStyle}/>
+    </div>
+    <div style={{marginBottom:10}}>
+      <label style={lblStyle}>Facturi</label>
+      {facturi.map((f,idx)=>
+        <div key={idx} style={{border:`1px solid ${C.border}`,padding:10,marginBottom:8,background:C.surface}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+            <label style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:pdfLoadingIdx===idx?C.border:C.accent,color:pdfLoadingIdx===idx?C.text:"#fff",cursor:pdfLoadingIdx===idx?"default":"pointer",whiteSpace:"nowrap"}}>
+              {pdfLoadingIdx===idx?"⏳ Se citește...":"📎 Încarcă PDF factură"}
+              <input type="file" accept="application/pdf" disabled={pdfLoadingIdx===idx} onChange={e=>{incarcaPdf(idx,e.target.files[0]); e.target.value="";}} style={{display:"none"}}/>
+            </label>
+            <span style={{fontSize:11,color:C.textMuted,flex:1}}>completează automat seria, data și produsele — verifică înainte de generare</span>
+            {facturi.length>1&&<button onClick={()=>delFactura(idx)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"120px 130px 1fr",gap:8}}>
+            <input value={f.serie} onChange={e=>updFactura(idx,"serie",e.target.value)} placeholder="Serie factură" style={selStyle}/>
+            <input type="date" value={f.data} onChange={e=>updFactura(idx,"data",e.target.value)} style={selStyle}/>
+            <input value={f.denumire} onChange={e=>updFactura(idx,"denumire",e.target.value)} placeholder="ex: Draperii living, stor baie" style={selStyle}/>
+          </div>
+        </div>
+      )}
+      <button onClick={addFactura} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>+ adaugă altă factură</button>
+    </div>
+    <div style={{marginBottom:12}}>
+      <label style={lblStyle}>Observații (dacă lipsește ceva sau există o rezervă)</label>
+      <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} placeholder="ex: lipsește un capac la rulou dormitor, se remediază până la..." rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. proces verbal următor: <b>{pvCounter}/{new Date().getFullYear()}</b></div>
+    <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📋 Generează și vizualizează procesul verbal</button>
+
+    {(client.proceseVerbale||[]).length>0&&<div style={{marginTop:16}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Procese verbale generate</div>
+      {(client.proceseVerbale||[]).slice().reverse().map(pv=>
+        <div key={pv.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:C.bg,marginBottom:4,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:80}}>{pv.numar}</span>
+          <span style={{fontSize:12,color:C.textSub,flex:1}}>{pv.numeClient} · {pv.facturi.length} factură(i) · {fmtD(pv.data)}</span>
+          <button onClick={()=>vizualizeaza(htmlFor(pv))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
+          <button onClick={()=>descarca(htmlFor(pv),pv.numar)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
+        </div>
+      )}
+    </div>}
+  </div>;
+}
+
 function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1000);
@@ -3565,7 +3826,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter}){
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
@@ -3649,7 +3910,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <input type="time" lang="ro" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
         </div>
         <div style={{display:"flex",gap:4,marginBottom:0,borderBottom:`1px solid ${C.border}`}}>
-          {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`]].map(([id,label])=>{
+          {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`📋 Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`]].map(([id,label])=>{
             const active=(clientDetailTab[client.id]||"contact")===id;
             return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
           })}
@@ -3666,6 +3927,9 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         </div>}
         {(clientDetailTab[client.id]||"contact")==="contract"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
           <ContractClientSection client={client} ci={ci} setClients={setClients} C={C} contractCounter={contractCounter} setContractCounter={setContractCounter}/>
+        </div>}
+        {(clientDetailTab[client.id]||"contact")==="pv"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
+          <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
         </div>}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Poze și măsurători</div>
@@ -4493,6 +4757,7 @@ function App() {
   const [rulouMateriale,setRulouMateriale]=useState([]);
   const [camereLista,setCamereLista]=useState(["Living","Dormitor","Dormitor 2","Bucătărie","Hol","Baie","Birou","Cameră copil","Terasă","Dressing"]);
   const [contractCounter,setContractCounter]=useState(1010);
+  const [pvCounter,setPvCounter]=useState(1);
   const [log,setLog]=useState({});
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
@@ -4599,14 +4864,15 @@ function App() {
           const rm=await sbGet(RMK); if(rm){setRulouMateriale(rm);gotAnyData=true;}
           const cm=await sbGet(CMK); if(cm){setCamereLista(cm);gotAnyData=true;}
           const ctc=await sbGet(CTK); if(ctc){setContractCounter(ctc);gotAnyData=true;}
+          const pvc=await sbGet(PVK); if(pvc){setPvCounter(pvc);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -4633,6 +4899,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(RMK,rulouMateriale);},[rulouMateriale,loaded]);
   useEffect(()=>{if(loaded) sbSave(CMK,camereLista);},[camereLista,loaded]);
   useEffect(()=>{if(loaded) sbSave(CTK,contractCounter);},[contractCounter,loaded]);
+  useEffect(()=>{if(loaded) sbSave(PVK,pvCounter);},[pvCounter,loaded]);
   useEffect(()=>{if(loaded) sbSave(AK,admin);},[admin,loaded]);
   useEffect(()=>{if(loaded) sbSave(PK,perdele);},[perdele,loaded]);
   useEffect(()=>{if(loaded) sbSave(MIK,mit);},[mit,loaded]);
@@ -4799,7 +5066,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -4809,6 +5076,45 @@ function App() {
     document.body.appendChild(a);a.click();
     document.body.removeChild(a);URL.revokeObjectURL(url);
   };
+  const autoBackupHandleRef=React.useRef(null);
+  const [autoBackupStatus,setAutoBackupStatus]=useState(""); // "" | "nume_fisier.json"
+  const [autoBackupLast,setAutoBackupLast]=useState("");
+  const scrieAutoBackup=async()=>{
+    const handle=autoBackupHandleRef.current;
+    if(!handle) return;
+    try{
+      const perm=await handle.requestPermission({mode:"readwrite"});
+      if(perm!=="granted") return;
+      const payload={
+        version:2, exportedAt:new Date().toISOString(),
+        data:{
+          [SK]:data,[CK]:chat,[CLK]:clients,[AK]:admin,
+          [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
+          [RK]:recurente,[MOK]:motoare,
+          [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter
+        }
+      };
+      const writable=await handle.createWritable();
+      await writable.write(JSON.stringify(payload,null,2));
+      await writable.close();
+      setAutoBackupLast(new Date().toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"}));
+    }catch(e){ console.warn("Auto-backup a eșuat:",e); }
+  };
+  const configureazaAutoBackup=async()=>{
+    if(!("showSaveFilePicker" in window)){ alert("Browserul tău nu suportă salvarea automată directă în fișier — funcționează doar în Chrome sau Edge."); return; }
+    try{
+      const handle=await window.showSaveFilePicker({suggestedName:"kreativo_backup.json",types:[{description:"JSON",accept:{"application/json":[".json"]}}]});
+      autoBackupHandleRef.current=handle;
+      setAutoBackupStatus(handle.name);
+      await scrieAutoBackup();
+    }catch(e){ /* utilizatorul a anulat selecția — nu facem nimic */ }
+  };
+  React.useEffect(()=>{
+    if(!autoBackupStatus) return;
+    const id=setInterval(()=>{ scrieAutoBackup(); },15*60*1000);
+    return ()=>clearInterval(id);
+  },[autoBackupStatus,data,clients,admin,perdele,mit,jurnal,planMaine,recurente,motoare,iesiri,intrari,bilete,trezorerie,log,proiecte,furnizoriLista,tudor,obiective,tudorContacte,zileBlocate,obiectiveMari,rulouMateriale,camereLista,contractCounter,pvCounter]);
 
   const importRef=useRef(null);
   const importDate=(e)=>{
@@ -4843,6 +5149,7 @@ function App() {
         if(d[RMK]) setRulouMateriale(d[RMK]);
         if(d[CMK]) setCamereLista(d[CMK]);
         if(d[CTK]) setContractCounter(d[CTK]);
+        if(d[PVK]) setPvCounter(d[PVK]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -4965,7 +5272,7 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>📐 Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>📏 Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
@@ -5002,10 +5309,14 @@ function App() {
             {t.id==="recurente"&&recAzi.length>0?<span style={{background:C.danger,color:"#fff",fontSize:9,padding:"1px 6px",fontWeight:700}}>{recAzi.length}</span>:null}
           </button>)}
       </div>
-      <div style={{padding:"14px 20px",borderTop:"1px solid #C4B8A4",display:"flex",gap:6}}>
-        <button onClick={exportDate} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
-        <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
-        <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
+      <div style={{padding:"14px 20px",borderTop:"1px solid #C4B8A4"}}>
+        <div style={{display:"flex",gap:6,marginBottom:8}}>
+          <button onClick={exportDate} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
+          <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
+          <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
+        </div>
+        <button onClick={configureazaAutoBackup} style={{width:"100%",padding:"7px 0",border:"1px solid #A89878",background:autoBackupStatus?"#5C6B65":"transparent",color:autoBackupStatus?"#fff":C.text,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>⏱ {autoBackupStatus?"Backup automat activ":"Configurează backup automat"}</button>
+        {autoBackupStatus&&<div style={{fontSize:9,color:C.textSub,marginTop:6,letterSpacing:"0.04em"}}>→ {autoBackupStatus}{autoBackupLast?` · ultima salvare: ${autoBackupLast}`:""}</div>}
       </div>
     </div>
     {/* CONȚINUT */}
@@ -5512,7 +5823,7 @@ function App() {
               </label>}
             </div>
             <div style={{display:"flex",gap:4,borderBottom:`1px solid ${C.border}`}}>
-              {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`]].map(([id,label])=>{
+              {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`📋 Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`]].map(([id,label])=>{
                 const active=(clientDetailTab[client.id]||"contact")===id;
                 return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
               })}
@@ -5530,6 +5841,9 @@ function App() {
             </div>}
             {(clientDetailTab[client.id]||"contact")==="contract"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
               <ContractClientSection client={client} ci={ci} setClients={setClients} C={C} contractCounter={contractCounter} setContractCounter={setContractCounter}/>
+            </div>}
+            {(clientDetailTab[client.id]||"contact")==="pv"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
+              <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
             </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
@@ -5585,7 +5899,7 @@ function App() {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter}/>}
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter}/>}
     </div>}
 
     {tab==="achizitii"&&<div>
