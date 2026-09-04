@@ -3170,24 +3170,34 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
         const wb=XLSX.read(ev.target.result,{type:"array"});
         const ws=wb.Sheets[wb.SheetNames[0]];
         const rows=XLSX.utils.sheet_to_json(ws,{header:1});
-        const existing=new Set(catalogMateriale.map(m=>(m.design+"|"+m.sursa).toLowerCase()));
+        const existingMap={};
+        catalogMateriale.forEach(m=>{ existingMap[(m.design+"|"+m.sursa).toLowerCase()]=m.id; });
         const noi=[];
+        const actualizariMap={};
         for(let i=1;i<rows.length;i++){
           const r=rows[i];
           if(!r || !r[0]) continue;
           const des=String(r[0]).trim();
           const eur=Number(r[1]);
           const src=r[3]?String(r[3]).trim():(r[2]&&isNaN(Number(r[2]))?String(r[2]).trim():"import");
-          const furn=r[4]?String(r[4]).trim():"—";
+          const furn=r[4]?String(r[4]).trim():"";
           if(!des || isNaN(eur)) continue;
           const key=(des+"|"+src).toLowerCase();
-          if(existing.has(key)) continue;
-          existing.add(key);
-          noi.push({id:gid(), design:des, pretEur:eur, pretLei:calcLei(eur), sursa:src||"import", furnizor:furn});
+          if(existingMap[key]){
+            if(furn) actualizariMap[existingMap[key]]=furn;
+            continue;
+          }
+          if(actualizariMap[key]) continue;
+          existingMap[key]="pending-"+des;
+          noi.push({id:gid(), design:des, pretEur:eur, pretLei:calcLei(eur), sursa:src||"import", furnizor:furn||"—"});
         }
-        if(!noi.length){ alert("Nu am găsit rânduri noi de importat (poate sunt deja în catalog, sau formatul nu se potrivește: Design / Preț EUR / ... / Sursă / Furnizor)."); }
-        else setCatalogMateriale(p=>[...p, ...noi].sort((a,b)=>a.design.localeCompare(b.design,"ro")));
-        alert(`${noi.length} materiale noi importate.`);
+        const nrActualizari=Object.keys(actualizariMap).length;
+        if(nrActualizari) setCatalogMateriale(p=>p.map(m=>actualizariMap[m.id]?{...m,furnizor:actualizariMap[m.id]}:m));
+        if(noi.length) setCatalogMateriale(p=>[...p, ...noi].sort((a,b)=>a.design.localeCompare(b.design,"ro")));
+        const mesaje=[];
+        if(noi.length) mesaje.push(`${noi.length} materiale noi importate`);
+        if(nrActualizari) mesaje.push(`${nrActualizari} materiale existente actualizate cu furnizorul`);
+        alert(mesaje.length ? mesaje.join(" · ")+"." : "Nu am găsit rânduri noi sau actualizări de făcut (poate sunt deja identice cu ce ai în catalog, sau formatul nu se potrivește: Design / Preț EUR / ... / Sursă / Furnizor).");
       }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
       setImporting(false);
       if(inputRef.current) inputRef.current.value="";
