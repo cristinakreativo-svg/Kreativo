@@ -75,6 +75,7 @@ const RMK = "kreativo_rulou_materiale_v1";
 const CMK = "kreativo_camere_lista_v1";
 const CTK = "kreativo_contract_counter_v1";
 const PVK = "kreativo_pv_counter_v1";
+const MTK = "kreativo_catalog_materiale_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -3018,6 +3019,130 @@ function extrageDateFacturaPDF(file){
   });
 }
 
+function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
+  const [cauta,setCauta]=React.useState("");
+  const [design,setDesign]=React.useState("");
+  const [pretEur,setPretEur]=React.useState("");
+  const [sursa,setSursa]=React.useState("");
+  const [importing,setImporting]=React.useState(false);
+  const inputRef=React.useRef(null);
+
+  const calcLei=(eur)=>Math.round(Number(eur)*3*1.21*5.4);
+
+  const adauga=()=>{
+    if(!design.trim()){ alert("Completează denumirea (Design)."); return; }
+    if(!pretEur.trim() || isNaN(Number(pretEur))){ alert("Completează prețul EUR (număr)."); return; }
+    const nou={id:gid(), design:design.trim(), pretEur:Number(pretEur), pretLei:calcLei(pretEur), sursa:sursa.trim()||"manual"};
+    setCatalogMateriale(p=>[...p, nou].sort((a,b)=>a.design.localeCompare(b.design,"ro")));
+    setDesign(""); setPretEur(""); setSursa("");
+  };
+  const sterge=(id)=>{
+    if(window.confirm("Ștergi acest material din catalog?")) setCatalogMateriale(p=>p.filter(m=>m.id!==id));
+  };
+  const editeaza=(id,field,val)=>{
+    setCatalogMateriale(p=>p.map(m=>{
+      if(m.id!==id) return m;
+      const upd={...m,[field]:val};
+      if(field==="pretEur") upd.pretLei=calcLei(val);
+      return upd;
+    }));
+  };
+
+  const importaExcel=(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    setImporting(true);
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+        const existing=new Set(catalogMateriale.map(m=>(m.design+"|"+m.sursa).toLowerCase()));
+        const noi=[];
+        for(let i=1;i<rows.length;i++){
+          const r=rows[i];
+          if(!r || !r[0]) continue;
+          const des=String(r[0]).trim();
+          const eur=Number(r[1]);
+          const src=r[3]?String(r[3]).trim():(r[2]&&isNaN(Number(r[2]))?String(r[2]).trim():"import");
+          if(!des || isNaN(eur)) continue;
+          const key=(des+"|"+src).toLowerCase();
+          if(existing.has(key)) continue;
+          existing.add(key);
+          noi.push({id:gid(), design:des, pretEur:eur, pretLei:calcLei(eur), sursa:src||"import"});
+        }
+        if(!noi.length){ alert("Nu am găsit rânduri noi de importat (poate sunt deja în catalog, sau formatul nu se potrivește: Design / Preț EUR / ... / Sursă)."); }
+        else setCatalogMateriale(p=>[...p, ...noi].sort((a,b)=>a.design.localeCompare(b.design,"ro")));
+        alert(`${noi.length} materiale noi importate.`);
+      }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
+      setImporting(false);
+      if(inputRef.current) inputRef.current.value="";
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const filtrate = catalogMateriale.filter(m=>!cauta.trim()||m.design.toLowerCase().includes(cauta.toLowerCase())||m.sursa.toLowerCase().includes(cauta.toLowerCase()));
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  return <div style={{padding:"20px"}}>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Catalog materiale ({catalogMateriale.length})</div>
+
+    <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <input value={cauta} onChange={e=>setCauta(e.target.value)} placeholder="🔍 caută după denumire sau sursă..." style={{...selStyle,flex:1,minWidth:200}}/>
+      <label style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:importing?C.border:"#5C6B65",color:importing?C.text:"#fff",cursor:importing?"default":"pointer",whiteSpace:"nowrap"}}>
+        {importing?"⏳ Se importă...":"📥 Importă din Excel"}
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
+      </label>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: <b>Design</b>, <b>Preț EUR</b>, (opțional altă coloană), <b>Sursă</b>. Materialele deja existente (aceeași denumire + sursă) nu se dublează.</div>
+
+    <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:20}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>+ Adaugă material manual</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:10}}>
+        <div><label style={lblStyle}>Design</label><input value={design} onChange={e=>setDesign(e.target.value)} placeholder="ex: Bassilk" style={selStyle}/></div>
+        <div><label style={lblStyle}>Preț EUR</label><input value={pretEur} onChange={e=>setPretEur(e.target.value)} placeholder="ex: 10.39" style={selStyle}/></div>
+        <div><label style={lblStyle}>Sursă</label><input value={sursa} onChange={e=>setSursa(e.target.value)} placeholder="ex: Bru" style={selStyle}/></div>
+      </div>
+      <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
+    </div>
+
+    <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <thead>
+        <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:"left"}}>
+          <th style={{padding:"6px 10px"}}>Design</th>
+          <th style={{padding:"6px 10px"}}>Preț EUR</th>
+          <th style={{padding:"6px 10px"}}>Preț (lei)</th>
+          <th style={{padding:"6px 10px"}}>Sursă</th>
+          <th style={{padding:"6px 10px"}}></th>
+        </tr>
+      </thead>
+      <tbody>
+        {filtrate.map((m,i)=>
+          <tr key={m.id} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.design} onChange={e=>editeaza(m.id,"design",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.pretEur} onChange={e=>editeaza(m.id,"pretEur",e.target.value)} style={{width:70,border:"none",background:"transparent",fontSize:13,color:"#2255AA",outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px",fontWeight:600,color:C.text}}>{m.pretLei} lei</td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.sursa} onChange={e=>editeaza(m.id,"sursa",e.target.value)} style={{width:90,border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px",textAlign:"right"}}>
+              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
+            </td>
+          </tr>
+        )}
+        {filtrate.length===0&&<tr><td colSpan={5} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogMateriale.length===0?"Catalogul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
+      </tbody>
+    </table>
+  </div>;
+}
+
 function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounter}){
   const [numeClient,setNumeClient]=React.useState("");
   const [facturi,setFacturi]=React.useState([{serie:"",data:"",denumire:""}]);
@@ -4926,6 +5051,7 @@ function App() {
   const [camereLista,setCamereLista]=useState(["Living","Dormitor","Dormitor 2","Bucătărie","Hol","Baie","Birou","Cameră copil","Terasă","Dressing"]);
   const [contractCounter,setContractCounter]=useState(1010);
   const [pvCounter,setPvCounter]=useState(1);
+  const [catalogMateriale,setCatalogMateriale]=useState([]);
   const [log,setLog]=useState({});
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
@@ -5033,14 +5159,15 @@ function App() {
           const cm=await sbGet(CMK); if(cm){setCamereLista(cm);gotAnyData=true;}
           const ctc=await sbGet(CTK); if(ctc){setContractCounter(ctc);gotAnyData=true;}
           const pvc=await sbGet(PVK); if(pvc){setPvCounter(pvc);gotAnyData=true;}
+          const mtc=await sbGet(MTK); if(mtc){setCatalogMateriale(mtc);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -5068,6 +5195,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CMK,camereLista);},[camereLista,loaded]);
   useEffect(()=>{if(loaded) sbSave(CTK,contractCounter);},[contractCounter,loaded]);
   useEffect(()=>{if(loaded) sbSave(PVK,pvCounter);},[pvCounter,loaded]);
+  useEffect(()=>{if(loaded) sbSave(MTK,catalogMateriale);},[catalogMateriale,loaded]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
@@ -5243,7 +5371,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -5269,7 +5397,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale
         }
       };
       const writable=await handle.createWritable();
@@ -5327,6 +5455,7 @@ function App() {
         if(d[CMK]) setCamereLista(d[CMK]);
         if(d[CTK]) setContractCounter(d[CTK]);
         if(d[PVK]) setPvCounter(d[PVK]);
+        if(d[MTK]) setCatalogMateriale(d[MTK]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -5415,7 +5544,7 @@ function App() {
 
   const GRUPURI=[
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
-    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"achizitii",l:"Achiziții"}]},
+    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"catalogmateriale",l:"Catalog materiale"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Tudor"},{id:"recurente",l:"Recurente"}]},
     {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
@@ -6078,6 +6207,8 @@ function App() {
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter}/>}
     </div>}
+
+    {tab==="catalogmateriale"&&<TabCatalogMateriale C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale}/>}
 
     {tab==="achizitii"&&<div>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
