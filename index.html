@@ -2559,16 +2559,16 @@ function ConfigPanouSalvataRow({cfg,clientId,setClients,C,onPrint}){
 }
 
 function ContractClientSection({client,ci,setClients,C,contractCounter,setContractCounter}){
-  const [open,setOpen]=React.useState(false);
   const [tip,setTip]=React.useState("PF");
   const [numeClient,setNumeClient]=React.useState("");
   const [loculMontaj,setLoculMontaj]=React.useState(client.adresa||"");
   const [valoare,setValoare]=React.useState("");
-  const [tva,setTva]=React.useState("neinclus");
+  const [tva,setTva]=React.useState("inclus");
   const [termenLivrare,setTermenLivrare]=React.useState("");
   const [tipZile,setTipZile]=React.useState("lucrătoare");
   const [avans,setAvans]=React.useState("");
-  const [scadenta,setScadenta]=React.useState("la montaj");
+  const [scadenta,setScadenta]=React.useState("cu 1 zi înainte de livrare");
+  const [scadentaCustom,setScadentaCustom]=React.useState("");
   const [email,setEmail]=React.useState("");
   const [ciSeria,setCiSeria]=React.useState("");
   const [ciNumar,setCiNumar]=React.useState("");
@@ -2588,7 +2588,8 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
       valoare: valoare.trim(), tva, termenLivrare: termenLivrare.trim(), tipZile,
       telefon: client.telefon||"—", email: email.trim()||"—",
       numeClient: numeClient.trim(),
-      avans: avans.trim()||"0", diferenta: String(Math.max(val-av,0)), scadenta,
+      avans: avans.trim()||"0", diferenta: String(Math.max(val-av,0)),
+      scadenta: scadenta==="altă variantă"?(scadentaCustom.trim()||"altă variantă agreată cu Clientul"):scadenta,
       ciSeria: ciSeria.trim()||"—", ciNumar: ciNumar.trim()||"—",
       cui: cui.trim()||"—", regCom: regCom.trim()||"—", iban: iban.trim()||"—",
       reprezentant: reprezentant.trim()||"—", garantieLuni: garantieLuni.trim()||"24",
@@ -2621,14 +2622,14 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
     const html = tip==="PF" ? buildContractPF(data) : buildContractPJ(data);
     const contract = {id:gid(), tip, numarContract, dataContract:tday(), numeClient:numeClient.trim(),
       valoare:valoare.trim(), tva, termenLivrare:termenLivrare.trim(), tipZile, loculMontaj:loculMontaj.trim(),
-      avans:avans.trim(), scadenta, email:email.trim(), ciSeria:ciSeria.trim(), ciNumar:ciNumar.trim(),
+      avans:avans.trim(), scadenta:(scadenta==="altă variantă"?(scadentaCustom.trim()||"altă variantă agreată cu Clientul"):scadenta), email:email.trim(), ciSeria:ciSeria.trim(), ciNumar:ciNumar.trim(),
       cui:cui.trim(), regCom:regCom.trim(), iban:iban.trim(), reprezentant:reprezentant.trim(),
       garantieLuni:garantieLuni.trim(), dataCreat:tday()};
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,contracte:[...(c.contracte||[]),contract]}));
     setContractCounter(p=>p+1);
     vizualizeaza(html);
     setNumeClient(""); setValoare(""); setTermenLivrare(""); setAvans(""); setEmail("");
-    setCiSeria(""); setCiNumar(""); setCui(""); setRegCom(""); setIban(""); setReprezentant("");
+    setCiSeria(""); setCiNumar(""); setCui(""); setRegCom(""); setIban(""); setReprezentant(""); setScadentaCustom("");
   };
 
   const htmlFor=(contract)=>{
@@ -2638,7 +2639,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
       loculMontaj: contract.loculMontaj||"—", valoare: contract.valoare, tva: contract.tva||"neinclus",
       termenLivrare: contract.termenLivrare, tipZile: contract.tipZile||"lucrătoare",
       telefon: client.telefon||"—", email: contract.email||"—", numeClient: contract.numeClient,
-      avans: contract.avans||"0", diferenta: String(Math.max(val-av,0)), scadenta: contract.scadenta||"la montaj",
+      avans: contract.avans||"0", diferenta: String(Math.max(val-av,0)), scadenta: contract.scadenta||"cu 1 zi înainte de livrare",
       ciSeria: contract.ciSeria||"—", ciNumar: contract.ciNumar||"—",
       cui: contract.cui||"—", regCom: contract.regCom||"—", iban: contract.iban||"—",
       reprezentant: contract.reprezentant||"—", garantieLuni: contract.garantieLuni||"24",
@@ -2649,13 +2650,8 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
 
-  return <div style={{marginTop:16}}>
-    <button onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",padding:"10px 14px",background:C.bg,border:"none",cursor:"pointer",textAlign:"left"}}>
-      <span style={{fontSize:12,color:C.textSub,fontWeight:500,flex:1}}>📄 Contract ({(client.contracte||[]).length})</span>
-      <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
-    </button>
-    {open&&<div style={{padding:"14px",border:`1px solid ${C.border}`,borderTop:"none"}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,marginBottom:12}}>
+  return <div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,marginBottom:12}}>
         <div><label style={lblStyle}>Tip contract</label>
           <select value={tip} onChange={e=>setTip(e.target.value)} style={selStyle}>
             <option value="PF">Persoană fizică</option>
@@ -2689,9 +2685,11 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
         </div>
         <div><label style={lblStyle}>Diferența scadentă</label>
           <select value={scadenta} onChange={e=>setScadenta(e.target.value)} style={selStyle}>
+            <option value="cu 1 zi înainte de livrare">Cu 1 zi înainte de livrare</option>
             <option value="la montaj">La montaj</option>
-            <option value="înainte de livrare">Înainte de livrare</option>
+            <option value="altă variantă">Altă variantă (agreată cu clientul)</option>
           </select>
+          {scadenta==="altă variantă"&&<input value={scadentaCustom} onChange={e=>setScadentaCustom(e.target.value)} placeholder="ex: în 3 rate lunare egale" style={{...selStyle,marginTop:6}}/>}
         </div>
         <div><label style={lblStyle}>Termen livrare (zile)</label>
           <input value={termenLivrare} onChange={e=>setTermenLivrare(e.target.value)} placeholder="ex: 21" style={selStyle}/>
@@ -2721,7 +2719,6 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
           </div>
         )}
       </div>}
-    </div>}
   </div>;
 }
 
@@ -3576,6 +3573,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
+  const [clientDetailTab,setClientDetailTab]=React.useState({});
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
   const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
@@ -3654,25 +3652,29 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <span style={{fontSize:12,color:C.textMuted,marginLeft:8}}>Ora:</span>
           <input type="time" lang="ro" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
         </div>
-        <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:14,padding:"10px 14px",background:C.bg,border:"none",cursor:"pointer",textAlign:"left"}}>
-          <span style={{fontSize:12,color:C.textSub,fontWeight:500,flex:1}}>📇 Date de contact (telefon, adresă)</span>
-          <span style={{fontSize:11,color:C.textMuted}}>{contactOpen[client.id]?"▾":"▸"}</span>
-        </button>
-        {contactOpen[client.id]&&<>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:0,padding:"10px 14px",background:C.bg}}>
+        <div style={{display:"flex",gap:4,marginBottom:0,borderBottom:`1px solid ${C.border}`}}>
+          {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`]].map(([id,label])=>{
+            const active=(clientDetailTab[client.id]||"contact")===id;
+            return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
+          })}
+        </div>
+        {(clientDetailTab[client.id]||"contact")==="contact"&&<div style={{marginBottom:16,padding:"12px 14px",background:C.bg}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
             <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Telefon:</span>
             {client.telefon?<a href={`tel:${client.telefon.replace(/\s+/g,"")}`} style={{fontSize:13,color:C.accent,fontWeight:500,textDecoration:"none"}}>{client.telefon} 📞</a>:<span style={{fontSize:13,color:C.textMuted}}>— nesetat —</span>}
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 14px",background:C.bg}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
             <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Adresă:</span>
             {client.adresa?<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.adresa)}`} target="_blank" rel="noopener noreferrer" style={{fontSize:13,color:C.accent,fontWeight:500,textDecoration:"none"}}>{client.adresa} 📍</a>:<span style={{fontSize:13,color:C.textMuted}}>— nesetată —</span>}
           </div>
-        </>}
+        </div>}
+        {(clientDetailTab[client.id]||"contact")==="contract"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
+          <ContractClientSection client={client} ci={ci} setClients={setClients} C={C} contractCounter={contractCounter} setContractCounter={setContractCounter}/>
+        </div>}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Poze și măsurători</div>
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danPoze" folder="dan-poze" accept="image/*,.pdf" buttonLabel="+ fă poză / adaugă măsurătoare"/>
         </div>
-        <ContractClientSection client={client} ci={ci} setClients={setClients} C={C} contractCounter={contractCounter} setContractCounter={setContractCounter}/>
         <div>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi șină / sisteme de produs</div>
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
@@ -4520,6 +4522,7 @@ function App() {
   const [newTaskJurnalItemText,setNewTaskJurnalItemText]=useState("");
   const [addingCli,setAddingCli]=useState(false);
   const [contactOpen,setContactOpen]=useState({});
+  const [clientDetailTab,setClientDetailTab]=useState({});
   const [newCliName,setNewCliName]=useState("");
   const [newTudorTask,setNewTudorTask]=useState({});
   const [addingToTudor,setAddingToTudor]=useState(null);
@@ -5489,12 +5492,8 @@ function App() {
               <input type="number" value={client.valoare||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,valoare:e.target.value}))} placeholder="0" style={{width:120,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
               <span style={{fontSize:12,color:C.textMuted}}>RON</span>
             </div>
-            {/* Contact + Nico + Dan, toate pe un rând */}
-            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:contactOpen[client.id]?0:12,padding:"10px 14px",background:C.bg,flexWrap:"wrap"}}>
-              <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",padding:0}}>
-                <span style={{fontSize:12,color:C.textSub,fontWeight:500}}>📇 Contact</span>
-                <span style={{fontSize:10,color:C.textMuted}}>{contactOpen[client.id]?"▾":"▸"}</span>
-              </button>
+            {/* Nico + Dan + stadiu, pe un rând */}
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:12,padding:"10px 14px",background:C.bg,flexWrap:"wrap"}}>
               <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
                 <input type="checkbox" checked={!!client.alocatNico} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,alocatNico:e.target.checked}))}/>
                 <span style={{fontSize:12,color:C.textSub}}>Nico</span>
@@ -5516,18 +5515,26 @@ function App() {
                 <span style={{fontSize:12,color:C.textSub}}>Proiect terminat (debifează pt. redeschidere)</span>
               </label>}
             </div>
-            {contactOpen[client.id]&&<>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:0,padding:"10px 14px",background:C.bg}}>
+            <div style={{display:"flex",gap:4,borderBottom:`1px solid ${C.border}`}}>
+              {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`]].map(([id,label])=>{
+                const active=(clientDetailTab[client.id]||"contact")===id;
+                return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
+              })}
+            </div>
+            {(clientDetailTab[client.id]||"contact")==="contact"&&<div style={{marginBottom:12,padding:"12px 14px",background:C.bg}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                 <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Telefon:</span>
                 <input type="tel" value={client.telefon||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,telefon:e.target.value}))} placeholder="07xx xxx xxx" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
                 {client.telefon&&<a href={`tel:${client.telefon.replace(/\s+/g,"")}`} style={{fontSize:12,color:"#fff",background:C.accent,padding:"6px 12px",textDecoration:"none",whiteSpace:"nowrap",flexShrink:0}}>📞 Sună</a>}
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"10px 14px",background:C.bg}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Adresă:</span>
                 <input value={client.adresa||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,adresa:e.target.value}))} placeholder="Stradă, nr, oraș" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
               </div>
-            </>}
-            <ContractClientSection client={client} ci={ci} setClients={setClients} C={C} contractCounter={contractCounter} setContractCounter={setContractCounter}/>
+            </div>}
+            {(clientDetailTab[client.id]||"contact")==="contract"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
+              <ContractClientSection client={client} ci={ci} setClients={setClients} C={C} contractCounter={contractCounter} setContractCounter={setContractCounter}/>
+            </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
               return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} ora={(client.oraTask||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onOraChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const o=Array.from({length:c.tasks.length},(_,j)=>(c.oraTask||[])[j]||"");o[ti]=v;return {...c,oraTask:o};}))} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
