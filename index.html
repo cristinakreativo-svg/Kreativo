@@ -3254,7 +3254,6 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const [numeClient,setNumeClient]=React.useState(client.name||"");
   const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:""}]}]);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null
-  const [pickerCauta,setPickerCauta]=React.useState("");
 
   const catalogMap=React.useMemo(()=>{
     const m={};
@@ -3282,7 +3281,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
 
   const alegeMaterial=(camId,prodId,m)=>{
     setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.design,pretUnitar:String(m.pretLei)})}));
-    setPickerFor(null); setPickerCauta("");
+    setPickerFor(null);
   };
   const valoareLinie=(pr)=>(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
@@ -3377,7 +3376,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
         </div>
         {c.produse.map(pr=>
           <div key={pr.id}>
-          <div style={{display:"grid",gridTemplateColumns:"100px 1fr auto 110px 80px 90px auto",gap:8,marginBottom:6,alignItems:"center"}}>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,marginBottom:6,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
@@ -3385,16 +3384,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
               <option value="șină">Șină</option>
               <option value="altele">Altele</option>
             </select>
-            <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Material" style={selStyle}/>
-            <button type="button" onClick={()=>{const open=pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id; setPickerFor(open?null:{camId:c.id,prodId:pr.id}); setPickerCauta("");}} style={{fontSize:12,fontWeight:600,padding:"7px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>📋 Catalog</button>
+            <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Material — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
             <input value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} placeholder="Culoare" style={selStyle}/>
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="m" style={selStyle}/>
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:10,marginBottom:10}}>
-            <input autoFocus value={pickerCauta} onChange={e=>setPickerCauta(e.target.value)} placeholder="🔍 caută material..." style={{...selStyle,marginBottom:8}}/>
-            <div style={{maxHeight:220,overflowY:"auto",border:`1px solid ${C.border}`}}>
+          {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginBottom:10,marginTop:-4}}>
+            <div style={{maxHeight:220,overflowY:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
                   <th style={{padding:"6px 10px",textAlign:"left"}}>Design</th>
@@ -3402,8 +3399,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
                   <th style={{padding:"6px 10px",textAlign:"right"}}>Preț</th>
                 </tr></thead>
                 <tbody>
-                  {catalogMateriale.filter(m=>!pickerCauta.trim()||m.design.toLowerCase().includes(pickerCauta.toLowerCase())||m.sursa.toLowerCase().includes(pickerCauta.toLowerCase())).slice(0,200).map(m=>
-                    <tr key={m.id} onClick={()=>alegeMaterial(c.id,pr.id,m)} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  {catalogMateriale.filter(m=>!pr.material.trim()||m.design.toLowerCase().includes(pr.material.toLowerCase())||m.sursa.toLowerCase().includes(pr.material.toLowerCase())).slice(0,200).map(m=>
+                    <tr key={m.id} onMouseDown={e=>{e.preventDefault();alegeMaterial(c.id,pr.id,m);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.design}</td>
                       <td style={{padding:"7px 10px",color:C.textMuted}}>{m.sursa}</td>
                       <td style={{padding:"7px 10px",textAlign:"right",color:C.text}}>{m.pretLei} lei</td>
