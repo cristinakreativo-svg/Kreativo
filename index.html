@@ -768,6 +768,7 @@ function buildContractPF(data){
   p { orphans: 3; widows: 3; }
   a { color:#5C6B65; }
   a:hover { color:#2A2118; }
+  @media print { .notaEditare { display:none !important; } }
   @media print {
     .sheet { max-width: none; }
   }
@@ -780,7 +781,8 @@ function buildContractPF(data){
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">S.C. 3P Design S.R.L. · Brașov</span>
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">kreativobv@gmail.com</span>
 </div>
-<div style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty">
+<div class="notaEditare" style="margin:14px 0 0;padding:9px 14px;background:#EFE6D0;border:1px dashed #A99C86;font:600 11px/1.4 'Source Sans 3',Calibri,sans-serif;color:#6E6151">✏️ Poți edita direct orice text din contract — dă click oriunde în text și scrie. Util pentru clauze excepționale cerute de client. Această notă nu apare la printare.</div>
+<div contenteditable="true" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
 
 <div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
 <div style="flex:1;min-width:0">
@@ -933,6 +935,7 @@ function buildContractPJ(data){
   p { orphans: 3; widows: 3; }
   a { color:#5C6B65; }
   a:hover { color:#2A2118; }
+  @media print { .notaEditare { display:none !important; } }
   @media print {
     .sheet { max-width: none; }
   }
@@ -945,7 +948,8 @@ function buildContractPJ(data){
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">S.C. 3P Design S.R.L. · Brașov</span>
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">kreativobv@gmail.com</span>
 </div>
-<div style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty">
+<div class="notaEditare" style="margin:14px 0 0;padding:9px 14px;background:#EFE6D0;border:1px dashed #A99C86;font:600 11px/1.4 'Source Sans 3',Calibri,sans-serif;color:#6E6151">✏️ Poți edita direct orice text din contract — dă click oriunde în text și scrie. Util pentru clauze excepționale cerute de client. Această notă nu apare la printare.</div>
+<div contenteditable="true" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
 
 <div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
 <div style="flex:1;min-width:0">
@@ -2843,17 +2847,11 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
         {tip==="PJ"&&<div><label style={lblStyle}>IBAN</label><input value={iban} onChange={e=>setIban(e.target.value)} placeholder="RO.. .." style={selStyle}/></div>}
         {tip==="PJ"&&<div><label style={lblStyle}>Reprezentant (nume și funcție)</label><input value={reprezentant} onChange={e=>setReprezentant(e.target.value)} placeholder="ex: Ionescu Ana, director" style={selStyle}/></div>}
         {tip==="PJ"&&<div><label style={lblStyle}>Garanție (luni)</label><input value={garantieLuni} onChange={e=>setGarantieLuni(e.target.value)} style={selStyle}/></div>}
-        <div><label style={lblStyle}>Valoare contract (lei)</label>
-          <input value={valoare} onChange={e=>setValoare(e.target.value)} placeholder="ex: 4500" style={selStyle}/>
-        </div>
         <div><label style={lblStyle}>TVA</label>
           <select value={tva} onChange={e=>setTva(e.target.value)} style={selStyle}>
             <option value="neinclus">Neinclus</option>
             <option value="inclus">Inclus</option>
           </select>
-        </div>
-        <div><label style={lblStyle}>Avans (lei)</label>
-          <input value={avans} onChange={e=>setAvans(e.target.value)} placeholder="ex: 2000" style={selStyle}/>
         </div>
         <div><label style={lblStyle}>Diferența scadentă</label>
           <select value={scadenta} onChange={e=>setScadenta(e.target.value)} style={selStyle}>
@@ -2863,9 +2861,6 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
           </select>
           {scadenta==="altă variantă"&&<input value={scadentaCustom} onChange={e=>setScadentaCustom(e.target.value)} placeholder="ex: în 3 rate lunare egale" style={{...selStyle,marginTop:6}}/>}
         </div>
-        <div><label style={lblStyle}>Termen livrare (zile)</label>
-          <input value={termenLivrare} onChange={e=>setTermenLivrare(e.target.value)} placeholder="ex: 21" style={selStyle}/>
-        </div>
         <div><label style={lblStyle}>Zile</label>
           <select value={tipZile} onChange={e=>setTipZile(e.target.value)} style={selStyle}>
             <option value="lucrătoare">Lucrătoare</option>
@@ -2874,6 +2869,17 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
         </div>
         <div style={{gridColumn:"1 / -1"}}><label style={lblStyle}>Loc montaj (dacă diferă de adresa clientului)</label>
           <input value={loculMontaj} onChange={e=>setLoculMontaj(e.target.value)} placeholder={client.adresa||"Adresă montaj"} style={selStyle}/>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:14,marginBottom:14,padding:"12px 14px",background:C.accentLight,border:`1px solid ${C.accent}`}}>
+        <div><label style={{...lblStyle,fontWeight:700,color:C.text}}>Valoare contract (lei)</label>
+          <input value={valoare} onChange={e=>setValoare(e.target.value)} placeholder="ex: 4500" style={{...selStyle,fontWeight:700,fontSize:15}}/>
+        </div>
+        <div><label style={{...lblStyle,fontWeight:700,color:C.text}}>Avans (lei)</label>
+          <input value={avans} onChange={e=>setAvans(e.target.value)} placeholder="ex: 2000" style={{...selStyle,fontWeight:700,fontSize:15}}/>
+        </div>
+        <div><label style={{...lblStyle,fontWeight:700,color:C.text}}>Termen livrare (zile)</label>
+          <input value={termenLivrare} onChange={e=>setTermenLivrare(e.target.value)} placeholder="ex: 21" style={{...selStyle,fontWeight:700,fontSize:15}}/>
         </div>
       </div>
       <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. contract următor: <b>{contractCounter}/{new Date().getFullYear()}</b> · totul se completează automat, nimic nu rămâne liber pe contract.</div>
@@ -2931,8 +2937,8 @@ function extrageDateFacturaPDF(file){
           if(row[0] && row[0].startsWith("Data (ziua") && row[1]) dataFact=row[1];
           const ci=row.indexOf("Cumparator");
           if(ci!==-1 && row.length>ci+1) cumparator=row.slice(ci+1).join(" ").trim();
-          if(row[0]==="CIF/CUI" && row[2]==="CIF/CUI" && row[3]) cui=row[3];
-          if(row[0]==="Nr. Reg. Com." && row[2]==="Nr. Reg. Com." && row[3]) regCom=row[3];
+          if(row[0]==="CIF/CUI" && row[2]==="CIF/CUI" && row[3]) cui=row.slice(3).join(" ");
+          if(row[0]==="Nr. Reg. Com." && row[2]==="Nr. Reg. Com." && row[3]) regCom=row.slice(3).join(" ");
           if(row[0]==="Contul" && row[2]==="Contul" && row[3]) iban=row.slice(3).join(" ");
           if(row[0]==="Sediul" && row[2]==="Sediul" && row[3]) sediul=row.slice(3).join(" ");
           if(row[0]==="Loc./Jud." && row[2]==="Loc./Jud." && row[3]) locJud=row.slice(3).join(" ");
