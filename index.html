@@ -1133,8 +1133,12 @@ function buildProcesVerbal(data){
   </table>
 
   <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">03</span>Observații</h2>
-  <div style="min-height:44px;background:#E7E0D3;border-left:2px solid #5C6B65;padding:11px 14px 12px;margin:0 0 6px">
-    <p style="margin:0">${data.observatii}</p>
+  <div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;color:#8A7A64;margin-bottom:6px">Se completează la fața locului — observații, sau „fără observații" dacă e cazul.</div>
+  <div style="margin:0 0 10px">
+    <div style="border-bottom:1px dotted #A99C86;height:26px"></div>
+    <div style="border-bottom:1px dotted #A99C86;height:26px"></div>
+    <div style="border-bottom:1px dotted #A99C86;height:26px"></div>
+    <div style="border-bottom:1px dotted #A99C86;height:26px"></div>
   </div>
 
   <h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">04</span>Declarație</h2>
@@ -2704,6 +2708,13 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
     window.open(url, "_blank");
     setTimeout(()=>URL.revokeObjectURL(url), 60000);
   };
+  const printeaza=(html)=>{
+    const blob = new Blob([html], {type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    if(w){ w.addEventListener("load",()=>{ setTimeout(()=>w.print(),300); }); }
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  };
   const descarca=(html, numarContract)=>{
     const blob = new Blob([html], {type:"text/html"});
     const url = URL.createObjectURL(blob);
@@ -2817,6 +2828,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
             <span style={{fontSize:11,color:C.textMuted,minWidth:36}}>{contract.tip}</span>
             <span style={{fontSize:12,color:C.textSub,flex:1}}>{contract.numeClient} · {contract.valoare} lei · {fmtD(contract.dataContract)}</span>
             <button onClick={()=>vizualizeaza(htmlFor(contract))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
+            <button onClick={()=>printeaza(htmlFor(contract))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
             <button onClick={()=>descarca(htmlFor(contract), contract.numarContract)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
           </div>
         )}
@@ -2857,7 +2869,7 @@ function extrageDateFacturaPDF(file){
               const denumire=row[1]||"";
               const um=row[2]||"";
               const cant=row[3]||"";
-              if(denumire) produse.push(um&&cant?`${denumire} (${cant} ${um})`:denumire);
+              if(denumire && denumire.trim().toLowerCase()!=="avans") produse.push(um&&cant?`${denumire} (${cant} ${um})`:denumire);
             } else if(row[0] && row[0].toLowerCase().startsWith("acest document")){
               inTable=false;
             }
@@ -2878,7 +2890,6 @@ function extrageDateFacturaPDF(file){
 function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounter}){
   const [numeClient,setNumeClient]=React.useState(client.name||"");
   const [facturi,setFacturi]=React.useState([{serie:"",data:"",denumire:""}]);
-  const [observatii,setObservatii]=React.useState("");
   const [pdfLoadingIdx,setPdfLoadingIdx]=React.useState(null);
 
   const updFactura=(idx,field,val)=>setFacturi(p=>p.map((f,i)=>i!==idx?f:{...f,[field]:val}));
@@ -2905,6 +2916,13 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
     window.open(url,"_blank");
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   };
+  const printeaza=(html)=>{
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    const w=window.open(url,"_blank");
+    if(w){ w.addEventListener("load",()=>{ setTimeout(()=>w.print(),300); }); }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  };
   const descarca=(html,numar)=>{
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
@@ -2914,19 +2932,19 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
     setTimeout(()=>URL.revokeObjectURL(url),30000);
   };
   const htmlFor=(pv)=>buildProcesVerbal({numar:pv.numar, dataFmt:fmtD(pv.data), numeClient:pv.numeClient,
-    facturiRows: rowsHtml(pv.facturi), observatii: pv.observatii||"Fără observații."});
+    facturiRows: rowsHtml(pv.facturi)});
 
   const genereaza=()=>{
     if(!numeClient.trim()){ alert("Completează numele cumpărătorului."); return; }
     const valid=facturi.filter(f=>f.serie.trim());
     if(!valid.length){ alert("Adaugă cel puțin o factură (serie)."); return; }
     const numar=`${pvCounter}/${new Date().getFullYear()}`;
-    const pv={id:gid(), numar, data:tday(), numeClient:numeClient.trim(), facturi:valid, observatii:observatii.trim()};
+    const pv={id:gid(), numar, data:tday(), numeClient:numeClient.trim(), facturi:valid};
     const html=htmlFor(pv);
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,proceseVerbale:[...(c.proceseVerbale||[]),pv]}));
     setPvCounter(p=>p+1);
     vizualizeaza(html);
-    setFacturi([{serie:"",data:"",denumire:""}]); setObservatii("");
+    setFacturi([{serie:"",data:"",denumire:""}]);
   };
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
@@ -2958,12 +2976,10 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
       )}
       <button onClick={addFactura} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>+ adaugă altă factură</button>
     </div>
-    <div style={{marginBottom:12}}>
-      <label style={lblStyle}>Observații (dacă lipsește ceva sau există o rezervă)</label>
-      <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} placeholder="ex: lipsește un capac la rulou dormitor, se remediază până la..." rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. proces verbal următor: <b>{pvCounter}/{new Date().getFullYear()}</b> · secțiunea „Observații" rămâne liberă pe document, se completează de mână la fața locului.</div>
+    <div style={{display:"flex",gap:8}}>
+      <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📋 Generează și vizualizează</button>
     </div>
-    <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. proces verbal următor: <b>{pvCounter}/{new Date().getFullYear()}</b></div>
-    <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📋 Generează și vizualizează procesul verbal</button>
 
     {(client.proceseVerbale||[]).length>0&&<div style={{marginTop:16}}>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Procese verbale generate</div>
@@ -2972,6 +2988,7 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
           <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:80}}>{pv.numar}</span>
           <span style={{fontSize:12,color:C.textSub,flex:1}}>{pv.numeClient} · {pv.facturi.length} factură(i) · {fmtD(pv.data)}</span>
           <button onClick={()=>vizualizeaza(htmlFor(pv))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
+          <button onClick={()=>printeaza(htmlFor(pv))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
           <button onClick={()=>descarca(htmlFor(pv),pv.numar)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
         </div>
       )}
