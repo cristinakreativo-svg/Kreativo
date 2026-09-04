@@ -1310,7 +1310,9 @@ ${data.camereHtml}
 </div>
 </div>
 
-<p style="margin:16px 0 0;font-size:.92em;color:#4A3F31">Prețurile includ TVA. Oferta este orientativă și devine fermă după confirmarea măsurătorilor la fața locului. Valabilitate ofertă: 30 de zile de la data emiterii.</p>
+<p style="margin:16px 0 4px;font-size:.92em;color:#4A3F31">Prețurile sunt exprimate în lei și includ TVA. Oferta este orientativă și devine fermă după confirmarea măsurătorilor la fața locului. Valabilitate ofertă: 30 de zile de la data emiterii.</p>
+<p style="margin:0 0 4px;font-size:.92em;color:#4A3F31">La lansarea comenzii se achită un avans de 50% din valoarea ofertei; diferența se achită cu o zi înaintea livrării.</p>
+<p style="margin:0;font-size:.92em;color:#4A3F31">Pentru sistemele de acționare electrică ale căror șine necesită conectare directă la instalația electrică, Clientul va asigura prezența unui electrician autorizat.</p>
 
 <div style="break-inside:avoid;margin:18px 0 0;padding-top:9px;border-top:1px solid #D4C9B8">
 <div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#5C6B65;margin-bottom:11px">Confirmare client</div>
@@ -3254,6 +3256,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const [numeClient,setNumeClient]=React.useState(client.name||"");
   const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null
+  const [editingId,setEditingId]=React.useState(null); // id-ul ofertei editate, sau null la creare nouă
+  const formTopRef=React.useRef(null);
 
   const catalogMap=React.useMemo(()=>{
     const m={};
@@ -3309,17 +3313,19 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
   const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
 
+  const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
   const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
-      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${pr.tip||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
-      const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
-      const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
-      const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${pr.tip}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+      const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
+      const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
+      const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
       return rMaterial+rBanda+rManopera+rTotal;
     }).join("");
     const numar=String(idx+1).padStart(2,"0");
-    return `<h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">${numar}</span>${c.numeCamera||"Cameră"}</h2>
+    return `<div style="border:1px solid #D4C9B8;padding:12px 16px;margin:14px 0;break-inside:avoid;page-break-inside:avoid">
+    <h2 style="margin:0 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">${numar}</span>${c.numeCamera||"Cameră"}</h2>
     <div>
     <table style="width:100%;border-collapse:collapse;margin:6px 0 4px">
       <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64">
@@ -3333,6 +3339,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
       <tbody>${rows}</tbody>
     </table>
     <div style="display:flex;justify-content:flex-end;font-size:.92em;color:#4A3F31;padding-top:2px">Subtotal ${c.numeCamera||"cameră"}: <b style="margin-left:6px">${subtotalCamera(c).toFixed(0)} lei</b></div>
+    </div>
     </div>`;
   }).join("");
 
@@ -3366,14 +3373,37 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     });
   };
 
+  const editeazaOferta=(oferta)=>{
+    setNumeClient(oferta.numeClient);
+    setCamere(oferta.camere.map(c=>({...c, geamuri:c.geamuri||[golGeam(1)], produse:c.produse.map(pr=>({...pr}))})));
+    setEditingId(oferta.id);
+    if(formTopRef.current) formTopRef.current.scrollIntoView({behavior:"smooth",block:"start"});
+  };
+  const anuleazaEditare=()=>{
+    setEditingId(null);
+    setNumeClient(client.name||"");
+    setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+  };
   const genereaza=()=>{
     if(!numeClient.trim()){ alert("Completează numele clientului."); return; }
     const camereValide=camere.filter(c=>c.numeCamera.trim() && c.produse.some(pr=>pr.material.trim()));
     if(!camereValide.length){ alert("Adaugă cel puțin o cameră cu un produs (material completat)."); return; }
+    const camereClean=camereValide.map(c=>({...c, produse:c.produse.filter(pr=>pr.material.trim())}));
+
+    if(editingId){
+      const existent=(client.oferte||[]).find(o=>o.id===editingId);
+      if(!existent){ alert("Oferta editată nu mai există — a fost cumva ștearsă între timp."); setEditingId(null); return; }
+      const html=buildOferta({numar:existent.numar, dataFmt:fmtD(existent.data), numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId:existent.id});
+      const ofertaActualizata={...existent, numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, editedHtml:undefined};
+      setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).map(o=>o.id!==editingId?o:ofertaActualizata)}));
+      vizualizeaza(html);
+      anuleazaEditare();
+      return;
+    }
+
     const ofertaId=gid();
     const numar=`${ofertaCounter}/${new Date().getFullYear()}`;
     const dataFmt=fmtD(tday());
-    const camereClean=camereValide.map(c=>({...c, produse:c.produse.filter(pr=>pr.material.trim())}));
     const html=buildOferta({numar, dataFmt, numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId});
     const oferta={id:ofertaId, numar, data:tday(), numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, dataCreat:tday()};
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:[...(c.oferte||[]),oferta]}));
@@ -3385,10 +3415,15 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
 
-  return <div>
+  return <div ref={formTopRef}>
     <datalist id="oferta-camere-dl">
       {(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}
     </datalist>
+
+    {editingId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+      <span style={{fontSize:12,fontWeight:600,flex:1}}>✏️ Editezi o ofertă existentă — la salvare, se actualizează, nu se creează una nouă.</span>
+      <button onClick={anuleazaEditare} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
+    </div>}
 
     <div style={{marginBottom:14}}>
       <label style={lblStyle}>Nume client (pe ofertă)</label>
@@ -3422,7 +3457,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",fontWeight:600,marginBottom:8}}>Materiale / produse pentru toată camera</div>
         {c.produse.map(pr=>
           <div key={pr.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:8,background:C.bg}}>
-          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginBottom:esteTextil(pr)?8:0}}>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
@@ -3436,23 +3471,23 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginBottom:8}}>
+          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginTop:8}}>
             <span></span>
-            <input value="Bandă fronsare" disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <input value="Bandă fronsare" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
             <span></span>
-            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
             <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={selStyle}/>
             <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareBanda(pr).toFixed(0)} lei</span>
           </div>}
-          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginBottom:8}}>
+          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginTop:8}}>
             <span></span>
-            <input value="Manoperă" disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <input value="Manoperă" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
             <span></span>
-            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
             <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={selStyle}/>
             <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareManopera(pr).toFixed(0)} lei</span>
           </div>}
-          {esteTextil(pr)&&<div style={{display:"flex",justifyContent:"flex-end",paddingTop:6,borderTop:`1px solid ${C.border}`}}>
+          {esteTextil(pr)&&<div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:`1px solid ${C.border}`}}>
             <span style={{fontSize:13,fontWeight:700,color:C.text}}>Total {pr.tip}: {valoareLinie(pr).toFixed(0)} lei</span>
           </div>}
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
@@ -3490,7 +3525,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
       <span style={{fontSize:14,fontWeight:700,color:C.text}}>Total ofertă: {totalGeneral.toFixed(0)} lei</span>
     </div>
     <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. ofertă următoare: <b>{ofertaCounter}/{new Date().getFullYear()}</b></div>
-    <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📋 Generează și vizualizează oferta</button>
+    <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:editingId?"#A0845C":"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>{editingId?"💾 Salvează modificările":"📋 Generează și vizualizează oferta"}</button>
 
     {(client.oferte||[]).length>0&&<div style={{marginTop:16}}>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Oferte generate</div>
@@ -3498,6 +3533,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
         <div key={oferta.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:C.bg,marginBottom:4,flexWrap:"wrap"}}>
           <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:80}}>{oferta.numar}</span>
           <span style={{fontSize:12,color:C.textSub,flex:1}}>{oferta.numeClient} · {oferta.total} lei · {fmtD(oferta.data)}{oferta.editedHtml?" · ✏️ editat manual":""}</span>
+          <button onClick={()=>editeazaOferta(oferta)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>✏️ Editează</button>
           <button onClick={()=>vizualizeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
           <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
           <button onClick={()=>descarca(htmlFor(oferta),oferta.numar)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
