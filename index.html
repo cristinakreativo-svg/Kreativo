@@ -781,7 +781,28 @@ function buildContractPF(data){
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">S.C. 3P Design S.R.L. · Brașov</span>
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">kreativobv@gmail.com</span>
 </div>
-<div class="notaEditare" style="margin:14px 0 0;padding:9px 14px;background:#EFE6D0;border:1px dashed #A99C86;font:600 11px/1.4 'Source Sans 3',Calibri,sans-serif;color:#6E6151">✏️ Poți edita direct orice text din contract — dă click oriunde în text și scrie. Util pentru clauze excepționale cerute de client. Această notă nu apare la printare.</div>
+<div class="notaEditare" style="margin:14px 0 0;padding:9px 14px;background:#EFE6D0;border:1px dashed #A99C86;font:600 11px/1.4 'Source Sans 3',Calibri,sans-serif;color:#6E6151;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+<span>✏️ Poți edita direct orice text din contract — dă click oriunde în text și scrie. Apasă „Salvează" ca editarea să rămână și în aplicație, sau „Printează" pentru PDF pe loc. Această notă nu apare la printare.</span>
+<span style="flex:none;display:flex;gap:8px">
+<button onclick="kreativoSalveazaEditare()" style="font:700 12px/1 'Source Sans 3',Calibri,sans-serif;padding:10px 16px;background:#A0845C;color:#fff;border:none;cursor:pointer;white-space:nowrap">💾 Salvează în aplicație</button>
+<button onclick="window.print()" style="font:700 12px/1 'Source Sans 3',Calibri,sans-serif;padding:10px 16px;background:#5C6B65;color:#fff;border:none;cursor:pointer;white-space:nowrap">🖨 Printează</button>
+</span>
+</div>
+<script>
+window.__kreativoMeta = {clientId:"${data.clientId||''}", contractId:"${data.contractId||''}"};
+function kreativoSalveazaEditare(){
+  if(!window.opener || !window.__kreativoMeta.clientId || !window.__kreativoMeta.contractId){
+    alert("Nu pot salva în aplicație — deschide contractul din nou din Kreativo (nu dintr-o filă redeschisă separat) și încearcă din nou.");
+    return;
+  }
+  const notite = document.querySelectorAll(".notaEditare");
+  notite.forEach(n=>n.style.display="none");
+  const htmlFull = "<!DOCTYPE html>" + document.documentElement.outerHTML;
+  notite.forEach(n=>n.style.display="");
+  window.opener.postMessage({type:"kreativo-save-contract", clientId:window.__kreativoMeta.clientId, contractId:window.__kreativoMeta.contractId, html:htmlFull}, "*");
+  alert("Salvat! Data viitoare când deschizi acest contract din aplicație, va apărea cu editarea făcută.");
+}
+</script>
 <div contenteditable="true" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
 
 <div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
@@ -798,7 +819,7 @@ function buildContractPF(data){
 
 
 
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 22px;margin:12px 0 2px;padding:8px 0;border-top:1px solid #D4C9B8;border-bottom:1px solid #D4C9B8">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0 22px;margin:12px 0 2px;padding:8px 0;border-top:1px solid #D4C9B8;border-bottom:1px solid #D4C9B8">
 <div>
 <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Nr. contract</div>
 <div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numarContract}</div>
@@ -806,10 +827,6 @@ function buildContractPF(data){
 <div>
 <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Data</div>
 <div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.dataContractFmt}</div>
-</div>
-<div>
-<div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Ofertă / comandă</div>
-<div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numarContract} / ${data.dataContractFmt}</div>
 </div>
 <div>
 <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Locul montajului</div>
@@ -825,7 +842,7 @@ function buildContractPF(data){
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.3.</span> Furnizorul și Clientul sunt denumiți împreună «Părțile».</p>
 <h2 style="margin:9px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">02</span>Obiectul contractului</h2>
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">2.1.</span> Furnizorul se obligă să furnizeze și, dacă este inclus în ofertă, să monteze produsele comandate de Client: perdele, draperii, șine, galerii, rulouri interioare și/sau sisteme de acționare manuală ori electrică.</p>
-<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">2.2.</span> Produsele, materialele, nuanțele, dimensiunile, cantitățile, componentele și serviciile incluse sunt prevăzute în Oferta/Comanda nr. ${data.numarContract} din ${data.dataContractFmt}, care face parte integrantă din prezentul contract. Oferta confirmată prevalează în privința specificațiilor tehnice și comerciale ale comenzii.</p>
+<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">2.2.</span> Produsele, materialele, nuanțele, dimensiunile, cantitățile, componentele și serviciile incluse sunt prevăzute în oferta/comanda confirmată de Client, care face parte integrantă din prezentul contract. Oferta confirmată prevalează în privința specificațiilor tehnice și comerciale ale comenzii.</p>
 <h2 style="margin:9px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">03</span>Confirmarea specificațiilor și modificările ulterioare</h2>
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">3.1.</span> Comanda este lansată după efectuarea măsurătorilor, confirmarea specificațiilor de către Client și încasarea avansului. Confirmarea poate fi exprimată prin semnarea contractului sau printr-un mesaj neechivoc transmis prin e-mail ori aplicația de mesagerie utilizată de Părți.</p>
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">3.2.</span> Clientul verifică, înainte de lansarea comenzii, materialul, nuanța, modelul, dimensiunile, tipul de prindere și modul de acționare. Orice modificare solicitată ulterior va fi aplicată numai dacă este încă posibilă și după acceptarea eventualului cost suplimentar și a termenului revizuit.</p>
@@ -948,7 +965,28 @@ function buildContractPJ(data){
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">S.C. 3P Design S.R.L. · Brașov</span>
 <span style="display:block;font-size:9.6px;letter-spacing:.14em">kreativobv@gmail.com</span>
 </div>
-<div class="notaEditare" style="margin:14px 0 0;padding:9px 14px;background:#EFE6D0;border:1px dashed #A99C86;font:600 11px/1.4 'Source Sans 3',Calibri,sans-serif;color:#6E6151">✏️ Poți edita direct orice text din contract — dă click oriunde în text și scrie. Util pentru clauze excepționale cerute de client. Această notă nu apare la printare.</div>
+<div class="notaEditare" style="margin:14px 0 0;padding:9px 14px;background:#EFE6D0;border:1px dashed #A99C86;font:600 11px/1.4 'Source Sans 3',Calibri,sans-serif;color:#6E6151;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+<span>✏️ Poți edita direct orice text din contract — dă click oriunde în text și scrie. Apasă „Salvează" ca editarea să rămână și în aplicație, sau „Printează" pentru PDF pe loc. Această notă nu apare la printare.</span>
+<span style="flex:none;display:flex;gap:8px">
+<button onclick="kreativoSalveazaEditare()" style="font:700 12px/1 'Source Sans 3',Calibri,sans-serif;padding:10px 16px;background:#A0845C;color:#fff;border:none;cursor:pointer;white-space:nowrap">💾 Salvează în aplicație</button>
+<button onclick="window.print()" style="font:700 12px/1 'Source Sans 3',Calibri,sans-serif;padding:10px 16px;background:#5C6B65;color:#fff;border:none;cursor:pointer;white-space:nowrap">🖨 Printează</button>
+</span>
+</div>
+<script>
+window.__kreativoMeta = {clientId:"${data.clientId||''}", contractId:"${data.contractId||''}"};
+function kreativoSalveazaEditare(){
+  if(!window.opener || !window.__kreativoMeta.clientId || !window.__kreativoMeta.contractId){
+    alert("Nu pot salva în aplicație — deschide contractul din nou din Kreativo (nu dintr-o filă redeschisă separat) și încearcă din nou.");
+    return;
+  }
+  const notite = document.querySelectorAll(".notaEditare");
+  notite.forEach(n=>n.style.display="none");
+  const htmlFull = "<!DOCTYPE html>" + document.documentElement.outerHTML;
+  notite.forEach(n=>n.style.display="");
+  window.opener.postMessage({type:"kreativo-save-contract", clientId:window.__kreativoMeta.clientId, contractId:window.__kreativoMeta.contractId, html:htmlFull}, "*");
+  alert("Salvat! Data viitoare când deschizi acest contract din aplicație, va apărea cu editarea făcută.");
+}
+</script>
 <div contenteditable="true" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
 
 <div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
@@ -965,7 +1003,7 @@ function buildContractPJ(data){
 
 
 
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0 22px;margin:12px 0 2px;padding:8px 0;border-top:1px solid #D4C9B8;border-bottom:1px solid #D4C9B8">
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0 22px;margin:12px 0 2px;padding:8px 0;border-top:1px solid #D4C9B8;border-bottom:1px solid #D4C9B8">
 <div>
 <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Nr. contract</div>
 <div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numarContract}</div>
@@ -973,10 +1011,6 @@ function buildContractPJ(data){
 <div>
 <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Data</div>
 <div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.dataContractFmt}</div>
-</div>
-<div>
-<div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Ofertă / comandă</div>
-<div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numarContract} / ${data.dataContractFmt}</div>
 </div>
 <div>
 <div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Locul montajului</div>
@@ -992,7 +1026,7 @@ function buildContractPJ(data){
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">1.3.</span> Furnizorul și Clientul sunt denumiți împreună «Părțile».</p>
 <h2 style="margin:9px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">02</span>Obiectul contractului</h2>
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">2.1.</span> Furnizorul se obligă să furnizeze și, dacă este inclus în ofertă, să monteze produsele comandate de Client: perdele, draperii, șine, galerii, rulouri interioare și/sau sisteme de acționare manuală ori electrică.</p>
-<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">2.2.</span> Produsele, materialele, nuanțele, dimensiunile, cantitățile, componentele și serviciile incluse sunt prevăzute în Oferta/Comanda nr. ${data.numarContract} din ${data.dataContractFmt}, care face parte integrantă din prezentul contract. Oferta confirmată prevalează în privința specificațiilor tehnice și comerciale ale comenzii.</p>
+<p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">2.2.</span> Produsele, materialele, nuanțele, dimensiunile, cantitățile, componentele și serviciile incluse sunt prevăzute în oferta/comanda confirmată de Client, care face parte integrantă din prezentul contract. Oferta confirmată prevalează în privința specificațiilor tehnice și comerciale ale comenzii.</p>
 <h2 style="margin:9px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">03</span>Confirmarea specificațiilor și modificările ulterioare</h2>
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">3.1.</span> Comanda este lansată după efectuarea măsurătorilor, confirmarea specificațiilor de către Client și încasarea avansului. Confirmarea poate fi exprimată prin semnarea contractului sau printr-un mesaj neechivoc transmis prin e-mail ori aplicația de mesagerie utilizată de Părți.</p>
 <p style="margin:0 0 3.4px;padding-left:2.2em;text-indent:-2.2em"><span style="color:#8A7A64;font-weight:600">3.2.</span> Clientul verifică, înainte de lansarea comenzii, materialul, nuanța, modelul, dimensiunile, tipul de prindere și modul de acționare. Orice modificare solicitată ulterior va fi aplicată numai dacă este încă posibilă și după acceptarea eventualului cost suplimentar și a termenului revizuit.</p>
@@ -2684,6 +2718,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
   const [termenLivrare,setTermenLivrare]=React.useState("");
   const [tipZile,setTipZile]=React.useState("lucrătoare");
   const [avans,setAvans]=React.useState("");
+  const [avansManual,setAvansManual]=React.useState(false);
   const [scadenta,setScadenta]=React.useState("cu 1 zi înainte de livrare");
   const [scadentaCustom,setScadentaCustom]=React.useState("");
   const [email,setEmail]=React.useState("");
@@ -2697,6 +2732,12 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
   const [pdfLoading,setPdfLoading]=React.useState(false);
 
   React.useEffect(()=>{ if(!loculMontaj && client.adresa) setLoculMontaj(client.adresa); },[client.adresa]);
+  React.useEffect(()=>{
+    if(avansManual) return;
+    const val=Number(valoare);
+    if(val>0) setAvans(String(Math.round(val*0.5)));
+    else setAvans("");
+  },[valoare, avansManual]);
 
   const incarcaPdfContract=async(file)=>{
     if(!file) return;
@@ -2734,7 +2775,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
     }
     return {
       numarContract, dataContractFmt,
-      loculMontaj: loculMontaj.trim()||"—",
+      loculMontaj: toTitleCaseRo(loculMontaj.trim())||"—",
       valoare: valoare.trim(), tva, termenLivrare: termenLivrare.trim(), tipZile,
       numeClient: toTitleCaseRo(numeClient), numeClientMare: numeClient.trim().toUpperCase(), identificare,
       avans: avans.trim()||"0", diferenta: String(Math.max(val-av,0)),
@@ -2772,9 +2813,10 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
     if(!termenLivrare.trim()){ alert("Completează termenul de livrare (în zile)."); return; }
     const numarContract = `${contractCounter}/${new Date().getFullYear()}`;
     const dataContractFmt = fmtD(tday());
-    const data = buildData(numarContract, dataContractFmt);
+    const contractId = gid();
+    const data = {...buildData(numarContract, dataContractFmt), clientId: client.id, contractId};
     const html = tip==="PF" ? buildContractPF(data) : buildContractPJ(data);
-    const contract = {id:gid(), tip, numarContract, dataContract:tday(), numeClient:numeClient.trim(),
+    const contract = {id:contractId, tip, numarContract, dataContract:tday(), numeClient:numeClient.trim(),
       valoare:valoare.trim(), tva, termenLivrare:termenLivrare.trim(), tipZile, loculMontaj:loculMontaj.trim(),
       avans:avans.trim(), scadenta:(scadenta==="altă variantă"?(scadentaCustom.trim()||"altă variantă agreată cu Clientul"):scadenta), email:email.trim(), ciSeria:ciSeria.trim(), ciNumar:ciNumar.trim(),
       cui:cui.trim(), regCom:regCom.trim(), iban:iban.trim(), reprezentant:reprezentant.trim(),
@@ -2783,10 +2825,11 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
     setContractCounter(p=>p+1);
     vizualizeaza(html);
     setNumeClient(""); setValoare(""); setTermenLivrare(""); setAvans(""); setEmail("");
-    setCiSeria(""); setCiNumar(""); setCui(""); setRegCom(""); setIban(""); setReprezentant(""); setScadentaCustom("");
+    setCiSeria(""); setCiNumar(""); setCui(""); setRegCom(""); setIban(""); setReprezentant(""); setScadentaCustom(""); setAvansManual(false);
   };
 
   const htmlFor=(contract)=>{
+    if(contract.editedHtml) return contract.editedHtml;
     const val=Number(contract.valoare)||0, av=Number(contract.avans)||0;
     let identificare="";
     if(contract.tip==="PF"){
@@ -2807,11 +2850,11 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
     }
     const data = {
       numarContract: contract.numarContract, dataContractFmt: fmtD(contract.dataContract),
-      loculMontaj: contract.loculMontaj||"—", valoare: contract.valoare, tva: contract.tva||"neinclus",
+      loculMontaj: toTitleCaseRo(contract.loculMontaj)||"—", valoare: contract.valoare, tva: contract.tva||"neinclus",
       termenLivrare: contract.termenLivrare, tipZile: contract.tipZile||"lucrătoare",
       numeClient: toTitleCaseRo(contract.numeClient), numeClientMare: (contract.numeClient||"").toUpperCase(), identificare,
       avans: contract.avans||"0", diferenta: String(Math.max(val-av,0)), scadenta: contract.scadenta||"cu 1 zi înainte de livrare",
-      garantieLuni: contract.garantieLuni||"24",
+      garantieLuni: contract.garantieLuni||"24", clientId: client.id, contractId: contract.id,
     };
     return contract.tip==="PF" ? buildContractPF(data) : buildContractPJ(data);
   };
@@ -2875,8 +2918,9 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
         <div><label style={{...lblStyle,fontWeight:700,color:C.text}}>Valoare contract (lei)</label>
           <input value={valoare} onChange={e=>setValoare(e.target.value)} placeholder="ex: 4500" style={{...selStyle,fontWeight:700,fontSize:15}}/>
         </div>
-        <div><label style={{...lblStyle,fontWeight:700,color:C.text}}>Avans (lei)</label>
-          <input value={avans} onChange={e=>setAvans(e.target.value)} placeholder="ex: 2000" style={{...selStyle,fontWeight:700,fontSize:15}}/>
+        <div><label style={{...lblStyle,fontWeight:700,color:C.text}}>Avans (lei) {!avansManual&&<span style={{fontWeight:400,textTransform:"none",color:C.textMuted}}>— sugerat 50%</span>}</label>
+          <input value={avans} onChange={e=>{setAvans(e.target.value);setAvansManual(true);}} placeholder="ex: 2000" style={{...selStyle,fontWeight:700,fontSize:15}}/>
+          {avansManual&&<button type="button" onClick={()=>setAvansManual(false)} style={{fontSize:10,color:C.accent,background:"none",border:"none",cursor:"pointer",padding:"3px 0",textDecoration:"underline"}}>↺ revino la 50% automat</button>}
         </div>
         <div><label style={{...lblStyle,fontWeight:700,color:C.text}}>Termen livrare (zile)</label>
           <input value={termenLivrare} onChange={e=>setTermenLivrare(e.target.value)} placeholder="ex: 21" style={{...selStyle,fontWeight:700,fontSize:15}}/>
@@ -2891,7 +2935,7 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
           <div key={contract.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:C.bg,marginBottom:4}}>
             <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:90}}>{contract.numarContract}</span>
             <span style={{fontSize:11,color:C.textMuted,minWidth:36}}>{contract.tip}</span>
-            <span style={{fontSize:12,color:C.textSub,flex:1}}>{contract.numeClient} · {contract.valoare} lei · {fmtD(contract.dataContract)}</span>
+            <span style={{fontSize:12,color:C.textSub,flex:1}}>{contract.numeClient} · {contract.valoare} lei · {fmtD(contract.dataContract)}{contract.editedHtml?" · ✏️ editat manual":""}</span>
             <button onClick={()=>vizualizeaza(htmlFor(contract))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
             <button onClick={()=>printeaza(htmlFor(contract))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
             <button onClick={()=>descarca(htmlFor(contract), contract.numarContract)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
@@ -5024,6 +5068,15 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CMK,camereLista);},[camereLista,loaded]);
   useEffect(()=>{if(loaded) sbSave(CTK,contractCounter);},[contractCounter,loaded]);
   useEffect(()=>{if(loaded) sbSave(PVK,pvCounter);},[pvCounter,loaded]);
+  useEffect(()=>{
+    const onMsg=(e)=>{
+      const d=e.data;
+      if(!d || d.type!=="kreativo-save-contract") return;
+      setClients(p=>p.map(c=>c.id!==d.clientId?c:{...c,contracte:(c.contracte||[]).map(x=>x.id!==d.contractId?x:{...x,editedHtml:d.html})}));
+    };
+    window.addEventListener("message", onMsg);
+    return ()=>window.removeEventListener("message", onMsg);
+  },[]);
   useEffect(()=>{if(loaded) sbSave(AK,admin);},[admin,loaded]);
   useEffect(()=>{if(loaded) sbSave(PK,perdele);},[perdele,loaded]);
   useEffect(()=>{if(loaded) sbSave(MIK,mit);},[mit,loaded]);
