@@ -76,6 +76,7 @@ const CMK = "kreativo_camere_lista_v1";
 const CTK = "kreativo_contract_counter_v1";
 const PVK = "kreativo_pv_counter_v1";
 const MTK = "kreativo_catalog_materiale_v1";
+const OFK2 = "kreativo_oferta_counter_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -1221,6 +1222,112 @@ function buildProcesVerbal(data){
 <div style="display:flex;justify-content:space-between;gap:24px;border-top:1px solid #D4C9B8;padding-top:6px;margin-top:14px;font:400 9px/1.3 'Source Sans 3',Calibri,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#9A8C76">
   <span>Proces verbal de predare-primire · Kreativo Studio</span>
   <span>CUI RO17633996 · J08/1360/2005</span>
+</div>
+</div>
+</body>
+</html>`;
+}
+
+// ============ OFERTĂ DE PREȚ ============
+function buildOferta(data){
+  const LOGO_URI = CONTRACT_LOGO_URI;
+  return `<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<title>Ofertă ${data.numar}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0.55in; }
+  html,body { margin:0; padding:0; background:#F2EFE9; }
+  .sheet { max-width: 7.5in; margin: 0 auto; background:#F2EFE9; }
+  h2 { break-after: avoid-page; page-break-after: avoid; break-inside: avoid; page-break-inside: avoid; }
+  h2 + div { break-before: avoid-page; page-break-before: avoid; }
+  @media print { .notaEditare { display:none !important; } }
+</style>
+</head>
+<body>
+<div class="sheet">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;border-bottom:1px solid #D4C9B8;padding-bottom:7px;font:400 .72em/1.4 'Source Sans 3',Calibri,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8A7A64">
+  <span style="display:block;font-size:9.6px;letter-spacing:.14em">S.C. 3P Design S.R.L. · Brașov</span>
+  <span style="display:block;font-size:9.6px;letter-spacing:.14em">kreativobv@gmail.com</span>
+</div>
+<div class="notaEditare" style="margin:14px 0 0;padding:9px 14px;background:#EFE6D0;border:1px dashed #A99C86;font:600 11px/1.4 'Source Sans 3',Calibri,sans-serif;color:#6E6151;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+<span>✏️ Poți edita direct orice text din ofertă — dă click oriunde în text și scrie. Apasă „Salvează" ca editarea să rămână și în aplicație, sau „Printează" pentru PDF pe loc. Această notă nu apare la printare.</span>
+<span style="flex:none;display:flex;gap:8px">
+<button onclick="kreativoSalveazaEditare()" style="font:700 12px/1 'Source Sans 3',Calibri,sans-serif;padding:10px 16px;background:#A0845C;color:#fff;border:none;cursor:pointer;white-space:nowrap">💾 Salvează în aplicație</button>
+<button onclick="window.print()" style="font:700 12px/1 'Source Sans 3',Calibri,sans-serif;padding:10px 16px;background:#5C6B65;color:#fff;border:none;cursor:pointer;white-space:nowrap">🖨 Printează</button>
+</span>
+</div>
+<script>
+window.__kreativoMeta = {clientId:"${data.clientId||''}", contractId:"${data.ofertaId||''}"};
+function kreativoSalveazaEditare(){
+  if(!window.opener || !window.__kreativoMeta.clientId || !window.__kreativoMeta.contractId){
+    alert("Nu pot salva în aplicație — deschide oferta din nou din Kreativo (nu dintr-o filă redeschisă separat) și încearcă din nou.");
+    return;
+  }
+  const notite = document.querySelectorAll(".notaEditare");
+  notite.forEach(n=>n.style.display="none");
+  const htmlFull = "<!DOCTYPE html>" + document.documentElement.outerHTML;
+  notite.forEach(n=>n.style.display="");
+  window.opener.postMessage({type:"kreativo-save-oferta", clientId:window.__kreativoMeta.clientId, ofertaId:window.__kreativoMeta.contractId, html:htmlFull}, "*");
+  alert("Salvat! Data viitoare când deschizi această ofertă din aplicație, va apărea cu editarea făcută.");
+}
+<\/script>
+<div contenteditable="true" style="font:400 13px/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
+
+<div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
+<div style="flex:1;min-width:0">
+<h1 style="margin:0;font:400 2.5em/1.12 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:-.005em;color:#2A2118;text-wrap:balance">Ofertă de preț</h1>
+<div style="margin-top:8px;font:400 1.05em/1.3 'Source Serif 4',Cambria,Georgia,serif;font-style:italic;color:#4A3F31">perdele, draperii, șine și sisteme de umbrire</div>
+</div>
+<img alt="Kreativo Studio" src="${LOGO_URI}" style="height:42px;width:auto;flex:none;margin-top:2px"/>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0 22px;margin:12px 0 2px;padding:8px 0;border-top:1px solid #D4C9B8;border-bottom:1px solid #D4C9B8">
+<div>
+<div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Nr. ofertă</div>
+<div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numar}</div>
+</div>
+<div>
+<div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Data</div>
+<div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.dataFmt}</div>
+</div>
+<div>
+<div style="font:400 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:5px">Client</div>
+<div style="font:400 1.14em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.numeClient}</div>
+</div>
+</div>
+
+${data.camereHtml}
+
+<div style="display:flex;justify-content:flex-end;margin:18px 0 0;padding-top:10px;border-top:2px solid #A0845C">
+<div style="text-align:right">
+<div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:4px">Total ofertă</div>
+<div style="font:600 1.7em/1 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.totalGeneral} lei</div>
+</div>
+</div>
+
+<p style="margin:16px 0 0;font-size:.92em;color:#4A3F31">Prețurile includ TVA. Oferta este orientativă și devine fermă după confirmarea măsurătorilor la fața locului. Valabilitate ofertă: 30 de zile de la data emiterii.</p>
+
+<div style="break-inside:avoid;margin:18px 0 0;padding-top:9px;border-top:1px solid #D4C9B8">
+<div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#5C6B65;margin-bottom:11px">Confirmare client</div>
+<p style="margin:0 0 10px">Prin semnătura de mai jos, Clientul confirmă acceptarea integrală a prezentei oferte, în forma și la valoarea de mai sus.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 34px;margin-top:20px">
+<div>
+<div style="border-bottom:1px solid #A99C86;height:40px"></div>
+<div style="display:flex;justify-content:space-between;gap:16px;margin-top:5px;font-size:.85em;color:#6E6151">
+<span>Semnătură Client</span><span>Data:</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;gap:24px;border-top:1px solid #D4C9B8;padding-top:6px;margin-top:14px;font:400 9px/1.3 'Source Sans 3',Calibri,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#9A8C76">
+<span>Ofertă de preț · Kreativo Studio</span>
+<span>CUI RO17633996 · J08/1360/2005</span>
 </div>
 </div>
 </body>
@@ -3143,6 +3250,202 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
   </div>;
 }
 
+function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
+  const [numeClient,setNumeClient]=React.useState(client.name||"");
+  const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:""}]}]);
+  const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null
+  const [pickerCauta,setPickerCauta]=React.useState("");
+
+  const catalogMap=React.useMemo(()=>{
+    const m={};
+    catalogMateriale.forEach(x=>{ m[x.design.toLowerCase()]=x; });
+    return m;
+  },[catalogMateriale]);
+
+  const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:""}]}]);
+  const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
+  const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
+  const addProdus=(camId)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:[...c.produse,{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:""}]}));
+  const delProdus=(camId,prodId)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.length<=1?c.produse:c.produse.filter(pr=>pr.id!==prodId)}));
+  const updProdus=(camId,prodId,field,val)=>setCamere(p=>p.map(c=>{
+    if(c.id!==camId) return c;
+    return {...c,produse:c.produse.map(pr=>{
+      if(pr.id!==prodId) return pr;
+      const upd={...pr,[field]:val};
+      if(field==="material"){
+        const match=catalogMap[val.trim().toLowerCase()];
+        if(match) upd.pretUnitar=String(match.pretLei);
+      }
+      return upd;
+    })};
+  }));
+
+  const alegeMaterial=(camId,prodId,m)=>{
+    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.design,pretUnitar:String(m.pretLei)})}));
+    setPickerFor(null); setPickerCauta("");
+  };
+  const valoareLinie=(pr)=>(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
+  const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
+
+  const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
+    const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>
+      `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${pr.tip||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareLinie(pr).toFixed(0)} lei</td></tr>`
+    ).join("");
+    const numar=String(idx+1).padStart(2,"0");
+    return `<h2 style="margin:14px 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">${numar}</span>${c.numeCamera||"Cameră"}</h2>
+    <div>
+    <table style="width:100%;border-collapse:collapse;margin:6px 0 4px">
+      <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64">
+        <td style="padding:5px 8px 5px 0;border-bottom:1px solid #D4C9B8">Tip</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Material</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Culoare</td>
+        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D4C9B8">Cantitate</td>
+        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D4C9B8">Preț unitar</td>
+        <td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D4C9B8">Valoare</td>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div style="display:flex;justify-content:flex-end;font-size:.92em;color:#4A3F31;padding-top:2px">Subtotal ${c.numeCamera||"cameră"}: <b style="margin-left:6px">${subtotalCamera(c).toFixed(0)} lei</b></div>
+    </div>`;
+  }).join("");
+
+  const vizualizeaza=(html)=>{
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    window.open(url,"_blank");
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  };
+  const printeaza=(html)=>{
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    const w=window.open(url,"_blank");
+    if(w){ w.addEventListener("load",()=>{ setTimeout(()=>w.print(),300); }); }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  };
+  const descarca=(html,numar)=>{
+    const blob=new Blob([html],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=`Oferta_${numar.replace("/","-")}_${(numeClient||client.name).replace(/[^a-zA-Z0-9]+/g,"_")}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  };
+  const htmlFor=(oferta)=>{
+    if(oferta.editedHtml) return oferta.editedHtml;
+    return buildOferta({
+      numar:oferta.numar, dataFmt:fmtD(oferta.data), numeClient:oferta.numeClient,
+      camereHtml: camereHtmlBuild(oferta.camere), totalGeneral: oferta.camere.reduce((s,c)=>s+c.produse.reduce((s2,pr)=>s2+(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0),0),0).toFixed(0),
+      clientId: client.id, ofertaId: oferta.id,
+    });
+  };
+
+  const genereaza=()=>{
+    if(!numeClient.trim()){ alert("Completează numele clientului."); return; }
+    const camereValide=camere.filter(c=>c.numeCamera.trim() && c.produse.some(pr=>pr.material.trim()));
+    if(!camereValide.length){ alert("Adaugă cel puțin o cameră cu un produs (material completat)."); return; }
+    const ofertaId=gid();
+    const numar=`${ofertaCounter}/${new Date().getFullYear()}`;
+    const dataFmt=fmtD(tday());
+    const camereClean=camereValide.map(c=>({...c, produse:c.produse.filter(pr=>pr.material.trim())}));
+    const html=buildOferta({numar, dataFmt, numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId});
+    const oferta={id:ofertaId, numar, data:tday(), numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, dataCreat:tday()};
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:[...(c.oferte||[]),oferta]}));
+    setOfertaCounter(p=>p+1);
+    vizualizeaza(html);
+    setCamere([{id:gid(), numeCamera:"", produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:""}]}]);
+  };
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  return <div>
+    <datalist id="oferta-camere-dl">
+      {(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}
+    </datalist>
+
+    <div style={{marginBottom:14}}>
+      <label style={lblStyle}>Nume client (pe ofertă)</label>
+      <input value={numeClient} onChange={e=>setNumeClient(e.target.value)} style={selStyle}/>
+    </div>
+
+    {camere.map((c,ci2)=>
+      <div key={c.id} style={{border:`1px solid ${C.border}`,padding:12,marginBottom:10,background:C.surface}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+          <input list="oferta-camere-dl" value={c.numeCamera} onChange={e=>updCameraName(c.id,e.target.value)} placeholder="Cameră (ex: Living)" style={{...selStyle,fontWeight:600,flex:1}}/>
+          {camere.length>1&&<button onClick={()=>delCamera(c.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+        </div>
+        {c.produse.map(pr=>
+          <div key={pr.id}>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr auto 110px 80px 90px auto",gap:8,marginBottom:6,alignItems:"center"}}>
+            <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="perdea">Perdea</option>
+              <option value="draperie">Draperie</option>
+              <option value="stor">Stor</option>
+              <option value="șină">Șină</option>
+              <option value="altele">Altele</option>
+            </select>
+            <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Material" style={selStyle}/>
+            <button type="button" onClick={()=>{const open=pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id; setPickerFor(open?null:{camId:c.id,prodId:pr.id}); setPickerCauta("");}} style={{fontSize:12,fontWeight:600,padding:"7px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>📋 Catalog</button>
+            <input value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} placeholder="Culoare" style={selStyle}/>
+            <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="m" style={selStyle}/>
+            <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
+            {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+          </div>
+          {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:10,marginBottom:10}}>
+            <input autoFocus value={pickerCauta} onChange={e=>setPickerCauta(e.target.value)} placeholder="🔍 caută material..." style={{...selStyle,marginBottom:8}}/>
+            <div style={{maxHeight:220,overflowY:"auto",border:`1px solid ${C.border}`}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
+                  <th style={{padding:"6px 10px",textAlign:"left"}}>Design</th>
+                  <th style={{padding:"6px 10px",textAlign:"left"}}>Sursă</th>
+                  <th style={{padding:"6px 10px",textAlign:"right"}}>Preț</th>
+                </tr></thead>
+                <tbody>
+                  {catalogMateriale.filter(m=>!pickerCauta.trim()||m.design.toLowerCase().includes(pickerCauta.toLowerCase())||m.sursa.toLowerCase().includes(pickerCauta.toLowerCase())).slice(0,200).map(m=>
+                    <tr key={m.id} onClick={()=>alegeMaterial(c.id,pr.id,m)} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.design}</td>
+                      <td style={{padding:"7px 10px",color:C.textMuted}}>{m.sursa}</td>
+                      <td style={{padding:"7px 10px",textAlign:"right",color:C.text}}>{m.pretLei} lei</td>
+                    </tr>
+                  )}
+                  {catalogMateriale.length===0&&<tr><td colSpan={3} style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Catalogul de materiale e gol — adaugă întâi materiale în tab-ul „Catalog materiale".</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>}
+          </div>
+        )}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
+          <button onClick={()=>addProdus(c.id)} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>+ adaugă produs</button>
+          <span style={{fontSize:12,color:C.textMuted}}>Subtotal: <b style={{color:C.text}}>{subtotalCamera(c).toFixed(0)} lei</b></span>
+        </div>
+      </div>
+    )}
+    <button onClick={addCamera} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:16}}>+ adaugă cameră</button>
+
+    <div style={{display:"flex",justifyContent:"flex-end",padding:"10px 14px",background:C.accentLight,border:`1px solid ${C.accent}`,marginBottom:14}}>
+      <span style={{fontSize:14,fontWeight:700,color:C.text}}>Total ofertă: {totalGeneral.toFixed(0)} lei</span>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. ofertă următoare: <b>{ofertaCounter}/{new Date().getFullYear()}</b></div>
+    <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>📋 Generează și vizualizează oferta</button>
+
+    {(client.oferte||[]).length>0&&<div style={{marginTop:16}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Oferte generate</div>
+      {(client.oferte||[]).slice().reverse().map(oferta=>
+        <div key={oferta.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:C.bg,marginBottom:4,flexWrap:"wrap"}}>
+          <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:80}}>{oferta.numar}</span>
+          <span style={{fontSize:12,color:C.textSub,flex:1}}>{oferta.numeClient} · {oferta.total} lei · {fmtD(oferta.data)}{oferta.editedHtml?" · ✏️ editat manual":""}</span>
+          <button onClick={()=>vizualizeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>👁 Vizualizează</button>
+          <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>🖨 Printează</button>
+          <button onClick={()=>descarca(htmlFor(oferta),oferta.numar)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
+          <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.numar}? Nu poate fi recuperată.`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).filter(x=>x.id!==oferta.id)}));}} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"5px 6px"}}>🗑</button>
+        </div>
+      )}
+    </div>}
+  </div>;
+}
+
 function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounter}){
   const [numeClient,setNumeClient]=React.useState("");
   const [facturi,setFacturi]=React.useState([{serie:"",data:"",denumire:""}]);
@@ -4119,7 +4422,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,ofertaCounter,setOfertaCounter}){
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
@@ -4203,7 +4506,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <input type="time" lang="ro" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
         </div>
         <div style={{display:"flex",gap:4,marginBottom:0,borderBottom:`1px solid ${C.border}`}}>
-          {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`📋 Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`]].map(([id,label])=>{
+          {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`📋 Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`],["oferta",`💰 Ofertă${(client.oferte||[]).length?" ("+(client.oferte||[]).length+")":""}`]].map(([id,label])=>{
             const active=(clientDetailTab[client.id]||"contact")===id;
             return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
           })}
@@ -4223,6 +4526,9 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         </div>}
         {(clientDetailTab[client.id]||"contact")==="pv"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
           <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
+        </div>}
+        {(clientDetailTab[client.id]||"contact")==="oferta"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
+          <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
         </div>}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Poze și măsurători</div>
@@ -5052,6 +5358,7 @@ function App() {
   const [contractCounter,setContractCounter]=useState(1010);
   const [pvCounter,setPvCounter]=useState(1);
   const [catalogMateriale,setCatalogMateriale]=useState([]);
+  const [ofertaCounter,setOfertaCounter]=useState(1);
   const [log,setLog]=useState({});
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
@@ -5160,14 +5467,15 @@ function App() {
           const ctc=await sbGet(CTK); if(ctc){setContractCounter(ctc);gotAnyData=true;}
           const pvc=await sbGet(PVK); if(pvc){setPvCounter(pvc);gotAnyData=true;}
           const mtc=await sbGet(MTK); if(mtc){setCatalogMateriale(mtc);gotAnyData=true;}
+          const ofc=await sbGet(OFK2); if(ofc){setOfertaCounter(ofc);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -5196,11 +5504,16 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CTK,contractCounter);},[contractCounter,loaded]);
   useEffect(()=>{if(loaded) sbSave(PVK,pvCounter);},[pvCounter,loaded]);
   useEffect(()=>{if(loaded) sbSave(MTK,catalogMateriale);},[catalogMateriale,loaded]);
+  useEffect(()=>{if(loaded) sbSave(OFK2,ofertaCounter);},[ofertaCounter,loaded]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
-      if(!d || d.type!=="kreativo-save-contract") return;
-      setClients(p=>p.map(c=>c.id!==d.clientId?c:{...c,contracte:(c.contracte||[]).map(x=>x.id!==d.contractId?x:{...x,editedHtml:d.html})}));
+      if(!d) return;
+      if(d.type==="kreativo-save-contract"){
+        setClients(p=>p.map(c=>c.id!==d.clientId?c:{...c,contracte:(c.contracte||[]).map(x=>x.id!==d.contractId?x:{...x,editedHtml:d.html})}));
+      } else if(d.type==="kreativo-save-oferta"){
+        setClients(p=>p.map(c=>c.id!==d.clientId?c:{...c,oferte:(c.oferte||[]).map(x=>x.id!==d.ofertaId?x:{...x,editedHtml:d.html})}));
+      }
     };
     window.addEventListener("message", onMsg);
     return ()=>window.removeEventListener("message", onMsg);
@@ -5371,7 +5684,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -5397,7 +5710,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter
         }
       };
       const writable=await handle.createWritable();
@@ -5456,6 +5769,7 @@ function App() {
         if(d[CTK]) setContractCounter(d[CTK]);
         if(d[PVK]) setPvCounter(d[PVK]);
         if(d[MTK]) setCatalogMateriale(d[MTK]);
+        if(d[OFK2]) setOfertaCounter(d[OFK2]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -5578,7 +5892,7 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>📐 Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>📏 Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
@@ -6129,7 +6443,7 @@ function App() {
               </label>}
             </div>
             <div style={{display:"flex",gap:4,borderBottom:`1px solid ${C.border}`}}>
-              {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`📋 Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`]].map(([id,label])=>{
+              {[["contact","📇 Contact"],["contract",`📄 Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`📋 Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`],["oferta",`💰 Ofertă${(client.oferte||[]).length?" ("+(client.oferte||[]).length+")":""}`]].map(([id,label])=>{
                 const active=(clientDetailTab[client.id]||"contact")===id;
                 return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
               })}
@@ -6150,6 +6464,9 @@ function App() {
             </div>}
             {(clientDetailTab[client.id]||"contact")==="pv"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
               <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
+            </div>}
+            {(clientDetailTab[client.id]||"contact")==="oferta"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
+              <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
             </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
@@ -6205,7 +6522,7 @@ function App() {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter}/>}
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>}
     </div>}
 
     {tab==="catalogmateriale"&&<TabCatalogMateriale C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale}/>}
