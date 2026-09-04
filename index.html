@@ -729,7 +729,7 @@ function buildRulouPrintHtml(cfg){
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
       <div style="line-height:1.9;">
-        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}<br/>Cantitate: ${cfg.qty}
+        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}${cfg.input.btbManual?"<br/>Bottombar: "+cfg.input.btb+" (manual, culoare: "+(cfg.input.btbManualColor||"nespecificată")+")":""}<br/>Cantitate: ${cfg.qty}
       </div>
     </div>
     <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Înălțime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
@@ -1055,10 +1055,13 @@ function getRomanPartsList(articleCode, calcResult){
 }
 
 function validateCoulisseInput(input){
-  const {width, railSegments, packKey} = input;
+  const {width, railSegments, packKey, colourKey} = input;
   const pack = PACK_SIDES[packKey];
   const rs = Number(railSegments);
   const errors=[], warnings=[];
+  if(!colourKey){
+    errors.push("Alege o culoare pentru șină (White sau Black) — obligatoriu.");
+  }
   if(width<400){
     errors.push(`Lățimea (${width}mm) e sub minimul admis de sistem (400mm).`);
   }
@@ -1667,7 +1670,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
   const [motorKey,setMotorKey]=React.useState("CM-57");
   const [gliderKey,setGliderKey]=React.useState("Pleat");
   const [packKey,setPackKey]=React.useState("Right");
-  const [colourKey,setColourKey]=React.useState("White");
+  const [colourKey,setColourKey]=React.useState("");
   const [railSegments,setRailSegments]=React.useState(1);
   const [quantity,setQuantity]=React.useState(1);
   const [options,setOptions]=React.useState([]);
@@ -1680,10 +1683,11 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
 
   let result=null, parts=[], error=null;
   try{
+    if(!colourKey) throw new Error("Alege o culoare.");
     result=coulisseCalc({width:Number(width),height:Number(height),motorKey,gliderKey,packKey,colourKey,railSegments:Number(railSegments),options});
     parts=getPartsList(result.articleCode,result,Number(quantity)||1);
-  }catch(e){ error="Verifică valorile introduse."; }
-  const {errors:validErrors,warnings:validWarnings}=validateCoulisseInput({width:Number(width),height:Number(height),railSegments:Number(railSegments),packKey});
+  }catch(e){ error=colourKey?"Verifică valorile introduse.":null; }
+  const {errors:validErrors,warnings:validWarnings}=validateCoulisseInput({width:Number(width),height:Number(height),railSegments:Number(railSegments),packKey,colourKey});
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
@@ -1777,8 +1781,9 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
           {Object.keys(PACK_SIDES).map(p=><option key={p} value={p}>{p}</option>)}
         </select>
       </div>
-      <div><label style={lblStyle}>Culoare</label>
+      <div><label style={lblStyle}>Culoare (obligatoriu)</label>
         <select value={colourKey} onChange={e=>setColourKey(e.target.value)} style={selStyle}>
+          <option value="">— alege culoare —</option>
           {Object.keys(COLOURS).map(c=><option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -2526,50 +2531,64 @@ function ListaTaiereProfile({clients,C}){
   (clients||[]).forEach(client=>{
     (client.configuratiiSina||[]).forEach(cfg=>{
       if(cfg.produs) return;
-      rows.push({tip:"Șină Coulisse", lungime:cfg.result.rail, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
+      rows.push({categorie:"Șină Coulisse", tip:`Șină Coulisse ${cfg.input.colourKey||"?"}`, lungime:cfg.result.rail, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
         detalii:`${cfg.input.railSegments||1} segment(e)`, cantitate:cfg.input.quantity||1,
         client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-r"});
     });
     (client.configuratiiRoman||[]).forEach(cfg=>{
       if(cfg.produs) return;
-      rows.push({tip:"Șină stor roman", lungime:cfg.result.headrail, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
+      rows.push({categorie:"Stor roman", tip:"Șină stor roman", lungime:cfg.result.headrail, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
         detalii:cfg.input.mechKey, cantitate:1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-rh"});
-      rows.push({tip:cfg.result.tiltrod2?"Tub/tijă stor roman (1)":"Tub/tijă stor roman", lungime:cfg.result.tiltrod1,
-        gabaritL:cfg.input.width, gabaritH:cfg.input.height, detalii:cfg.input.mechKey, cantitate:1,
+      rows.push({categorie:"Stor roman", tip:"Tub/tijă stor roman", lungime:cfg.result.tiltrod1,
+        gabaritL:cfg.input.width, gabaritH:cfg.input.height, detalii:cfg.result.tiltrod2?(cfg.input.mechKey+" · bucata 1 din 2 (tub tăiat în 2)"):cfg.input.mechKey, cantitate:1,
         client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-rt1"});
-      if(cfg.result.tiltrod2) rows.push({tip:"Tub/tijă stor roman (2)", lungime:cfg.result.tiltrod2,
-        gabaritL:cfg.input.width, gabaritH:cfg.input.height, detalii:cfg.input.mechKey, cantitate:1,
+      if(cfg.result.tiltrod2) rows.push({categorie:"Stor roman", tip:"Tub/tijă stor roman", lungime:cfg.result.tiltrod2,
+        gabaritL:cfg.input.width, gabaritH:cfg.input.height, detalii:cfg.input.mechKey+" · bucata 2 din 2 (tub tăiat în 2)", cantitate:1,
         client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-rt2"});
     });
     (client.configuratiiRulou||[]).forEach(cfg=>{
       if(cfg.produs) return;
-      rows.push({tip:"Tub rulou", lungime:cfg.result.tubeL, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
+      rows.push({categorie:"Rulou", tip:"Tub rulou", lungime:cfg.result.tubeL, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
         detalii:cfg.input.tube, cantitate:cfg.qty||1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-tu"});
+      if(cfg.input.btbManual && cfg.input.btb){
+        rows.push({categorie:"Bottombar (contragreutate manuală)", tip:`Bottombar ${cfg.input.btbManualColor||"culoare nespecificată"} — ${cfg.input.btb}`,
+          lungime:cfg.result.btbL, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
+          detalii:"rulou", cantitate:cfg.qty||1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-btb"});
+      }
     });
     (client.configuratiiPanou||[]).forEach(cfg=>{
       if(cfg.produs) return; // șina/profilul e mereu Coulisse, indiferent de bifa material — dar dacă e produs, nu mai apare
       const segm=cfg.input.segments||1;
-      rows.push({tip:"Șină panou", lungime:cfg.result.cutHeadrail, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
-        detalii:`${cfg.input.system} · ${segm} segment(e)`, cantitate:(cfg.qty||1)*segm,
+      const trackInfo=PN_TRACK_INFO[cfg.input.tracks];
+      rows.push({categorie:"Panou", tip:`Șină panou ${cfg.input.tracks} canale (${trackInfo?trackInfo.headrailArt:"?"})`, lungime:cfg.result.cutHeadrail, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
+        detalii:`${cfg.input.system} · ${segm} segment(e) · ${cfg.result.panels} panouri`, cantitate:(cfg.qty||1)*segm,
         client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-ph"});
-      rows.push({tip:"Profil PVC panou", lungime:cfg.result.cutPVC, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
-        detalii:`${cfg.result.panels} panouri`, cantitate:(cfg.qty||1)*cfg.result.panels,
+      rows.push({categorie:"Panou", tip:"Profil PVC panou", lungime:cfg.result.cutPVC, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
+        detalii:`${cfg.input.tracks} canale · ${cfg.result.panels} panouri`, cantitate:(cfg.qty||1)*cfg.result.panels,
         client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-ppvc"});
     });
   });
+  const CATEGORII=["Șină Coulisse","Stor roman","Rulou","Bottombar (contragreutate manuală)","Panou"];
   const grupuri={};
-  rows.forEach(r=>{ (grupuri[r.tip]=grupuri[r.tip]||[]).push(r); });
-  const tipuri=Object.keys(grupuri).sort((a,b)=>a.localeCompare(b,"ro"));
+  rows.forEach(r=>{ (grupuri[r.tip]=grupuri[r.tip]||{categorie:r.categorie,items:[]}).items.push(r); });
+  const tipuri=Object.keys(grupuri).sort((a,b)=>{
+    const ca=CATEGORII.indexOf(grupuri[a].categorie), cb=CATEGORII.indexOf(grupuri[b].categorie);
+    if(ca!==cb) return ca-cb;
+    return a.localeCompare(b,"ro");
+  });
   const totalBuc=rows.reduce((s,r)=>s+Number(r.cantitate||1),0);
 
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>📏 Listă tăiere profile — șine, tuburi, tije nerealizate încă</div>
-    <div style={{fontSize:12,color:C.textMuted,marginBottom:16}}>{rows.length} bucăți de tăiat ({totalBuc} buc. total) · {tipuri.length} tipuri de profil · grupate pe tip, ca la fierăstrău să nu schimbi profilul de fiecare dată</div>
+    <div style={{fontSize:12,color:C.textMuted,marginBottom:16}}>{rows.length} bucăți de tăiat ({totalBuc} buc. total) · {tipuri.length} tipuri de profil · grupate pe categorie (șină/roman/rulou/panou) și apoi pe tip</div>
     {tipuri.length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nimic de tăiat — toate profilele salvate sunt deja marcate „produs".</div>}
-    {tipuri.map(tip=>{
-      const items=grupuri[tip].sort((a,b)=>a.client.localeCompare(b.client,"ro"));
+    {tipuri.map((tip,ti)=>{
+      const items=grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro"));
       const subtotalBuc=items.reduce((s,r)=>s+Number(r.cantitate||1),0);
-      return <div key={tip} style={{border:`1px solid ${C.border}`,marginBottom:14,background:C.surface}}>
+      const showCatHeader = ti===0 || grupuri[tipuri[ti-1]].categorie!==grupuri[tip].categorie;
+      return <React.Fragment key={tip}>
+        {showCatHeader&&<div style={{fontSize:14,fontWeight:700,color:C.accent,marginTop:ti===0?0:20,marginBottom:8,borderBottom:`2px solid ${C.accent}`,paddingBottom:4}}>{grupuri[tip].categorie}</div>}
+        <div style={{border:`1px solid ${C.border}`,marginBottom:14,background:C.surface}}>
         <div style={{padding:"10px 14px",background:C.accentLight,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontSize:13,fontWeight:600,color:C.text}}>{tip}</span>
           <span style={{fontSize:11,color:C.textMuted}}>{items.length} bucăți · {subtotalBuc} buc. total</span>
@@ -2596,7 +2615,8 @@ function ListaTaiereProfile({clients,C}){
             </tr>)}
           </tbody>
         </table>
-      </div>;
+        </div>
+      </React.Fragment>;
     })}
   </div>;
 }
@@ -2623,6 +2643,9 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
   const [fabricWeight,setFabricWeight]=React.useState(350);
   const [materialName,setMaterialName]=React.useState("");
   const [btb,setBtb]=React.useState("");
+  const [btbManual,setBtbManual]=React.useState(false);
+  const [btbManualName,setBtbManualName]=React.useState("");
+  const [btbManualColor,setBtbManualColor]=React.useState("");
   const [qty,setQty]=React.useState(1);
   const [clientId,setClientId]=React.useState("");
   const [camera,setCamera]=React.useState("");
@@ -2676,12 +2699,15 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
   const availBtb = codeSoFar ? rulouBottombarsAvailable(codeSoFar) : [];
   React.useEffect(()=>{ if(!availBtb.includes(btb)) setBtb(availBtb[0]||""); },[size,control,system,options.join(","),mechOptions.join(",")]);
 
-  const inp = {...btbCandidatesInput, btb};
+  const inp = {...btbCandidatesInput, btb: btbManual ? btbManualName.trim() : btb, btbManual, btbManualColor: btbManual?btbManualColor.trim():""};
   let result=null, parts=[], calcError=null;
   try{
     if(size&&control&&system&&color&&tube&&btb&&(control!=="A"||(chainType&&csdType))&&Number(width)>0&&Number(height)>0){
       result = rulouCalc(inp);
       parts = rulouPartsList(inp, result, Number(qty)||1);
+      if(btbManual && (!btbManualName.trim() || !btbManualColor.trim())){
+        result.errs = [...(result.errs||[]), "Completează denumirea ȘI culoarea bottombar-ului manual — obligatoriu."];
+      }
     }
   }catch(e){ calcError = "Verifică valorile introduse: "+e.message; }
 
@@ -2860,10 +2886,18 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
     </div>}
 
     <div style={{marginBottom:16}}>
-      <label style={lblStyle}>Bottombar</label>
-      <select value={btb} onChange={e=>setBtb(e.target.value)} style={selStyle}>
+      <label style={lblStyle}>Bottombar (contragreutate)</label>
+      <div style={{display:"flex",gap:8,marginBottom:8}}>
+        <button type="button" onClick={()=>setBtbManual(false)} style={{flex:1,fontSize:12,fontWeight:600,padding:"9px 8px",border:`1px solid ${!btbManual?C.accent:C.border}`,background:!btbManual?C.accentLight:C.surface,color:!btbManual?C.accent:C.textSub,cursor:"pointer"}}>Din lista Coulisse</button>
+        <button type="button" onClick={()=>setBtbManual(true)} style={{flex:1,fontSize:12,fontWeight:600,padding:"9px 8px",border:`1px solid ${btbManual?C.accent:C.border}`,background:btbManual?C.accentLight:C.surface,color:btbManual?C.accent:C.textSub,cursor:"pointer"}}>✏️ Manual (nume + culoare)</button>
+      </div>
+      {!btbManual&&<select value={btb} onChange={e=>setBtb(e.target.value)} style={selStyle}>
         {availBtb.map(b=><option key={b} value={b}>{b}</option>)}
-      </select>
+      </select>}
+      {btbManual&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
+        <input value={btbManualName} onChange={e=>setBtbManualName(e.target.value)} placeholder="Denumire bottombar" style={selStyle}/>
+        <input value={btbManualColor} onChange={e=>setBtbManualColor(e.target.value)} placeholder="Culoare (ex: alb, negru, gri antracit)" style={selStyle}/>
+      </div>}
     </div>
 
     {calcError&&<div style={{fontSize:13,color:C.text,padding:"10px 0"}}>{calcError}</div>}
@@ -2962,7 +2996,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
           ["Parte comandă",cfg.input.side==="Left"?"Stânga":"Dreapta"],
           ["Țesătură",cfg.input.fabricManual?(cfg.input.materialName||"material custom"):cfg.input.fabric],
           ...(cfg.input.fabricManual?[["Grosime",cfg.input.fabricThickness+" mm"],["Greutate",cfg.input.fabricWeight+" g/m²"]]:[]),
-          ["Bottombar",cfg.input.btb],
+          ["Bottombar",cfg.input.btbManual?`${cfg.input.btb} (manual, culoare: ${cfg.input.btbManualColor||"nespecificată"})`:cfg.input.btb],
           ["Opțiuni",(cfg.input.options||[]).length?cfg.input.options.join(", "):"—"],
           ["Accesorii",(cfg.input.mechOptions||[]).length?cfg.input.mechOptions.join(", "):"—"],
           ["Cantitate",cfg.qty+" buc."]].map(([l,v])=>
