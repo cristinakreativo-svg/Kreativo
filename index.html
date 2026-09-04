@@ -3430,6 +3430,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     if(!numeClient.trim()){ alert("Completează numele clientului."); return; }
     const camereValide=camere.filter(c=>c.numeCamera.trim() && c.produse.some(pr=>pr.material.trim()));
     if(!camereValide.length){ alert("Adaugă cel puțin o cameră cu un produs (material completat)."); return; }
+    for(const c of camereValide){
+      for(const pr of c.produse){
+        if(pr.material.trim() && !pr.culoare.trim()){
+          alert(`Lipsește codul de culoare la „${pr.material}" din camera „${c.numeCamera}". Completează-l înainte să generezi oferta — fără el nu vei ști exact ce nuanță ai comandat.`);
+          return;
+        }
+      }
+    }
     const camereClean=camereValide.map(c=>({...c, produse:c.produse.filter(pr=>pr.material.trim())}));
 
     if(editingId){
@@ -3508,7 +3516,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Material — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
-            <input value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} placeholder="Culoare" style={selStyle}/>
+            <input value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} placeholder="Cod culoare *" style={{...selStyle,border:pr.material.trim()&&!pr.culoare.trim()?`1px solid #B5504A`:selStyle.border}}/>
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="m" style={selStyle}/>
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
