@@ -3313,8 +3313,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
       const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${pr.tip||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
-      const rBanda=`<tr><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">↳ Bandă fronsare</td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.cantitate||0} m</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.pretBanda||0} lei</td><td style="padding:3px 0 3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
-      const rManopera=`<tr><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">↳ Manoperă</td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.cantitate||0} m</td><td style="padding:3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${pr.pretManopera||0} lei</td><td style="padding:3px 0 3px 8px;text-align:right;border-bottom:1px solid #E4DCCD;color:#6E6151;font-size:.94em">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
+      const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
+      const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
       const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${pr.tip}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
       return rMaterial+rBanda+rManopera+rTotal;
     }).join("");
@@ -3422,7 +3422,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",fontWeight:600,marginBottom:8}}>Materiale / produse pentru toată camera</div>
         {c.produse.map(pr=>
           <div key={pr.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:8,background:C.bg}}>
-          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center"}}>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginBottom:esteTextil(pr)?8:0}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
@@ -3436,14 +3436,24 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          {esteTextil(pr)&&<div style={{display:"flex",alignItems:"center",gap:14,marginTop:8,padding:"8px 10px",background:C.surface,flexWrap:"wrap"}}>
-            <span style={{fontSize:11,color:C.textMuted}}>↳ Bandă fronsare ({pr.cantitate||0} m ×</span>
-            <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={{...selStyle,width:60}}/>
-            <span style={{fontSize:11,color:C.textMuted}}>lei) = <b style={{color:C.textSub}}>{valoareBanda(pr).toFixed(0)} lei</b></span>
-            <span style={{fontSize:11,color:C.textMuted,marginLeft:10}}>↳ Manoperă ({pr.cantitate||0} m ×</span>
-            <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={{...selStyle,width:60}}/>
-            <span style={{fontSize:11,color:C.textMuted}}>lei) = <b style={{color:C.textSub}}>{valoareManopera(pr).toFixed(0)} lei</b></span>
-            <span style={{fontSize:12,fontWeight:700,color:C.text,marginLeft:"auto"}}>Total {pr.tip}: {valoareLinie(pr).toFixed(0)} lei</span>
+          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginBottom:8}}>
+            <span></span>
+            <input value="Bandă fronsare" disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <span></span>
+            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={selStyle}/>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareBanda(pr).toFixed(0)} lei</span>
+          </div>}
+          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginBottom:8}}>
+            <span></span>
+            <input value="Manoperă" disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <span></span>
+            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface}}/>
+            <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={selStyle}/>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareManopera(pr).toFixed(0)} lei</span>
+          </div>}
+          {esteTextil(pr)&&<div style={{display:"flex",justifyContent:"flex-end",paddingTop:6,borderTop:`1px solid ${C.border}`}}>
+            <span style={{fontSize:13,fontWeight:700,color:C.text}}>Total {pr.tip}: {valoareLinie(pr).toFixed(0)} lei</span>
           </div>}
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
             <div style={{maxHeight:220,overflowY:"auto"}}>
