@@ -2858,19 +2858,28 @@ function extrageDateFacturaPDF(file){
         for(const line of lines) line.items.sort((a,b)=>a.x-b.x);
         const rows=lines.map(l=>l.items.map(i=>i.str.trim()).filter(Boolean));
 
-        let serie="", dataFact="", produse=[];
+        let serie="", dataFact="", produse=[], cumparator="";
         let inTable=false;
         for(const row of rows){
           if(!row.length) continue;
           if(row[0]==="Serie" && row[1]) serie=row[1];
           if(row[0] && row[0].startsWith("Data (ziua") && row[1]) dataFact=row[1];
+          const ci=row.indexOf("Cumparator");
+          if(ci!==-1 && row.length>ci+1) cumparator=row.slice(ci+1).join(" ").trim();
           if(row.includes("crt.") || row.some(c=>c.includes("Denumirea produselor"))) { inTable=true; continue; }
           if(inTable){
             if(/^\d+$/.test(row[0])){
               const denumire=row[1]||"";
               const um=row[2]||"";
               const cant=row[3]||"";
-              if(denumire && denumire.trim().toLowerCase()!=="avans") produse.push(um&&cant?`${denumire} (${cant} ${um})`:denumire);
+              if(denumire && denumire.trim().toLowerCase()!=="avans"){
+                let cantFmt=cant;
+                if(cant){
+                  const num=parseFloat(cant.replace(/\./g,"").replace(",","."));
+                  if(!isNaN(num)) cantFmt=Number.isInteger(num)?String(num):num.toLocaleString("ro-RO",{maximumFractionDigits:3});
+                }
+                produse.push(um&&cant?`${denumire} — ${cantFmt} ${um.toLowerCase()}`:denumire);
+              }
             } else if(row[0] && row[0].toLowerCase().startsWith("acest document")){
               inTable=false;
             }
@@ -2880,7 +2889,7 @@ function extrageDateFacturaPDF(file){
         const m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dataFact);
         if(m) dataIso=`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
 
-        resolve({serie, data:dataIso, denumire:produse.join("\n")});
+        resolve({serie, data:dataIso, denumire:produse.join("\n"), cumparator});
       }catch(e){ reject(e); }
     };
     reader.onerror=()=>reject(new Error("Nu s-a putut citi fișierul."));
@@ -2889,7 +2898,7 @@ function extrageDateFacturaPDF(file){
 }
 
 function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounter}){
-  const [numeClient,setNumeClient]=React.useState(client.name||"");
+  const [numeClient,setNumeClient]=React.useState("");
   const [facturi,setFacturi]=React.useState([{serie:"",data:"",denumire:""}]);
   const [pdfLoadingIdx,setPdfLoadingIdx]=React.useState(null);
 
@@ -2902,6 +2911,7 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
     try{
       const r=await extrageDateFacturaPDF(file);
       setFacturi(p=>p.map((f,i)=>i!==idx?f:{serie:r.serie||f.serie, data:r.data||f.data, denumire:r.denumire||f.denumire}));
+      if(r.cumparator) setNumeClient(r.cumparator);
       if(!r.serie && !r.denumire) alert("Nu am reușit să găsesc datele facturii în acest PDF — te rog verifică și completează manual câmpurile.");
     }catch(e){ alert("Nu am putut citi acest PDF. Completează manual câmpurile."); }
     setPdfLoadingIdx(null);
@@ -2909,7 +2919,13 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
 
   const rowsHtml=(list)=>list.filter(f=>f.serie.trim()||f.denumire.trim()).map(f=>{
     const produseHtml = f.denumire.trim()
-      ? f.denumire.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>`<div style="padding:2px 0">• ${l}</div>`).join("")
+      ? f.denumire.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
+          const parts=l.split(" — ");
+          if(parts.length===2){
+            return `<div style="display:flex;align-items:baseline;gap:6px;padding:2px 0"><span>• ${parts[0]}</span><span style="flex:1;border-bottom:1px dotted #A99C86;margin-bottom:3px"></span><span style="flex:none">${parts[1]}</span></div>`;
+          }
+          return `<div style="padding:2px 0">• ${l}</div>`;
+        }).join("")
       : "—";
     return `<tr><td style="padding:5px 8px 5px 0;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD;vertical-align:top">${f.serie||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD;vertical-align:top">${f.data?fmtD(f.data):"—"}</td><td style="padding:5px 0 5px 8px;border-bottom:1px solid #E4DCCD">${produseHtml}</td></tr>`;
   }).join("");
@@ -2976,7 +2992,7 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
             <input type="date" value={f.data} onChange={e=>updFactura(idx,"data",e.target.value)} style={selStyle}/>
           </div>
           <label style={{...lblStyle,marginBottom:3}}>Produse (câte unul pe rând)</label>
-          <textarea value={f.denumire} onChange={e=>updFactura(idx,"denumire",e.target.value)} placeholder={"ex:\nDraperii living\nStor baie"} rows={3} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
+          <textarea value={f.denumire} onChange={e=>updFactura(idx,"denumire",e.target.value)} placeholder={"ex:\nMâner — 12 buc\nStor baie — 1 buc"} rows={3} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/>
         </div>
       )}
       <button onClick={addFactura} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>+ adaugă altă factură</button>
