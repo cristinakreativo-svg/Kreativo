@@ -1245,7 +1245,7 @@ function buildOferta(data){
   .sheet { max-width: 7.5in; margin: 0 auto; background:#F2EFE9; }
   h2 { break-after: avoid-page; page-break-after: avoid; break-inside: avoid; page-break-inside: avoid; }
   h2 + div { break-before: avoid-page; page-break-before: avoid; }
-  @media print { .notaEditare { display:none !important; } }
+  @media print { .notaEditare { display:none !important; } .necesarMateriale { display:none !important; } }
 </style>
 </head>
 <body>
@@ -1313,6 +1313,8 @@ ${data.camereHtml}
 <p style="margin:16px 0 4px;font-size:.92em;color:#4A3F31">Prețurile sunt exprimate în lei și includ TVA. Oferta este orientativă și devine fermă după confirmarea măsurătorilor la fața locului. Valabilitate ofertă: 30 de zile de la data emiterii.</p>
 <p style="margin:0 0 4px;font-size:.92em;color:#4A3F31">La lansarea comenzii se achită un avans de 50% din valoarea ofertei; diferența se achită cu o zi înaintea livrării.</p>
 <p style="margin:0;font-size:.92em;color:#4A3F31">Pentru sistemele de acționare electrică ale căror șine necesită conectare directă la instalația electrică, Clientul va asigura prezența unui electrician autorizat.</p>
+
+${data.necesarHtml||""}
 
 <div style="break-inside:avoid;margin:18px 0 0;padding-top:9px;border-top:1px solid #D4C9B8">
 <div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#5C6B65;margin-bottom:11px">Confirmare client</div>
@@ -3133,6 +3135,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
   const [design,setDesign]=React.useState("");
   const [pretEur,setPretEur]=React.useState("");
   const [sursa,setSursa]=React.useState("");
+  const [furnizor,setFurnizor]=React.useState("");
   const [importing,setImporting]=React.useState(false);
   const inputRef=React.useRef(null);
 
@@ -3141,9 +3144,9 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
   const adauga=()=>{
     if(!design.trim()){ alert("Completează denumirea (Design)."); return; }
     if(!pretEur.trim() || isNaN(Number(pretEur))){ alert("Completează prețul EUR (număr)."); return; }
-    const nou={id:gid(), design:design.trim(), pretEur:Number(pretEur), pretLei:calcLei(pretEur), sursa:sursa.trim()||"manual"};
+    const nou={id:gid(), design:design.trim(), pretEur:Number(pretEur), pretLei:calcLei(pretEur), sursa:sursa.trim()||"manual", furnizor:furnizor.trim()||"—"};
     setCatalogMateriale(p=>[...p, nou].sort((a,b)=>a.design.localeCompare(b.design,"ro")));
-    setDesign(""); setPretEur(""); setSursa("");
+    setDesign(""); setPretEur(""); setSursa(""); setFurnizor("");
   };
   const sterge=(id)=>{
     if(window.confirm("Ștergi acest material din catalog?")) setCatalogMateriale(p=>p.filter(m=>m.id!==id));
@@ -3175,13 +3178,14 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
           const des=String(r[0]).trim();
           const eur=Number(r[1]);
           const src=r[3]?String(r[3]).trim():(r[2]&&isNaN(Number(r[2]))?String(r[2]).trim():"import");
+          const furn=r[4]?String(r[4]).trim():"—";
           if(!des || isNaN(eur)) continue;
           const key=(des+"|"+src).toLowerCase();
           if(existing.has(key)) continue;
           existing.add(key);
-          noi.push({id:gid(), design:des, pretEur:eur, pretLei:calcLei(eur), sursa:src||"import"});
+          noi.push({id:gid(), design:des, pretEur:eur, pretLei:calcLei(eur), sursa:src||"import", furnizor:furn});
         }
-        if(!noi.length){ alert("Nu am găsit rânduri noi de importat (poate sunt deja în catalog, sau formatul nu se potrivește: Design / Preț EUR / ... / Sursă)."); }
+        if(!noi.length){ alert("Nu am găsit rânduri noi de importat (poate sunt deja în catalog, sau formatul nu se potrivește: Design / Preț EUR / ... / Sursă / Furnizor)."); }
         else setCatalogMateriale(p=>[...p, ...noi].sort((a,b)=>a.design.localeCompare(b.design,"ro")));
         alert(`${noi.length} materiale noi importate.`);
       }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
@@ -3191,7 +3195,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
     reader.readAsArrayBuffer(file);
   };
 
-  const filtrate = catalogMateriale.filter(m=>!cauta.trim()||m.design.toLowerCase().includes(cauta.toLowerCase())||m.sursa.toLowerCase().includes(cauta.toLowerCase()));
+  const filtrate = catalogMateriale.filter(m=>!cauta.trim()||m.design.toLowerCase().includes(cauta.toLowerCase())||m.sursa.toLowerCase().includes(cauta.toLowerCase())||(m.furnizor||"").toLowerCase().includes(cauta.toLowerCase()));
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
@@ -3200,13 +3204,13 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Catalog materiale ({catalogMateriale.length})</div>
 
     <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
-      <input value={cauta} onChange={e=>setCauta(e.target.value)} placeholder="🔍 caută după denumire sau sursă..." style={{...selStyle,flex:1,minWidth:200}}/>
+      <input value={cauta} onChange={e=>setCauta(e.target.value)} placeholder="🔍 caută după denumire, sursă sau furnizor..." style={{...selStyle,flex:1,minWidth:200}}/>
       <label style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:importing?C.border:"#5C6B65",color:importing?C.text:"#fff",cursor:importing?"default":"pointer",whiteSpace:"nowrap"}}>
         {importing?"⏳ Se importă...":"📥 Importă din Excel"}
         <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
       </label>
     </div>
-    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: <b>Design</b>, <b>Preț EUR</b>, (opțional altă coloană), <b>Sursă</b>. Materialele deja existente (aceeași denumire + sursă) nu se dublează.</div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: <b>Design</b>, <b>Preț EUR</b>, (opțional altă coloană), <b>Sursă</b>, <b>Furnizor</b>. Materialele deja existente (aceeași denumire + sursă) nu se dublează.</div>
 
     <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:20}}>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>+ Adaugă material manual</div>
@@ -3214,6 +3218,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
         <div><label style={lblStyle}>Design</label><input value={design} onChange={e=>setDesign(e.target.value)} placeholder="ex: Bassilk" style={selStyle}/></div>
         <div><label style={lblStyle}>Preț EUR</label><input value={pretEur} onChange={e=>setPretEur(e.target.value)} placeholder="ex: 10.39" style={selStyle}/></div>
         <div><label style={lblStyle}>Sursă</label><input value={sursa} onChange={e=>setSursa(e.target.value)} placeholder="ex: Bru" style={selStyle}/></div>
+        <div><label style={lblStyle}>Furnizor</label><input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="ex: Bru Textile" style={selStyle}/></div>
       </div>
       <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
     </div>
@@ -3225,6 +3230,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
           <th style={{padding:"6px 10px"}}>Preț EUR</th>
           <th style={{padding:"6px 10px"}}>Preț (lei)</th>
           <th style={{padding:"6px 10px"}}>Sursă</th>
+          <th style={{padding:"6px 10px"}}>Furnizor</th>
           <th style={{padding:"6px 10px"}}></th>
         </tr>
       </thead>
@@ -3241,12 +3247,15 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
             <td style={{padding:"6px 10px"}}>
               <input value={m.sursa} onChange={e=>editeaza(m.id,"sursa",e.target.value)} style={{width:90,border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
             </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.furnizor||""} onChange={e=>editeaza(m.id,"furnizor",e.target.value)} style={{width:110,border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
+            </td>
             <td style={{padding:"6px 10px",textAlign:"right"}}>
               <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
             </td>
           </tr>
         )}
-        {filtrate.length===0&&<tr><td colSpan={5} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogMateriale.length===0?"Catalogul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
+        {filtrate.length===0&&<tr><td colSpan={6} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogMateriale.length===0?"Catalogul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
       </tbody>
     </table>
   </div>;
@@ -3301,7 +3310,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   }));
 
   const alegeMaterial=(camId,prodId,m)=>{
-    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.design,pretUnitar:String(m.pretLei)})}));
+    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.design,pretUnitar:String(m.pretLei),furnizor:m.furnizor||""})}));
     setPickerFor(null);
   };
   const esteTextil=(pr)=>pr.tip==="perdea"||pr.tip==="draperie";
@@ -3343,6 +3352,39 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     </div>`;
   }).join("");
 
+  const necesarHtmlBuild=(camereList)=>{
+    const grupe={};
+    camereList.forEach(c=>{
+      c.produse.filter(pr=>pr.material.trim()).forEach(pr=>{
+        const furn=pr.furnizor&&pr.furnizor.trim()?pr.furnizor.trim():"Furnizor nespecificat";
+        if(!grupe[furn]) grupe[furn]=[];
+        grupe[furn].push(pr);
+      });
+    });
+    const furnizori=Object.keys(grupe).sort((a,b)=>a.localeCompare(b,"ro"));
+    if(!furnizori.length) return "";
+    const blocuri=furnizori.map(furn=>{
+      const rows=grupe[furn].map(pr=>
+        `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #D8CDBA">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #D8CDBA">${pr.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D8CDBA">${pr.cantitate||0} m</td></tr>`
+      ).join("");
+      return `<div style="margin-bottom:12px">
+        <div style="font:700 .82em/1 'Source Sans 3',Calibri,sans-serif;color:#5C4A2E;margin-bottom:5px">${furn}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="font:600 .7em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#8A7A64">
+            <td style="padding:4px 8px 4px 0;border-bottom:1px solid #C9BC9E">Material</td>
+            <td style="padding:4px 8px;border-bottom:1px solid #C9BC9E">Culoare</td>
+            <td style="padding:4px 0 4px 8px;text-align:right;border-bottom:1px solid #C9BC9E">Cantitate</td>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }).join("");
+    return `<div class="necesarMateriale" style="margin:18px 0 0;padding:14px 16px;background:#F2EAD3;border:1px dashed #B8A67A">
+      <div style="font:700 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#6E5A2E;margin-bottom:10px">📦 Necesar materiale de comandat (intern — nu apare la printare)</div>
+      ${blocuri}
+    </div>`;
+  };
+
   const vizualizeaza=(html)=>{
     const blob=new Blob([html],{type:"text/html"});
     const url=URL.createObjectURL(blob);
@@ -3368,7 +3410,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     if(oferta.editedHtml) return oferta.editedHtml;
     return buildOferta({
       numar:oferta.numar, dataFmt:fmtD(oferta.data), numeClient:oferta.numeClient,
-      camereHtml: camereHtmlBuild(oferta.camere), totalGeneral: oferta.camere.reduce((s,c)=>s+c.produse.reduce((s2,pr)=>s2+(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0),0),0).toFixed(0),
+      camereHtml: camereHtmlBuild(oferta.camere), necesarHtml: necesarHtmlBuild(oferta.camere), totalGeneral: oferta.camere.reduce((s,c)=>s+c.produse.reduce((s2,pr)=>s2+(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0),0),0).toFixed(0),
       clientId: client.id, ofertaId: oferta.id,
     });
   };
@@ -3393,7 +3435,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     if(editingId){
       const existent=(client.oferte||[]).find(o=>o.id===editingId);
       if(!existent){ alert("Oferta editată nu mai există — a fost cumva ștearsă între timp."); setEditingId(null); return; }
-      const html=buildOferta({numar:existent.numar, dataFmt:fmtD(existent.data), numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId:existent.id});
+      const html=buildOferta({numar:existent.numar, dataFmt:fmtD(existent.data), numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId:existent.id});
       const ofertaActualizata={...existent, numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, editedHtml:undefined};
       setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).map(o=>o.id!==editingId?o:ofertaActualizata)}));
       vizualizeaza(html);
@@ -3404,7 +3446,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     const ofertaId=gid();
     const numar=`${ofertaCounter}/${new Date().getFullYear()}`;
     const dataFmt=fmtD(tday());
-    const html=buildOferta({numar, dataFmt, numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId});
+    const html=buildOferta({numar, dataFmt, numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId});
     const oferta={id:ofertaId, numar, data:tday(), numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, dataCreat:tday()};
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:[...(c.oferte||[]),oferta]}));
     setOfertaCounter(p=>p+1);
