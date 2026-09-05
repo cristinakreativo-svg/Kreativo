@@ -3276,6 +3276,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null
   const [editingId,setEditingId]=React.useState(null); // id-ul ofertei editate, sau null la creare nouă
+  const [formOpen,setFormOpen]=React.useState(false);
   const formTopRef=React.useRef(null);
 
   const catalogMap=React.useMemo(()=>{
@@ -3429,10 +3430,12 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     setNumeClient(oferta.numeClient);
     setCamere(oferta.camere.map(c=>({...c, geamuri:c.geamuri||[golGeam(1)], produse:c.produse.map(pr=>({...pr}))})));
     setEditingId(oferta.id);
+    setFormOpen(true);
     if(formTopRef.current) formTopRef.current.scrollIntoView({behavior:"smooth",block:"start"});
   };
   const anuleazaEditare=()=>{
     setEditingId(null);
+    setFormOpen(false);
     setNumeClient(client.name||"");
     setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   };
@@ -3470,6 +3473,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     setOfertaCounter(p=>p+1);
     vizualizeaza(html);
     setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+    setFormOpen(false);
   };
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
@@ -3480,6 +3484,12 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
       {(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}
     </datalist>
 
+    <button onClick={()=>setFormOpen(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:formOpen?14:16,padding:"9px 14px",background:C.bg,border:`1px solid ${C.border}`,cursor:"pointer",textAlign:"left"}}>
+      <span style={{fontSize:12,fontWeight:600,color:C.textSub,flex:1}}>{formOpen?"Ascunde formularul":"+ Adaugă ofertă"}</span>
+      <span style={{fontSize:11,color:C.textMuted}}>{formOpen?"▾":"▸"}</span>
+    </button>
+
+    {formOpen&&<>
     {editingId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>✏️ Editezi o ofertă existentă — la salvare, se actualizează, nu se creează una nouă.</span>
       <button onClick={anuleazaEditare} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
@@ -3586,6 +3596,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     </div>
     <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. ofertă următoare: <b>{ofertaCounter}/{new Date().getFullYear()}</b></div>
     <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:editingId?"#A0845C":"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>{editingId?"💾 Salvează modificările":"📋 Generează și vizualizează oferta"}</button>
+    </>}
 
     {(client.oferte||[]).length>0&&<div style={{marginTop:16}}>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Oferte generate</div>
@@ -4663,7 +4674,11 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <span style={{fontSize:12,color:C.textMuted,marginLeft:8}}>Ora:</span>
           <input type="time" lang="ro" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
         </div>
-        <div style={{marginBottom:14,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`}}>
+        <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:14,padding:"9px 14px",background:C.bg,border:`1px solid ${C.border}`,cursor:"pointer",textAlign:"left"}}>
+          <span style={{fontSize:11,color:C.textSub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",flex:1}}>Contact</span>
+          <span style={{fontSize:11,color:C.textMuted}}>{contactOpen[client.id]?"▾":"▸"}</span>
+        </button>
+        {contactOpen[client.id]&&<div style={{marginBottom:14,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderTop:"none"}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
             <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Telefon:</span>
             {client.telefon?<a href={`tel:${client.telefon.replace(/\s+/g,"")}`} style={{fontSize:13,color:C.accent,fontWeight:500,textDecoration:"none"}}>{client.telefon}</a>:<span style={{fontSize:13,color:C.textMuted}}>— nesetat —</span>}
@@ -4672,8 +4687,8 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
             <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Adresă:</span>
             {client.adresa?<a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(client.adresa)}`} target="_blank" rel="noopener noreferrer" style={{fontSize:13,color:C.accent,fontWeight:500,textDecoration:"none"}}>{client.adresa}</a>:<span style={{fontSize:13,color:C.textMuted}}>— nesetată —</span>}
           </div>
-        </div>
-        <div style={{display:"flex",gap:4,marginBottom:0,borderBottom:`1px solid ${C.border}`}}>
+        </div>}
+        <div style={{marginTop:14,display:"flex",gap:4,marginBottom:0,borderBottom:`1px solid ${C.border}`}}>
           {[["contract",`Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`],["oferta",`Ofertă${(client.oferte||[]).length?" ("+(client.oferte||[]).length+")":""}`]].map(([id,label])=>{
             const active=(clientDetailTab[client.id]||"contract")===id;
             return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
@@ -6600,7 +6615,11 @@ function App() {
                 <span style={{fontSize:12,color:C.textSub}}>Proiect terminat (debifează pt. redeschidere)</span>
               </label>}
             </div>
-            <div style={{marginBottom:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`}}>
+            <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:12,padding:"9px 14px",background:C.bg,border:`1px solid ${C.border}`,cursor:"pointer",textAlign:"left"}}>
+              <span style={{fontSize:11,color:C.textSub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",flex:1}}>Contact</span>
+              <span style={{fontSize:11,color:C.textMuted}}>{contactOpen[client.id]?"▾":"▸"}</span>
+            </button>
+            {contactOpen[client.id]&&<div style={{marginBottom:12,padding:"12px 14px",background:C.bg,border:`1px solid ${C.border}`,borderTop:"none"}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
                 <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Telefon:</span>
                 <input type="tel" value={client.telefon||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,telefon:e.target.value}))} placeholder="07xx xxx xxx" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
@@ -6610,8 +6629,8 @@ function App() {
                 <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>Adresă:</span>
                 <input value={client.adresa||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,adresa:e.target.value}))} placeholder="Stradă, nr, oraș" style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
               </div>
-            </div>
-            <div style={{display:"flex",gap:4,borderBottom:`1px solid ${C.border}`}}>
+            </div>}
+            <div style={{marginTop:12,display:"flex",gap:4,borderBottom:`1px solid ${C.border}`}}>
               {[["contract",`Contract${(client.contracte||[]).length?" ("+(client.contracte||[]).length+")":""}`],["pv",`Proces verbal${(client.proceseVerbale||[]).length?" ("+(client.proceseVerbale||[]).length+")":""}`],["oferta",`Ofertă${(client.oferte||[]).length?" ("+(client.oferte||[]).length+")":""}`]].map(([id,label])=>{
                 const active=(clientDetailTab[client.id]||"contract")===id;
                 return <button key={id} onClick={()=>setClientDetailTab(p=>({...p,[client.id]:id}))} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{label}</button>;
