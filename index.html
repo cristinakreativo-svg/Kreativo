@@ -3408,6 +3408,24 @@ function TabCatalogSine({C,catalogSine,setCatalogSine}){
   </div>;
 }
 
+function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine}){
+  const [sub,setSub]=React.useState("materiale");
+  const OPTIUNI=[
+    {id:"materiale",l:"Materiale (perdele/draperii)"},
+    {id:"sine",l:"Șine electrice"},
+  ];
+  return <div>
+    <div style={{display:"flex",gap:4,padding:"14px 20px 0",borderBottom:`1px solid ${C.border}`}}>
+      {OPTIUNI.map(o=>{
+        const active=sub===o.id;
+        return <button key={o.id} onClick={()=>setSub(o.id)} style={{padding:"9px 14px",fontSize:12,fontWeight:active?600:400,color:active?C.text:C.textMuted,background:active?C.bg:"transparent",border:"none",borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",cursor:"pointer"}}>{o.l}</button>;
+      })}
+    </div>
+    {sub==="materiale"&&<TabCatalogMateriale C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale}/>}
+    {sub==="sine"&&<TabCatalogSine C={C} catalogSine={catalogSine} setCatalogSine={setCatalogSine}/>}
+  </div>;
+}
+
 function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
   const [numeClient,setNumeClient]=React.useState(client.name||"");
   const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
@@ -3423,7 +3441,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150"});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -3453,6 +3471,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         const match=catalogMap[val.trim().toLowerCase()];
         if(match) upd.pretUnitar=String(match.pretLei);
       }
+      if(field==="tip" && val==="sina electrica" && !pr.cantitate.trim()) upd.cantitate="1";
       return upd;
     })};
   }));
@@ -3485,10 +3504,11 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     const cm=Number(pr.lungimeSinaCm)||0;
     return cm?Math.ceil((cm/100)/0.5)*0.5:0;
   };
-  const valoareMaterial=(pr)=>esteSina(pr)?calculeazaPretSina(pr):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const valoareMaterial=(pr)=>esteSina(pr)?calculeazaPretSina(pr)*(Number(pr.cantitate)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
   const valoareBanda=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretBanda)||0):0;
   const valoareManopera=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretManopera)||0):0;
-  const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr);
+  const valoareMontaj=(pr)=>esteSina(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
+  const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr)+valoareMontaj(pr);
   const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
   const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
@@ -3498,7 +3518,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
       if(esteSina(pr)){
         const lungimeAfisata=lungimeSteppedSina(pr)?`${lungimeSteppedSina(pr)} m`:"—";
-        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${lungimeAfisata}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rSina=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} (${lungimeAfisata})</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${calculeazaPretSina(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rMontaj=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
+        const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        return rSina+rMontaj+rTotalSina;
       }
       const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
@@ -3749,7 +3772,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           </div>}
           </>}
           {esteSina(pr)&&<>
-          <div style={{display:"grid",gridTemplateColumns:"120px 1fr 100px auto",gap:8,alignItems:"center"}}>
+          <div style={{display:"grid",gridTemplateColumns:"120px 1fr 90px 100px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
@@ -3760,6 +3783,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege modelul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
             <input value={pr.lungimeSinaCm} onChange={e=>updProdus(c.id,pr.id,"lungimeSinaCm",e.target.value)} placeholder="Lungime (cm)" style={selStyle}/>
+            <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:14,marginTop:8,flexWrap:"wrap"}}>
@@ -3775,8 +3799,18 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
                 <button key={lbl} onClick={()=>updProdus(c.id,pr.id,"wave",val)} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:pr.wave===val?C.accent:C.surface,color:pr.wave===val?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{lbl}</button>
               )}
             </div>
-            {pr.material&&pr.lungimeSinaCm&&<span style={{fontSize:12,color:C.textMuted,marginLeft:"auto"}}>({lungimeSteppedSina(pr)} m rotunjit)</span>}
+            {pr.material&&pr.lungimeSinaCm&&<span style={{fontSize:12,color:C.textMuted,marginLeft:"auto"}}>({lungimeSteppedSina(pr)} m rotunjit × {pr.cantitate||1} buc.)</span>}
             <span style={{fontSize:14,fontWeight:700,color:C.text}}>{valoareMaterial(pr).toFixed(0)} lei</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"120px 1fr 90px 100px auto",gap:8,alignItems:"center",marginTop:8}}>
+            <span></span>
+            <input value="Montaj" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
+            <span></span>
+            <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={selStyle}/>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareMontaj(pr).toFixed(0)} lei</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:`1px solid ${C.border}`}}>
+            <span style={{fontSize:13,fontWeight:700,color:C.text}}>Total șină electrică: {valoareLinie(pr).toFixed(0)} lei</span>
           </div>
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
             <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -6263,7 +6297,7 @@ function App() {
 
   const GRUPURI=[
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
-    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"catalogmateriale",l:"Catalog materiale"},{id:"catalogsine",l:"Catalog șine electrice"},{id:"achizitii",l:"Achiziții"}]},
+    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Tudor"},{id:"recurente",l:"Recurente"}]},
     {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
@@ -6934,8 +6968,7 @@ function App() {
       <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>}
     </div>}
 
-    {tab==="catalogmateriale"&&<TabCatalogMateriale C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale}/>}
-    {tab==="catalogsine"&&<TabCatalogSine C={C} catalogSine={catalogSine} setCatalogSine={setCatalogSine}/>}
+    {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine}/>}
 
     {tab==="achizitii"&&<div>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
