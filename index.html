@@ -77,6 +77,7 @@ const CTK = "kreativo_contract_counter_v1";
 const PVK = "kreativo_pv_counter_v1";
 const MTK = "kreativo_catalog_materiale_v1";
 const OFK2 = "kreativo_oferta_counter_v1";
+const CSK = "kreativo_catalog_sine_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -3283,7 +3284,131 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
   </div>;
 }
 
-function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
+function TabCatalogSine({C,catalogSine,setCatalogSine}){
+  const [cauta,setCauta]=React.useState("");
+  const [denumire,setDenumire]=React.useState("");
+  const [lungime,setLungime]=React.useState("");
+  const [pretPropriu,setPretPropriu]=React.useState("");
+  const [importing,setImporting]=React.useState(false);
+  const inputRef=React.useRef(null);
+
+  const adauga=()=>{
+    if(!denumire.trim()){ alert("Completează denumirea (ex: Șină electrică Motionblind-CM-57MC)."); return; }
+    if(!lungime.trim() || isNaN(Number(lungime))){ alert("Completează lungimea (număr, în metri)."); return; }
+    if(!pretPropriu.trim() || isNaN(Number(pretPropriu))){ alert("Completează prețul propriu (număr)."); return; }
+    const nou={id:gid(), denumire:denumire.trim(), lungime:Number(lungime), pretPropriu:Number(pretPropriu)};
+    setCatalogSine(p=>[...p, nou].sort((a,b)=>a.denumire.localeCompare(b.denumire,"ro")||a.lungime-b.lungime));
+    setDenumire(""); setLungime(""); setPretPropriu("");
+  };
+  const sterge=(id)=>{
+    if(window.confirm("Ștergi această poziție din nomenclator?")) setCatalogSine(p=>p.filter(m=>m.id!==id));
+  };
+  const editeaza=(id,field,val)=>{
+    setCatalogSine(p=>p.map(m=>m.id!==id?m:{...m,[field]:val}));
+  };
+
+  const importaExcel=(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    setImporting(true);
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+        const existingMap={};
+        catalogSine.forEach(m=>{ existingMap[(m.denumire+"|"+m.lungime).toLowerCase()]=m.id; });
+        const noi=[];
+        const actualizariMap={};
+        for(let i=1;i<rows.length;i++){
+          const r=rows[i];
+          if(!r || !r[0]) continue;
+          const den=String(r[0]).trim();
+          const lun=Number(r[4]);
+          const pretConc=Number(r[5]);
+          const pretProp=Number(r[7]);
+          if(!den || isNaN(lun) || isNaN(pretProp)) continue;
+          const key=(den+"|"+lun).toLowerCase();
+          if(existingMap[key]){ actualizariMap[existingMap[key]]=pretProp; continue; }
+          if(actualizariMap[key]) continue;
+          existingMap[key]="pending-"+den;
+          noi.push({id:gid(), denumire:den, lungime:lun, pretPropriu:pretProp});
+        }
+        const nrActualizari=Object.keys(actualizariMap).length;
+        if(nrActualizari) setCatalogSine(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretPropriu:actualizariMap[m.id]}:m));
+        if(noi.length) setCatalogSine(p=>[...p, ...noi].sort((a,b)=>a.denumire.localeCompare(b.denumire,"ro")||a.lungime-b.lungime));
+        const mesaje=[];
+        if(noi.length) mesaje.push(`${noi.length} poziții noi importate`);
+        if(nrActualizari) mesaje.push(`${nrActualizari} poziții existente actualizate`);
+        alert(mesaje.length?mesaje.join(" · ")+".":"Nu am găsit poziții noi sau actualizări (verifică formatul: Denumire / Model / Alimentare / Control / Lungime / Preț concurență / Reducere / Preț propriu).");
+      }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
+      setImporting(false);
+      if(inputRef.current) inputRef.current.value="";
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const filtrate = catalogSine.filter(m=>!cauta.trim()||m.denumire.toLowerCase().includes(cauta.toLowerCase()));
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  return <div style={{padding:"20px"}}>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Catalog șine electrice ({catalogSine.length} poziții)</div>
+
+    <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <input value={cauta} onChange={e=>setCauta(e.target.value)} placeholder="🔍 caută după denumire..." style={{...selStyle,flex:1,minWidth:200}}/>
+      <label style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:importing?C.border:"#5C6B65",color:importing?C.text:"#fff",cursor:importing?"default":"pointer",whiteSpace:"nowrap"}}>
+        {importing?"⏳ Se importă...":"📥 Importă din Excel"}
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
+      </label>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: <b>Denumire (pentru ofertă)</b>, Model, Alimentare, Control, <b>Lungime (m)</b>, Preț concurență, Reducere, <b>Preț propriu</b>. Pozițiile deja existente (aceeași denumire + lungime) se actualizează cu noul preț, nu se dublează.</div>
+
+    <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:20}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>+ Adaugă poziție manual</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:10}}>
+        <div style={{gridColumn:"span 2"}}><label style={lblStyle}>Denumire (pentru ofertă)</label><input value={denumire} onChange={e=>setDenumire(e.target.value)} placeholder="ex: Șină electrică Motionblind-CM-57MC" style={selStyle}/></div>
+        <div><label style={lblStyle}>Lungime (m)</label><input value={lungime} onChange={e=>setLungime(e.target.value)} placeholder="ex: 2.5" style={selStyle}/></div>
+        <div><label style={lblStyle}>Preț propriu (lei)</label><input value={pretPropriu} onChange={e=>setPretPropriu(e.target.value)} placeholder="ex: 1420" style={selStyle}/></div>
+      </div>
+      <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
+    </div>
+
+    <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <thead>
+        <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:"left"}}>
+          <th style={{padding:"6px 10px"}}>Denumire</th>
+          <th style={{padding:"6px 10px"}}>Lungime (m)</th>
+          <th style={{padding:"6px 10px"}}>Preț propriu (lei)</th>
+          <th style={{padding:"6px 10px"}}></th>
+        </tr>
+      </thead>
+      <tbody>
+        {filtrate.map((m,i)=>
+          <tr key={m.id} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.denumire} onChange={e=>editeaza(m.id,"denumire",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.lungime} onChange={e=>editeaza(m.id,"lungime",Number(e.target.value)||0)} style={{width:60,border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.pretPropriu} onChange={e=>editeaza(m.id,"pretPropriu",Number(e.target.value)||0)} style={{width:80,border:"none",background:"transparent",fontSize:13,fontWeight:600,color:"#2255AA",outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px",textAlign:"right"}}>
+              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
+            </td>
+          </tr>
+        )}
+        {filtrate.length===0&&<tr><td colSpan={4} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogSine.length===0?"Nomenclatorul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
+      </tbody>
+    </table>
+  </div>;
+}
+
+function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
   const [numeClient,setNumeClient]=React.useState(client.name||"");
   const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null
@@ -3298,7 +3423,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -3336,8 +3461,31 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
     setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.design,pretUnitar:String(m.pretLei),furnizor:m.furnizor||""})}));
     setPickerFor(null);
   };
+  const alegeSina=(camId,prodId,denumire)=>{
+    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:denumire})}));
+    setPickerFor(null);
+  };
   const esteTextil=(pr)=>pr.tip==="perdea"||pr.tip==="draperie";
-  const valoareMaterial=(pr)=>(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const esteSina=(pr)=>pr.tip==="sina electrica";
+  const calculeazaPretSina=(pr)=>{
+    const cm=Number(pr.lungimeSinaCm)||0;
+    if(!cm || !pr.material) return 0;
+    const m=cm/100;
+    const stepped=Math.ceil(m/0.5)*0.5;
+    const opts=catalogSine.filter(s=>s.denumire===pr.material);
+    if(!opts.length) return 0;
+    let match=opts.find(s=>Math.abs(s.lungime-stepped)<0.01);
+    if(!match) match=opts.reduce((a,b)=>b.lungime>a.lungime?b:a, opts[0]);
+    let pret=match.pretPropriu;
+    if(pr.wave) pret+=40*stepped;
+    if(pr.culoare==="Negru") pret+=100;
+    return pret;
+  };
+  const lungimeSteppedSina=(pr)=>{
+    const cm=Number(pr.lungimeSinaCm)||0;
+    return cm?Math.ceil((cm/100)/0.5)*0.5:0;
+  };
+  const valoareMaterial=(pr)=>esteSina(pr)?calculeazaPretSina(pr):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
   const valoareBanda=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretBanda)||0):0;
   const valoareManopera=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretManopera)||0):0;
   const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr);
@@ -3348,6 +3496,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
   const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
+      if(esteSina(pr)){
+        const lungimeAfisata=lungimeSteppedSina(pr)?`${lungimeSteppedSina(pr)} m`:"—";
+        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${lungimeAfisata}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">—</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+      }
       const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
       const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
@@ -3378,7 +3530,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
   const necesarHtmlBuild=(camereList)=>{
     const grupe={};
     camereList.forEach(c=>{
-      c.produse.filter(pr=>pr.material.trim()).forEach(pr=>{
+      c.produse.filter(pr=>pr.material.trim() && !esteSina(pr)).forEach(pr=>{
         const furn=pr.furnizor&&pr.furnizor.trim()?pr.furnizor.trim():"Furnizor nespecificat";
         if(!grupe[furn]) grupe[furn]=[];
         grupe[furn].push(pr);
@@ -3539,12 +3691,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",fontWeight:600,marginBottom:8}}>Materiale / produse pentru toată camera</div>
         {c.produse.map(pr=>
           <div key={pr.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:8,background:C.bg}}>
+          {!esteSina(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
+              <option value="sina electrica">Șină electrică</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Material — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
@@ -3593,6 +3747,55 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,ofertaCoun
               </table>
             </div>
           </div>}
+          </>}
+          {esteSina(pr)&&<>
+          <div style={{display:"grid",gridTemplateColumns:"120px 1fr 100px auto",gap:8,alignItems:"center"}}>
+            <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="perdea">Perdea</option>
+              <option value="draperie">Draperie</option>
+              <option value="stor">Stor</option>
+              <option value="șină">Șină</option>
+              <option value="sina electrica">Șină electrică</option>
+              <option value="altele">Altele</option>
+            </select>
+            <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege modelul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
+            <input value={pr.lungimeSinaCm} onChange={e=>updProdus(c.id,pr.id,"lungimeSinaCm",e.target.value)} placeholder="Lungime (cm)" style={selStyle}/>
+            {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:14,marginTop:8,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Culoare:</span>
+              {["Alb","Negru"].map(cul=>
+                <button key={cul} onClick={()=>updProdus(c.id,pr.id,"culoare",cul)} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:pr.culoare===cul?C.accent:C.surface,color:pr.culoare===cul?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{cul}</button>
+              )}
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Călăreți:</span>
+              {[["Normal",false],["Wave",true]].map(([lbl,val])=>
+                <button key={lbl} onClick={()=>updProdus(c.id,pr.id,"wave",val)} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:pr.wave===val?C.accent:C.surface,color:pr.wave===val?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{lbl}</button>
+              )}
+            </div>
+            {pr.material&&pr.lungimeSinaCm&&<span style={{fontSize:12,color:C.textMuted,marginLeft:"auto"}}>({lungimeSteppedSina(pr)} m rotunjit)</span>}
+            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{valoareMaterial(pr).toFixed(0)} lei</span>
+          </div>
+          {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
+            <div style={{maxHeight:220,overflowY:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
+                  <th style={{padding:"6px 10px",textAlign:"left"}}>Denumire</th>
+                </tr></thead>
+                <tbody>
+                  {[...new Set(catalogSine.map(s=>s.denumire))].filter(d=>!pr.material.trim()||d.toLowerCase().includes(pr.material.toLowerCase())).map(d=>
+                    <tr key={d} onMouseDown={e=>{e.preventDefault();alegeSina(c.id,pr.id,d);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{d}</td>
+                    </tr>
+                  )}
+                  {catalogSine.length===0&&<tr><td style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Nomenclatorul de șine e gol — adaugă întâi în tab-ul „Catalog șine electrice".</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>}
+          </>}
           </div>
         )}
         <button onClick={()=>addProdus(c.id)} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:8}}>+ adaugă produs</button>
@@ -4616,7 +4819,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,ofertaCounter,setOfertaCounter}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,ofertaCounter,setOfertaCounter}){
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
@@ -4726,7 +4929,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
         </div>}
         {(clientDetailTab[client.id]||"contract")==="oferta"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
-          <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
+          <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
         </div>}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Poze și măsurători</div>
@@ -5557,6 +5760,7 @@ function App() {
   const [pvCounter,setPvCounter]=useState(1);
   const [catalogMateriale,setCatalogMateriale]=useState([]);
   const [ofertaCounter,setOfertaCounter]=useState(1);
+  const [catalogSine,setCatalogSine]=useState([]);
   const [log,setLog]=useState({});
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
@@ -5666,14 +5870,15 @@ function App() {
           const pvc=await sbGet(PVK); if(pvc){setPvCounter(pvc);gotAnyData=true;}
           const mtc=await sbGet(MTK); if(mtc){setCatalogMateriale(mtc);gotAnyData=true;}
           const ofc=await sbGet(OFK2); if(ofc){setOfertaCounter(ofc);gotAnyData=true;}
+          const csv=await sbGet(CSK); if(csv){setCatalogSine(csv);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -5703,6 +5908,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(PVK,pvCounter);},[pvCounter,loaded]);
   useEffect(()=>{if(loaded) sbSave(MTK,catalogMateriale);},[catalogMateriale,loaded]);
   useEffect(()=>{if(loaded) sbSave(OFK2,ofertaCounter);},[ofertaCounter,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CSK,catalogSine);},[catalogSine,loaded]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
@@ -5882,7 +6088,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -5908,7 +6114,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine
         }
       };
       const writable=await handle.createWritable();
@@ -5968,6 +6174,7 @@ function App() {
         if(d[PVK]) setPvCounter(d[PVK]);
         if(d[MTK]) setCatalogMateriale(d[MTK]);
         if(d[OFK2]) setOfertaCounter(d[OFK2]);
+        if(d[CSK]) setCatalogSine(d[CSK]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -6056,7 +6263,7 @@ function App() {
 
   const GRUPURI=[
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
-    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"catalogmateriale",l:"Catalog materiale"},{id:"achizitii",l:"Achiziții"}]},
+    {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"catalogmateriale",l:"Catalog materiale"},{id:"catalogsine",l:"Catalog șine electrice"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Tudor"},{id:"recurente",l:"Recurente"}]},
     {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
@@ -6090,7 +6297,7 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>📐 Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>📏 Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
@@ -6668,7 +6875,7 @@ function App() {
               <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
             </div>}
             {(clientDetailTab[client.id]||(client.stadiu==="oferta"?"oferta":"contract"))==="oferta"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
-              <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
+              <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
             </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
@@ -6724,10 +6931,11 @@ function App() {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>}
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>}
     </div>}
 
     {tab==="catalogmateriale"&&<TabCatalogMateriale C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale}/>}
+    {tab==="catalogsine"&&<TabCatalogSine C={C} catalogSine={catalogSine} setCatalogSine={setCatalogSine}/>}
 
     {tab==="achizitii"&&<div>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
