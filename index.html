@@ -79,6 +79,7 @@ const MTK = "kreativo_catalog_materiale_v1";
 const OFK2 = "kreativo_oferta_counter_v1";
 const CSK = "kreativo_catalog_sine_v1";
 const CPK = "kreativo_catalog_plisse_v1";
+const CJK = "kreativo_catalog_jaluzele_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -3565,12 +3566,166 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
   </div>;
 }
 
-function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine,catalogPlisse,setCatalogPlisse}){
+function TabCatalogJaluzele({C,catalogJaluzele,setCatalogJaluzele}){
+  const [cauta,setCauta]=React.useState("");
+  const [afisate,setAfisate]=React.useState(30);
+  const [lamela,setLamela]=React.useState("");
+  const [grupaPret,setGrupaPret]=React.useState("");
+  const [inaltime,setInaltime]=React.useState("");
+  const [latime,setLatime]=React.useState("");
+  const [pretLei,setPretLei]=React.useState("");
+  const [furnizor,setFurnizor]=React.useState("");
+  const [importing,setImporting]=React.useState(false);
+  const inputRef=React.useRef(null);
+
+  const adauga=()=>{
+    if(!lamela.trim() || isNaN(Number(lamela))){ alert("Completează lamela (5, 3.5 sau 2.5)."); return; }
+    if(!grupaPret.trim()){ alert("Completează grupa de preț (A, B, C sau D)."); return; }
+    if(!inaltime.trim() || isNaN(Number(inaltime))){ alert("Completează înălțimea (număr, în cm)."); return; }
+    if(!latime.trim() || isNaN(Number(latime))){ alert("Completează lățimea (număr, în cm)."); return; }
+    if(!pretLei.trim() || isNaN(Number(pretLei))){ alert("Completează prețul (număr, în lei)."); return; }
+    const nou={id:gid(), lamela:Number(lamela), grupaPret:grupaPret.trim(), inaltime:Number(inaltime), latime:Number(latime), pretLei:Number(pretLei), furnizor:furnizor.trim()||"—"};
+    setCatalogJaluzele(p=>[...p, nou].sort((a,b)=>(a.grupaPret||"").localeCompare(b.grupaPret||"","ro")||(b.lamela||0)-(a.lamela||0)||(a.inaltime||0)-(b.inaltime||0)||(a.latime||0)-(b.latime||0)));
+    setLamela(""); setGrupaPret(""); setInaltime(""); setLatime(""); setPretLei(""); setFurnizor("");
+  };
+  const sterge=(id)=>{
+    if(window.confirm("Ștergi această poziție din nomenclator?")) setCatalogJaluzele(p=>p.filter(m=>m.id!==id));
+  };
+  const editeaza=(id,field,val)=>{
+    setCatalogJaluzele(p=>p.map(m=>m.id!==id?m:{...m,[field]:val}));
+  };
+
+  const importaExcel=(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    setImporting(true);
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+        const existingMap={};
+        catalogJaluzele.forEach(m=>{ existingMap[(m.lamela+"|"+m.grupaPret+"|"+m.inaltime+"|"+m.latime).toLowerCase()]=m.id; });
+        const noi=[];
+        const actualizariMap={};
+        for(let i=1;i<rows.length;i++){
+          try{
+            const r=rows[i];
+            if(!r || !r[0]) continue;
+            const lam=Number(r[1]);
+            const grp=r[2]!==undefined&&r[2]!==null?String(r[2]).trim():"";
+            const h=Number(r[3]);
+            const w=Number(r[4]);
+            const pretL=Number(r[6]);
+            const furn=r[7]?String(r[7]).trim():"";
+            if(isNaN(lam) || !grp || isNaN(h) || isNaN(w) || isNaN(pretL)) continue;
+            const key=(lam+"|"+grp+"|"+h+"|"+w).toLowerCase();
+            if(existingMap[key]){ actualizariMap[existingMap[key]]={pretLei:pretL,furnizor:furn}; continue; }
+            if(actualizariMap[key]) continue;
+            existingMap[key]="pending-"+i;
+            noi.push({id:gid(), lamela:lam, grupaPret:grp, inaltime:h, latime:w, pretLei:pretL, furnizor:furn||"—"});
+          }catch(rowErr){ console.error("Rând ignorat la import (linie "+(i+1)+"):", rowErr); }
+        }
+        const nrActualizari=Object.keys(actualizariMap).length;
+        if(nrActualizari) setCatalogJaluzele(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretLei:actualizariMap[m.id].pretLei,furnizor:actualizariMap[m.id].furnizor||m.furnizor}:m));
+        if(noi.length) setCatalogJaluzele(p=>[...p, ...noi].sort((a,b)=>(a.grupaPret||"").localeCompare(b.grupaPret||"","ro")||(b.lamela||0)-(a.lamela||0)||(a.inaltime||0)-(b.inaltime||0)||(a.latime||0)-(b.latime||0)));
+        const mesaje=[];
+        if(noi.length) mesaje.push(`${noi.length} poziții noi importate`);
+        if(nrActualizari) mesaje.push(`${nrActualizari} poziții existente actualizate`);
+        alert(mesaje.length?mesaje.join(" · ")+".":"Nu am găsit poziții noi sau actualizări (verifică formatul: Denumire / Lamelă / Grupă preț / Înălțime / Lățime / Preț EUR / Preț lei / Furnizor).");
+      }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
+      setImporting(false);
+      if(inputRef.current) inputRef.current.value="";
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const filtrate = catalogJaluzele.filter(m=>!cauta.trim()||String(m.lamela).includes(cauta)||(m.grupaPret||"").toLowerCase().includes(cauta.toLowerCase()));
+  const afisateLista = filtrate.slice(0, afisate);
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  return <div style={{padding:"20px"}}>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Catalog jaluzele venețiene ({catalogJaluzele.length} poziții)</div>
+
+    <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <input value={cauta} onChange={e=>{setCauta(e.target.value);setAfisate(30);}} placeholder="🔍 caută după lamelă sau grupă..." style={{...selStyle,flex:1,minWidth:200}}/>
+      <label style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:importing?C.border:"#5C6B65",color:importing?C.text:"#fff",cursor:importing?"default":"pointer",whiteSpace:"nowrap"}}>
+        {importing?"Se importă...":"Importă din Excel"}
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
+      </label>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: Denumire, <b>Lamelă (cm)</b>, <b>Grupă preț</b>, <b>Înălțime (cm)</b>, <b>Lățime (cm)</b>, Preț EUR, <b>Preț (lei)</b>, Furnizor. Pozițiile deja existente (aceeași lamelă + grupă + înălțime + lățime) se actualizează cu noul preț, nu se dublează.</div>
+
+    <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:20}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>+ Adaugă poziție manual</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:10}}>
+        <div><label style={lblStyle}>Lamelă (cm)</label><input value={lamela} onChange={e=>setLamela(e.target.value)} placeholder="5, 3.5 sau 2.5" style={selStyle}/></div>
+        <div><label style={lblStyle}>Grupă preț</label><input value={grupaPret} onChange={e=>setGrupaPret(e.target.value)} placeholder="A, B, C sau D" style={selStyle}/></div>
+        <div><label style={lblStyle}>Înălțime (cm)</label><input value={inaltime} onChange={e=>setInaltime(e.target.value)} placeholder="ex: 100" style={selStyle}/></div>
+        <div><label style={lblStyle}>Lățime (cm)</label><input value={latime} onChange={e=>setLatime(e.target.value)} placeholder="ex: 90" style={selStyle}/></div>
+        <div><label style={lblStyle}>Preț (lei)</label><input value={pretLei} onChange={e=>setPretLei(e.target.value)} placeholder="ex: 346" style={selStyle}/></div>
+        <div><label style={lblStyle}>Furnizor</label><input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="ex: KOTT" style={selStyle}/></div>
+      </div>
+      <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
+    </div>
+
+    <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <thead>
+        <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:"left"}}>
+          <th style={{padding:"6px 10px"}}>Lamelă (cm)</th>
+          <th style={{padding:"6px 10px"}}>Grupă</th>
+          <th style={{padding:"6px 10px"}}>Înălțime (cm)</th>
+          <th style={{padding:"6px 10px"}}>Lățime (cm)</th>
+          <th style={{padding:"6px 10px"}}>Preț (lei)</th>
+          <th style={{padding:"6px 10px"}}>Furnizor</th>
+          <th style={{padding:"6px 10px"}}></th>
+        </tr>
+      </thead>
+      <tbody>
+        {afisateLista.map((m,i)=>
+          <tr key={m.id} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.lamela} onChange={e=>editeaza(m.id,"lamela",Number(e.target.value)||0)} style={{width:60,border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.grupaPret} onChange={e=>editeaza(m.id,"grupaPret",e.target.value)} style={{width:40,border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.inaltime} onChange={e=>editeaza(m.id,"inaltime",Number(e.target.value)||0)} style={{width:60,border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.latime} onChange={e=>editeaza(m.id,"latime",Number(e.target.value)||0)} style={{width:60,border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.pretLei} onChange={e=>editeaza(m.id,"pretLei",Number(e.target.value)||0)} style={{width:80,border:"none",background:"transparent",fontSize:13,fontWeight:600,color:"#2255AA",outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.furnizor||""} onChange={e=>editeaza(m.id,"furnizor",e.target.value)} style={{width:90,border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px",textAlign:"right"}}>
+              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
+            </td>
+          </tr>
+        )}
+        {filtrate.length===0&&<tr><td colSpan={7} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogJaluzele.length===0?"Nomenclatorul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
+      </tbody>
+    </table>
+    {filtrate.length>afisate&&<div style={{textAlign:"center",marginTop:14}}>
+      <button onClick={()=>setAfisate(p=>p+30)} style={{fontSize:12,fontWeight:600,padding:"8px 18px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>Arată încă 30 (din {filtrate.length-afisate} rămase)</button>
+    </div>}
+  </div>;
+}
+
+function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine,catalogPlisse,setCatalogPlisse,catalogJaluzele,setCatalogJaluzele}){
   const [sub,setSub]=React.useState("materiale");
   const OPTIUNI=[
     {id:"materiale",l:"Materiale (perdele/draperii)"},
     {id:"sine",l:"Șine electrice"},
     {id:"plisse",l:"Plisate"},
+    {id:"jaluzele",l:"Jaluzele venețiene"},
   ];
   return <div>
     <div style={{display:"flex",gap:4,padding:"14px 20px 0",borderBottom:`1px solid ${C.border}`}}>
@@ -3582,10 +3737,11 @@ function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCat
     {sub==="materiale"&&<TabCatalogMateriale C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale}/>}
     {sub==="sine"&&<TabCatalogSine C={C} catalogSine={catalogSine} setCatalogSine={setCatalogSine}/>}
     {sub==="plisse"&&<TabCatalogPlisse C={C} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse}/>}
+    {sub==="jaluzele"&&<TabCatalogJaluzele C={C} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele}/>}
   </div>;
 }
 
-function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
+function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
   const [numeClient,setNumeClient]=React.useState(client.name||"");
   const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null
@@ -3600,7 +3756,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150", latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:""});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150", latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:""});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -3632,6 +3788,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       }
       if(field==="tip" && val==="sina electrica"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="150"; }
       if(field==="tip" && val==="pliseu"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; }
+      if(field==="tip" && val==="jaluzea"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; if(!pr.lamelaJaluzea) upd.lamelaJaluzea="5"; }
       return upd;
     })};
   }));
@@ -3683,10 +3840,34 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     if(!match) match=optsH.reduce((a,b)=>b.latime>a.latime?b:a, optsH[0]);
     return match.pretLei;
   };
-  const valoareMaterial=(pr)=>esteSina(pr)?calculeazaPretSina(pr)*(Number(pr.cantitate)||0):estePliseu(pr)?calculeazaPretPliseu(pr)*(Number(pr.cantitate)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const esteJaluzea=(pr)=>pr.tip==="jaluzea";
+  const dimensiuniSteppedJaluzea=(pr)=>{
+    const h=Number(pr.inaltimeJaluzeaCm)||0;
+    const w=Number(pr.latimeJaluzeaCm)||0;
+    const lamela=Number(pr.lamelaJaluzea)||0;
+    if(!h||!w||!lamela||!pr.grupaPretJaluzea) return {h:0,w:0};
+    const opts=catalogJaluzele.filter(p=>p.grupaPret===pr.grupaPretJaluzea && Number(p.lamela)===lamela);
+    if(!opts.length) return {h:0,w:0};
+    const inaltimiDisponibile=[...new Set(opts.map(p=>p.inaltime))].sort((a,b)=>a-b);
+    let hFolosit=inaltimiDisponibile.find(x=>x>=h);
+    if(hFolosit===undefined) hFolosit=inaltimiDisponibile[inaltimiDisponibile.length-1];
+    const optsH=opts.filter(p=>p.inaltime===hFolosit);
+    const latimiDisponibile=[...new Set(optsH.map(p=>p.latime))].sort((a,b)=>a-b);
+    let wFolosit=latimiDisponibile.find(x=>x>=w);
+    if(wFolosit===undefined) wFolosit=latimiDisponibile[latimiDisponibile.length-1];
+    return {h:hFolosit, w:wFolosit};
+  };
+  const calculeazaPretJaluzea=(pr)=>{
+    const {h,w}=dimensiuniSteppedJaluzea(pr);
+    if(!h||!w) return 0;
+    const lamela=Number(pr.lamelaJaluzea)||0;
+    const match=catalogJaluzele.find(p=>p.grupaPret===pr.grupaPretJaluzea && Number(p.lamela)===lamela && p.inaltime===h && p.latime===w);
+    return match?match.pretLei:0;
+  };
+  const valoareMaterial=(pr)=>esteSina(pr)?calculeazaPretSina(pr)*(Number(pr.cantitate)||0):estePliseu(pr)?calculeazaPretPliseu(pr)*(Number(pr.cantitate)||0):esteJaluzea(pr)?calculeazaPretJaluzea(pr)*(Number(pr.cantitate)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
   const valoareBanda=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretBanda)||0):0;
   const valoareManopera=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretManopera)||0):0;
-  const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr))?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
+  const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr)||esteJaluzea(pr))?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
   const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr)+valoareMontaj(pr);
   const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
@@ -3709,6 +3890,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         const rMontajPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
         const rTotalPliseu=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rPliseu+rMontajPliseu+rTotalPliseu;
+      }
+      if(esteJaluzea(pr)){
+        const {h:hAfisat,w:wAfisat}=dimensiuniSteppedJaluzea(pr);
+        const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm, Lamelă ${pr.lamelaJaluzea}cm${pr.grupaPretJaluzea?", Grupa "+pr.grupaPretJaluzea:""})`:"";
+        const rJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${calculeazaPretJaluzea(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rMontajJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
+        const rTotalJaluzea=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        return rJaluzea+rMontajJaluzea+rTotalJaluzea;
       }
       const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
@@ -3740,7 +3929,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const necesarHtmlBuild=(camereList)=>{
     const grupe={};
     camereList.forEach(c=>{
-      c.produse.filter(pr=>pr.material.trim() && !esteSina(pr) && !estePliseu(pr)).forEach(pr=>{
+      c.produse.filter(pr=>pr.material.trim() && !esteSina(pr) && !estePliseu(pr) && !esteJaluzea(pr)).forEach(pr=>{
         const furn=pr.furnizor&&pr.furnizor.trim()?pr.furnizor.trim():"Furnizor nespecificat";
         if(!grupe[furn]) grupe[furn]=[];
         grupe[furn].push(pr);
@@ -3815,12 +4004,13 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   };
   const genereaza=()=>{
     if(!numeClient.trim()){ alert("Completează numele clientului."); return; }
-    const camereValide=camere.filter(c=>c.numeCamera.trim() && c.produse.some(pr=>pr.material.trim()||(estePliseu(pr)&&pr.latimePliseuCm&&pr.inaltimePliseuCm)));
+    const camereValide=camere.filter(c=>c.numeCamera.trim() && c.produse.some(pr=>pr.material.trim()||(estePliseu(pr)&&pr.latimePliseuCm&&pr.inaltimePliseuCm)||(esteJaluzea(pr)&&pr.latimeJaluzeaCm&&pr.inaltimeJaluzeaCm)));
     if(!camereValide.length){ alert("Adaugă cel puțin o cameră cu un produs (material completat)."); return; }
     for(const c of camereValide){
       for(const pr of c.produse){
         const pliseuActiv=estePliseu(pr)&&(pr.material.trim()||pr.latimePliseuCm||pr.inaltimePliseuCm||pr.grupaPretPliseu||pr.culoare.trim());
-        if(pr.material.trim() && !estePliseu(pr) && !pr.culoare.trim()){
+        const jaluzeaActiva=esteJaluzea(pr)&&(pr.material.trim()||pr.latimeJaluzeaCm||pr.inaltimeJaluzeaCm||pr.grupaPretJaluzea);
+        if(pr.material.trim() && !estePliseu(pr) && !esteJaluzea(pr) && !pr.culoare.trim()){
           alert(`Lipsește codul de culoare la „${pr.material}" din camera „${c.numeCamera}". Completează-l înainte să generezi oferta — fără el nu vei ști exact ce nuanță ai comandat.`);
           return;
         }
@@ -3834,6 +4024,18 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         }
         if(pliseuActiv && !pr.culoare.trim()){
           alert(`Lipsește culoarea șinei la pliseul „${pr.material||"fără cod"}" din camera „${c.numeCamera}". Alege una înainte să generezi oferta.`);
+          return;
+        }
+        if(jaluzeaActiva && !pr.material.trim()){
+          alert(`Lipsește codul de culoare la jaluzeaua din camera „${c.numeCamera}". Completează-l înainte să generezi oferta.`);
+          return;
+        }
+        if(jaluzeaActiva && !pr.grupaPretJaluzea){
+          alert(`Lipsește grupa de preț la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}". Alege una (A, B, C sau D) înainte să generezi oferta.`);
+          return;
+        }
+        if(jaluzeaActiva && !pr.lamelaJaluzea){
+          alert(`Lipsește lamela la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}". Alege una (5, 3.5 sau 2.5) înainte să generezi oferta.`);
           return;
         }
       }
@@ -3929,6 +4131,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
               <option value="pliseu">Pliseu</option>
+              <option value="jaluzea">Jaluzea venețiană</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Material — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
@@ -3987,6 +4190,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
               <option value="pliseu">Pliseu</option>
+              <option value="jaluzea">Jaluzea venețiană</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege modelul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
@@ -4035,6 +4239,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
               <option value="pliseu">Pliseu</option>
+              <option value="jaluzea">Jaluzea venețiană</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Cod material (max 4 cifre)" maxLength={4} style={selStyle} autoComplete="off"/>
@@ -4064,6 +4269,46 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55}}/>
             <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
             {pr.grupaPretPliseu&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
+          </div>
+          </>}
+          {esteJaluzea(pr)&&<>
+          <div style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 90px 80px auto",gap:8,alignItems:"center"}}>
+            <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="perdea">Perdea</option>
+              <option value="draperie">Draperie</option>
+              <option value="stor">Stor</option>
+              <option value="șină">Șină</option>
+              <option value="sina electrica">Șină electrică</option>
+              <option value="pliseu">Pliseu</option>
+              <option value="jaluzea">Jaluzea venețiană</option>
+              <option value="altele">Altele</option>
+            </select>
+            <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Cod culoare" style={selStyle} autoComplete="off"/>
+            <input value={pr.latimeJaluzeaCm} onChange={e=>updProdus(c.id,pr.id,"latimeJaluzeaCm",e.target.value)} placeholder="Lățime (cm)" style={selStyle}/>
+            <input value={pr.inaltimeJaluzeaCm} onChange={e=>updProdus(c.id,pr.id,"inaltimeJaluzeaCm",e.target.value)} placeholder="Înălțime (cm)" style={selStyle}/>
+            <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
+            {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:14,marginTop:6,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Lamelă (cm):</span>
+              <select value={pr.lamelaJaluzea} onChange={e=>updProdus(c.id,pr.id,"lamelaJaluzea",e.target.value)} style={{...selStyle,width:70}}>
+                {["5","3.5","2.5"].map(l=><option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Grupă preț:</span>
+              <select value={pr.grupaPretJaluzea} onChange={e=>updProdus(c.id,pr.id,"grupaPretJaluzea",e.target.value)} style={{...selStyle,width:70}}>
+                <option value="">—</option>
+                {["A","B","C","D"].map(g=><option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
+            <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
+            {pr.grupaPretJaluzea&&pr.latimeJaluzeaCm&&pr.inaltimeJaluzeaCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedJaluzea(pr).w}×{dimensiuniSteppedJaluzea(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
           </div>
           </>}
           </div>
@@ -5091,7 +5336,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,ofertaCounter,setOfertaCounter}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter}){
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
@@ -5201,7 +5446,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
         </div>}
         {(clientDetailTab[client.id]||"contract")==="oferta"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
-          <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
+          <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
         </div>}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Poze și măsurători</div>
@@ -6034,6 +6279,7 @@ function App() {
   const [ofertaCounter,setOfertaCounter]=useState(1);
   const [catalogSine,setCatalogSine]=useState([]);
   const [catalogPlisse,setCatalogPlisse]=useState([]);
+  const [catalogJaluzele,setCatalogJaluzele]=useState([]);
   const [log,setLog]=useState({});
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
@@ -6145,14 +6391,15 @@ function App() {
           const ofc=await sbGet(OFK2); if(ofc){setOfertaCounter(ofc);gotAnyData=true;}
           const csv=await sbGet(CSK); if(csv){setCatalogSine(csv);gotAnyData=true;}
           const cpv=await sbGet(CPK); if(cpv){setCatalogPlisse(Array.isArray(cpv)?cpv.filter(m=>m&&m.sistem&&m.grupaPret):[]);gotAnyData=true;}
+          const cjv=await sbGet(CJK); if(cjv){setCatalogJaluzele(Array.isArray(cjv)?cjv.filter(m=>m&&m.grupaPret&&m.lamela):[]);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -6184,6 +6431,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(OFK2,ofertaCounter);},[ofertaCounter,loaded]);
   useEffect(()=>{if(loaded) sbSave(CSK,catalogSine);},[catalogSine,loaded]);
   useEffect(()=>{if(loaded) sbSave(CPK,catalogPlisse);},[catalogPlisse,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CJK,catalogJaluzele);},[catalogJaluzele,loaded]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
@@ -6363,7 +6611,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -6389,7 +6637,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele
         }
       };
       const writable=await handle.createWritable();
@@ -6451,6 +6699,7 @@ function App() {
         if(d[OFK2]) setOfertaCounter(d[OFK2]);
         if(d[CSK]) setCatalogSine(d[CSK]);
         if(d[CPK]) setCatalogPlisse(Array.isArray(d[CPK])?d[CPK].filter(m=>m&&m.sistem&&m.grupaPret):[]);
+        if(d[CJK]) setCatalogJaluzele(Array.isArray(d[CJK])?d[CJK].filter(m=>m&&m.grupaPret&&m.lamela):[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -6573,7 +6822,7 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
@@ -7151,7 +7400,7 @@ function App() {
               <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
             </div>}
             {(clientDetailTab[client.id]||(client.stadiu==="oferta"?"oferta":"contract"))==="oferta"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
-              <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
+              <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
             </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
@@ -7207,10 +7456,10 @@ function App() {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>}
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>}
     </div>}
 
-    {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse}/>}
+    {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele}/>}
 
     {tab==="achizitii"&&<div>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
