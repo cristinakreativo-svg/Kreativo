@@ -4122,7 +4122,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:13,fontWeight:700,color:C.text,marginLeft:"auto"}}>{valoareLinie(pr).toFixed(0)} lei</span>
           </div>
           <div style={{padding:8}}>
-          {!esteSina(pr)&&!estePliseu(pr)&&<>
+          {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
