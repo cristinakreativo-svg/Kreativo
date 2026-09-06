@@ -3411,6 +3411,7 @@ function TabCatalogSine({C,catalogSine,setCatalogSine}){
 
 function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
   const [cauta,setCauta]=React.useState("");
+  const [afisate,setAfisate]=React.useState(50);
   const [denumire,setDenumire]=React.useState("");
   const [sistem,setSistem]=React.useState("");
   const [grupaPret,setGrupaPret]=React.useState("");
@@ -3485,6 +3486,7 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
   };
 
   const filtrate = catalogPlisse.filter(m=>!cauta.trim()||m.sistem.toLowerCase().includes(cauta.toLowerCase())||m.denumire.toLowerCase().includes(cauta.toLowerCase()));
+  const afisateLista = filtrate.slice(0, afisate);
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
@@ -3493,7 +3495,7 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Catalog plisate ({catalogPlisse.length} poziții)</div>
 
     <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
-      <input value={cauta} onChange={e=>setCauta(e.target.value)} placeholder="🔍 caută după denumire..." style={{...selStyle,flex:1,minWidth:200}}/>
+      <input value={cauta} onChange={e=>{setCauta(e.target.value);setAfisate(50);}} placeholder="🔍 caută după denumire..." style={{...selStyle,flex:1,minWidth:200}}/>
       <label style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:importing?C.border:"#5C6B65",color:importing?C.text:"#fff",cursor:importing?"default":"pointer",whiteSpace:"nowrap"}}>
         {importing?"Se importă...":"Importă din Excel"}
         <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
@@ -3527,7 +3529,7 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
         </tr>
       </thead>
       <tbody>
-        {filtrate.map((m,i)=>
+        {afisateLista.map((m,i)=>
           <tr key={m.id} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
             <td style={{padding:"6px 10px"}}>
               <input value={m.sistem} onChange={e=>editeaza(m.id,"sistem",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
@@ -3555,6 +3557,9 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
         {filtrate.length===0&&<tr><td colSpan={7} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogPlisse.length===0?"Nomenclatorul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
       </tbody>
     </table>
+    {filtrate.length>afisate&&<div style={{textAlign:"center",marginTop:14}}>
+      <button onClick={()=>setAfisate(p=>p+50)} style={{fontSize:12,fontWeight:600,padding:"8px 18px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>Arată încă 50 (din {filtrate.length-afisate} rămase)</button>
+    </div>}
   </div>;
 }
 
