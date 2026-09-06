@@ -3637,10 +3637,6 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:denumire})}));
     setPickerFor(null);
   };
-  const alegePliseu=(camId,prodId,denumire)=>{
-    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:denumire})}));
-    setPickerFor(null);
-  };
   const esteTextil=(pr)=>pr.tip==="perdea"||pr.tip==="draperie";
   const esteSina=(pr)=>pr.tip==="sina electrica";
   const calculeazaPretSina=(pr)=>{
@@ -3669,8 +3665,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   };
   const calculeazaPretPliseu=(pr)=>{
     const {h,w}=dimensiuniSteppedPliseu(pr);
-    if(!h || !w || !pr.material || !pr.grupaPretPliseu) return 0;
-    const opts=catalogPlisse.filter(p=>p.sistem===pr.material && p.grupaPret===pr.grupaPretPliseu);
+    if(!h || !w || !pr.grupaPretPliseu) return 0;
+    const opts=catalogPlisse.filter(p=>p.grupaPret===pr.grupaPretPliseu);
     if(!opts.length) return 0;
     const inaltimiDisponibile=[...new Set(opts.map(p=>p.inaltime))];
     let hFolosit=inaltimiDisponibile.find(x=>x===h);
@@ -3880,11 +3876,12 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     </div>
 
     {camere.map((c,ci2)=>
-      <div key={c.id} style={{border:`1px solid ${C.border}`,padding:12,marginBottom:10,background:C.surface}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-          <input list="oferta-camere-dl" value={c.numeCamera} onChange={e=>updCameraName(c.id,e.target.value)} placeholder="Cameră (ex: Living)" style={{...selStyle,fontWeight:600,flex:1}}/>
-          {camere.length>1&&<button onClick={()=>delCamera(c.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+      <div key={c.id} style={{border:`2px solid ${C.accent}`,marginBottom:20,background:C.surface}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.accent}}>
+          <input list="oferta-camere-dl" value={c.numeCamera} onChange={e=>updCameraName(c.id,e.target.value)} placeholder="Cameră (ex: Living)" style={{...selStyle,fontWeight:700,flex:1,border:"none"}}/>
+          {camere.length>1&&<button onClick={()=>delCamera(c.id)} style={{fontSize:18,color:"#fff",border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
         </div>
+        <div style={{padding:12}}>
 
         <div style={{background:C.bg,padding:10,marginBottom:12}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
@@ -3912,7 +3909,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           </div>
           <div style={{padding:8}}>
           {!esteSina(pr)&&!estePliseu(pr)&&<>
-          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center"}}>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
@@ -3926,15 +3923,26 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <input value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} placeholder="Cod culoare *" style={{...selStyle,border:pr.material.trim()&&!pr.culoare.trim()?`1px solid #B5504A`:selStyle.border}}/>
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="m" style={selStyle}/>
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareMaterial(pr).toFixed(0)} lei</span>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          {esteTextil(pr)&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
-            <span style={{fontSize:11,color:C.textMuted}}>Bandă fronsare:</span>
-            <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={{...selStyle,width:55}}/>
-            <span style={{fontSize:11,color:C.textMuted}}>lei/m ({valoareBanda(pr).toFixed(0)} lei)</span>
-            <span style={{fontSize:11,color:C.textMuted,marginLeft:10}}>Manoperă:</span>
-            <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={{...selStyle,width:55}}/>
-            <span style={{fontSize:11,color:C.textMuted}}>lei/m ({valoareManopera(pr).toFixed(0)} lei)</span>
+          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center",marginTop:8}}>
+            <span></span>
+            <input value="Bandă fronsare" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
+            <span></span>
+            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
+            <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={selStyle}/>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareBanda(pr).toFixed(0)} lei</span>
+            <span></span>
+          </div>}
+          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center",marginTop:8}}>
+            <span></span>
+            <input value="Manoperă" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
+            <span></span>
+            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
+            <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={selStyle}/>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareManopera(pr).toFixed(0)} lei</span>
+            <span></span>
           </div>}
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
             <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -4017,47 +4025,34 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="pliseu">Pliseu</option>
               <option value="altele">Altele</option>
             </select>
-            <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege sistemul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
+            <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Cod material (max 4 cifre)" maxLength={4} style={selStyle} autoComplete="off"/>
             <input value={pr.latimePliseuCm} onChange={e=>updProdus(c.id,pr.id,"latimePliseuCm",e.target.value)} placeholder="Lățime (cm)" style={selStyle}/>
             <input value={pr.inaltimePliseuCm} onChange={e=>updProdus(c.id,pr.id,"inaltimePliseuCm",e.target.value)} placeholder="Înălțime (cm)" style={selStyle}/>
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
-            <span style={{fontSize:11,color:C.textMuted}}>Grupă preț:</span>
-            {["A","0","1","2","3","4"].map(g=>
-              <button key={g} onClick={()=>updProdus(c.id,pr.id,"grupaPretPliseu",g)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:pr.grupaPretPliseu===g?C.accent:C.surface,color:pr.grupaPretPliseu===g?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{g}</button>
-            )}
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
-            <span style={{fontSize:11,color:C.textMuted}}>Culoare șină:</span>
-            {["Weiss","Silber","Bronze","Anthrazit RAL7016","Schwarz"].map(cul=>
-              <button key={cul} onClick={()=>updProdus(c.id,pr.id,"culoare",cul)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:pr.culoare===cul?C.accent:C.surface,color:pr.culoare===cul?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{cul}</button>
-            )}
+          <div style={{display:"flex",alignItems:"center",gap:14,marginTop:6,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Grupă preț:</span>
+              <select value={pr.grupaPretPliseu} onChange={e=>updProdus(c.id,pr.id,"grupaPretPliseu",e.target.value)} style={{...selStyle,width:70}}>
+                <option value="">—</option>
+                {["A","0","1","2","3","4"].map(g=><option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Culoare șină:</span>
+              <select value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} style={{...selStyle,width:150}}>
+                <option value="">—</option>
+                {["Weiss","Silber","Bronze","Anthrazit RAL7016","Schwarz"].map(cul=><option key={cul} value={cul}>{cul}</option>)}
+              </select>
+            </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
             <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
             <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55}}/>
             <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
-            {pr.material&&pr.grupaPretPliseu&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
+            {pr.grupaPretPliseu&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
           </div>
-          {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
-            <div style={{maxHeight:220,overflowY:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
-                  <th style={{padding:"6px 10px",textAlign:"left"}}>Sistem</th>
-                </tr></thead>
-                <tbody>
-                  {[...new Set(catalogPlisse.map(s=>s.sistem))].filter(d=>!pr.material.trim()||d.toLowerCase().includes(pr.material.toLowerCase())).map(d=>
-                    <tr key={d} onMouseDown={e=>{e.preventDefault();alegePliseu(c.id,pr.id,d);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{d}</td>
-                    </tr>
-                  )}
-                  {catalogPlisse.length===0&&<tr><td style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Nomenclatorul de plisate e gol — adaugă întâi în tab-ul „Catalog plisate".</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>}
           </>}
           </div>
           </div>
@@ -4065,6 +4060,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         <button onClick={()=>addProdus(c.id)} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:8}}>+ adaugă produs</button>
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
           <span style={{fontSize:12,color:C.textMuted}}>Subtotal: <b style={{color:C.text}}>{subtotalCamera(c).toFixed(0)} lei</b></span>
+        </div>
         </div>
       </div>
     )}
