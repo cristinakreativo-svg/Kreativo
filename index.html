@@ -3455,21 +3455,23 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
         const noi=[];
         const actualizariMap={};
         for(let i=1;i<rows.length;i++){
-          const r=rows[i];
-          if(!r || !r[0]) continue;
-          const den=String(r[0]).trim();
-          const sis=r[1]?String(r[1]).trim():"";
-          const grp=r[2]!==undefined&&r[2]!==null?String(r[2]).trim():"";
-          const h=Number(r[3]);
-          const w=Number(r[4]);
-          const pretL=Number(r[6]);
-          const furn=r[7]?String(r[7]).trim():"";
-          if(!den || !sis || !grp || isNaN(h) || isNaN(w) || isNaN(pretL)) continue;
-          const key=(sis+"|"+grp+"|"+h+"|"+w).toLowerCase();
-          if(existingMap[key]){ actualizariMap[existingMap[key]]={pretLei:pretL,furnizor:furn}; continue; }
-          if(actualizariMap[key]) continue;
-          existingMap[key]="pending-"+den;
-          noi.push({id:gid(), denumire:den, sistem:sis, grupaPret:grp, inaltime:h, latime:w, pretLei:pretL, furnizor:furn||"—"});
+          try{
+            const r=rows[i];
+            if(!r || !r[0]) continue;
+            const den=String(r[0]).trim();
+            const sis=r[1]?String(r[1]).trim():"";
+            const grp=r[2]!==undefined&&r[2]!==null?String(r[2]).trim():"";
+            const h=Number(r[3]);
+            const w=Number(r[4]);
+            const pretL=Number(r[6]);
+            const furn=r[7]?String(r[7]).trim():"";
+            if(!den || !sis || !grp || isNaN(h) || isNaN(w) || isNaN(pretL)) continue;
+            const key=(sis+"|"+grp+"|"+h+"|"+w).toLowerCase();
+            if(existingMap[key]){ actualizariMap[existingMap[key]]={pretLei:pretL,furnizor:furn}; continue; }
+            if(actualizariMap[key]) continue;
+            existingMap[key]="pending-"+den;
+            noi.push({id:gid(), denumire:den, sistem:sis, grupaPret:grp, inaltime:h, latime:w, pretLei:pretL, furnizor:furn||"—"});
+          }catch(rowErr){ console.error("Rând ignorat la import (linie "+(i+1)+"):", rowErr); }
         }
         const nrActualizari=Object.keys(actualizariMap).length;
         if(nrActualizari) setCatalogPlisse(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretLei:actualizariMap[m.id].pretLei,furnizor:actualizariMap[m.id].furnizor||m.furnizor}:m));
@@ -3869,9 +3871,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       {(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}
     </datalist>
 
-    <button onClick={()=>setFormOpen(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:formOpen?14:16,padding:"9px 14px",background:C.bg,border:`1px solid ${C.border}`,cursor:"pointer",textAlign:"left"}}>
-      <span style={{fontSize:12,fontWeight:600,color:C.textSub,flex:1}}>{formOpen?"Ascunde formularul":"+ Adaugă ofertă"}</span>
-      <span style={{fontSize:11,color:C.textMuted}}>{formOpen?"▾":"▸"}</span>
+    <button onClick={()=>setFormOpen(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:formOpen?14:16,padding:"10px 14px",background:formOpen?C.bg:"#5C6B65",border:formOpen?`1px solid ${C.border}`:"none",cursor:"pointer",textAlign:"left"}}>
+      <span style={{fontSize:13,fontWeight:700,color:formOpen?C.textSub:"#fff",flex:1}}>{formOpen?"Ascunde formularul":"+ Adaugă ofertă"}</span>
+      <span style={{fontSize:12,color:formOpen?C.textMuted:"#fff"}}>{formOpen?"▾":"▸"}</span>
     </button>
 
     {formOpen&&<>
@@ -7535,9 +7537,27 @@ function App() {
   </div>;
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props){ super(props); this.state={hasError:false, error:null, info:null}; }
+  static getDerivedStateFromError(error){ return {hasError:true, error}; }
+  componentDidCatch(error, info){ this.setState({info}); console.error("Eroare Kreativo:", error, info); }
+  render(){
+    if(this.state.hasError){
+      return <div style={{padding:30,fontFamily:"Arial,sans-serif",maxWidth:800,margin:"40px auto",background:"#F2EFE9",border:"1px solid #B5504A"}}>
+        <h2 style={{color:"#B5504A"}}>A apărut o eroare</h2>
+        <p>Aplicația a întâmpinat o problemă și s-a oprit, ca să nu piardă date. Detaliile de mai jos ajută la reparare — trimite-le, te rog.</p>
+        <p style={{fontWeight:700}}>{String(this.state.error && this.state.error.message || this.state.error)}</p>
+        <pre style={{whiteSpace:"pre-wrap",fontSize:12,background:"#fff",padding:12,border:"1px solid #ddd",maxHeight:300,overflow:"auto"}}>{this.state.error && this.state.error.stack}</pre>
+        <button onClick={()=>window.location.reload()} style={{marginTop:14,fontSize:13,fontWeight:600,padding:"9px 18px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Reîncarcă aplicația</button>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
+
 const container = document.getElementById('root');
 const root = ReactDOM.createRoot(container);
-root.render(<App />);
+root.render(<ErrorBoundary><App /></ErrorBoundary>);
 </script>
 </body>
 </html>
