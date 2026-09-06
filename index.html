@@ -3430,7 +3430,7 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
     if(!pretLei.trim() || isNaN(Number(pretLei))){ alert("Completează prețul (număr, în lei)."); return; }
     const den=denumire.trim()||`Pliseu ${sistem.trim()} - Grupa ${grupaPret.trim()}`;
     const nou={id:gid(), denumire:den, sistem:sistem.trim(), grupaPret:grupaPret.trim(), inaltime:Number(inaltime), latime:Number(latime), pretLei:Number(pretLei), furnizor:furnizor.trim()||"—"};
-    setCatalogPlisse(p=>[...p, nou].sort((a,b)=>a.sistem.localeCompare(b.sistem,"ro")||a.grupaPret.localeCompare(b.grupaPret,"ro")||a.inaltime-b.inaltime||a.latime-b.latime));
+    setCatalogPlisse(p=>[...p, nou].sort((a,b)=>(a.sistem||"").localeCompare(b.sistem||"","ro")||(a.grupaPret||"").localeCompare(b.grupaPret||"","ro")||(a.inaltime||0)-(b.inaltime||0)||(a.latime||0)-(b.latime||0)));
     setDenumire(""); setSistem(""); setGrupaPret(""); setInaltime(""); setLatime(""); setPretLei(""); setFurnizor("");
   };
   const sterge=(id)=>{
@@ -3475,7 +3475,7 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
         }
         const nrActualizari=Object.keys(actualizariMap).length;
         if(nrActualizari) setCatalogPlisse(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretLei:actualizariMap[m.id].pretLei,furnizor:actualizariMap[m.id].furnizor||m.furnizor}:m));
-        if(noi.length) setCatalogPlisse(p=>[...p, ...noi].sort((a,b)=>a.sistem.localeCompare(b.sistem,"ro")||a.grupaPret.localeCompare(b.grupaPret,"ro")||a.inaltime-b.inaltime||a.latime-b.latime));
+        if(noi.length) setCatalogPlisse(p=>[...p, ...noi].sort((a,b)=>(a.sistem||"").localeCompare(b.sistem||"","ro")||(a.grupaPret||"").localeCompare(b.grupaPret||"","ro")||(a.inaltime||0)-(b.inaltime||0)||(a.latime||0)-(b.latime||0)));
         const mesaje=[];
         if(noi.length) mesaje.push(`${noi.length} poziții noi importate`);
         if(nrActualizari) mesaje.push(`${nrActualizari} poziții existente actualizate`);
@@ -3487,7 +3487,7 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
     reader.readAsArrayBuffer(file);
   };
 
-  const filtrate = catalogPlisse.filter(m=>!cauta.trim()||m.sistem.toLowerCase().includes(cauta.toLowerCase())||m.denumire.toLowerCase().includes(cauta.toLowerCase()));
+  const filtrate = catalogPlisse.filter(m=>!cauta.trim()||(m.sistem||"").toLowerCase().includes(cauta.toLowerCase())||(m.denumire||"").toLowerCase().includes(cauta.toLowerCase()));
   const afisateLista = filtrate.slice(0, afisate);
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
@@ -6144,7 +6144,7 @@ function App() {
           const mtc=await sbGet(MTK); if(mtc){setCatalogMateriale(mtc);gotAnyData=true;}
           const ofc=await sbGet(OFK2); if(ofc){setOfertaCounter(ofc);gotAnyData=true;}
           const csv=await sbGet(CSK); if(csv){setCatalogSine(csv);gotAnyData=true;}
-          const cpv=await sbGet(CPK); if(cpv){setCatalogPlisse(cpv);gotAnyData=true;}
+          const cpv=await sbGet(CPK); if(cpv){setCatalogPlisse(Array.isArray(cpv)?cpv.filter(m=>m&&m.sistem&&m.grupaPret):[]);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
@@ -6450,7 +6450,7 @@ function App() {
         if(d[MTK]) setCatalogMateriale(d[MTK]);
         if(d[OFK2]) setOfertaCounter(d[OFK2]);
         if(d[CSK]) setCatalogSine(d[CSK]);
-        if(d[CPK]) setCatalogPlisse(d[CPK]);
+        if(d[CPK]) setCatalogPlisse(Array.isArray(d[CPK])?d[CPK].filter(m=>m&&m.sistem&&m.grupaPret):[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
