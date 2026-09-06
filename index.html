@@ -3808,20 +3808,25 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   };
   const genereaza=()=>{
     if(!numeClient.trim()){ alert("Completează numele clientului."); return; }
-    const camereValide=camere.filter(c=>c.numeCamera.trim() && c.produse.some(pr=>pr.material.trim()));
+    const camereValide=camere.filter(c=>c.numeCamera.trim() && c.produse.some(pr=>pr.material.trim()||(estePliseu(pr)&&pr.latimePliseuCm&&pr.inaltimePliseuCm)));
     if(!camereValide.length){ alert("Adaugă cel puțin o cameră cu un produs (material completat)."); return; }
     for(const c of camereValide){
       for(const pr of c.produse){
+        const pliseuActiv=estePliseu(pr)&&(pr.material.trim()||pr.latimePliseuCm||pr.inaltimePliseuCm||pr.grupaPretPliseu||pr.culoare.trim());
         if(pr.material.trim() && !estePliseu(pr) && !pr.culoare.trim()){
           alert(`Lipsește codul de culoare la „${pr.material}" din camera „${c.numeCamera}". Completează-l înainte să generezi oferta — fără el nu vei ști exact ce nuanță ai comandat.`);
           return;
         }
-        if(estePliseu(pr) && pr.material.trim() && !pr.grupaPretPliseu){
-          alert(`Lipsește grupa de preț la pliseul „${pr.material}" din camera „${c.numeCamera}". Alege una (A, 0, 1, 2, 3 sau 4) înainte să generezi oferta.`);
+        if(pliseuActiv && !pr.material.trim()){
+          alert(`Lipsește codul materialului la pliseul din camera „${c.numeCamera}". Completează-l (max 4 cifre) înainte să generezi oferta.`);
           return;
         }
-        if(estePliseu(pr) && pr.material.trim() && !pr.culoare.trim()){
-          alert(`Lipsește culoarea șinei la pliseul „${pr.material}" din camera „${c.numeCamera}". Alege una înainte să generezi oferta.`);
+        if(pliseuActiv && !pr.grupaPretPliseu){
+          alert(`Lipsește grupa de preț la pliseul „${pr.material||"fără cod"}" din camera „${c.numeCamera}". Alege una (0, 1, 2, 3 sau 4) înainte să generezi oferta.`);
+          return;
+        }
+        if(pliseuActiv && !pr.culoare.trim()){
+          alert(`Lipsește culoarea șinei la pliseul „${pr.material||"fără cod"}" din camera „${c.numeCamera}". Alege una înainte să generezi oferta.`);
           return;
         }
       }
@@ -4036,7 +4041,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <span style={{fontSize:11,color:C.textMuted}}>Grupă preț:</span>
               <select value={pr.grupaPretPliseu} onChange={e=>updProdus(c.id,pr.id,"grupaPretPliseu",e.target.value)} style={{...selStyle,width:70}}>
                 <option value="">—</option>
-                {["A","0","1","2","3","4"].map(g=><option key={g} value={g}>{g}</option>)}
+                {["0","1","2","3","4"].map(g=><option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div style={{display:"flex",gap:6,alignItems:"center"}}>
