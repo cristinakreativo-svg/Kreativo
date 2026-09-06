@@ -3825,41 +3825,48 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const dimensiuniSteppedPliseu=(pr)=>{
     const h=Number(pr.inaltimePliseuCm)||0;
     const w=Number(pr.latimePliseuCm)||0;
-    return {h: h?Math.ceil(h/10)*10:0, w: w?Math.ceil(w/10)*10:0};
+    if(!h||!w||!pr.grupaPretPliseu) return {h:0,w:0,valid:false,imposibil:false};
+    const opts=catalogPlisse.filter(p=>p.grupaPret===pr.grupaPretPliseu);
+    if(!opts.length) return {h:0,w:0,valid:false,imposibil:false};
+    const inaltimiDisponibile=[...new Set(opts.map(p=>p.inaltime))].sort((a,b)=>a-b);
+    const maxH=inaltimiDisponibile[inaltimiDisponibile.length-1];
+    if(h>maxH) return {h:0,w:0,valid:false,imposibil:true};
+    const hFolosit=inaltimiDisponibile.find(x=>x>=h);
+    const optsH=opts.filter(p=>p.inaltime===hFolosit);
+    const latimiDisponibile=[...new Set(optsH.map(p=>p.latime))].sort((a,b)=>a-b);
+    const maxW=latimiDisponibile[latimiDisponibile.length-1];
+    if(w>maxW) return {h:0,w:0,valid:false,imposibil:true};
+    const wFolosit=latimiDisponibile.find(x=>x>=w);
+    return {h:hFolosit, w:wFolosit, valid:true, imposibil:false};
   };
   const calculeazaPretPliseu=(pr)=>{
-    const {h,w}=dimensiuniSteppedPliseu(pr);
-    if(!h || !w || !pr.grupaPretPliseu) return 0;
-    const opts=catalogPlisse.filter(p=>p.grupaPret===pr.grupaPretPliseu);
-    if(!opts.length) return 0;
-    const inaltimiDisponibile=[...new Set(opts.map(p=>p.inaltime))];
-    let hFolosit=inaltimiDisponibile.find(x=>x===h);
-    if(hFolosit===undefined) hFolosit=inaltimiDisponibile.reduce((a,b)=>(Math.abs(b-h)<Math.abs(a-h)?b:a), inaltimiDisponibile[0]);
-    const optsH=opts.filter(p=>p.inaltime===hFolosit);
-    let match=optsH.find(p=>p.latime===w);
-    if(!match) match=optsH.reduce((a,b)=>b.latime>a.latime?b:a, optsH[0]);
-    return match.pretLei;
+    const {h,w,valid}=dimensiuniSteppedPliseu(pr);
+    if(!valid) return 0;
+    const match=catalogPlisse.find(p=>p.grupaPret===pr.grupaPretPliseu && p.inaltime===h && p.latime===w);
+    return match?match.pretLei:0;
   };
   const esteJaluzea=(pr)=>pr.tip==="jaluzea";
   const dimensiuniSteppedJaluzea=(pr)=>{
     const h=Number(pr.inaltimeJaluzeaCm)||0;
     const w=Number(pr.latimeJaluzeaCm)||0;
     const lamela=Number(pr.lamelaJaluzea)||0;
-    if(!h||!w||!lamela||!pr.grupaPretJaluzea) return {h:0,w:0};
+    if(!h||!w||!lamela||!pr.grupaPretJaluzea) return {h:0,w:0,valid:false,imposibil:false};
     const opts=catalogJaluzele.filter(p=>p.grupaPret===pr.grupaPretJaluzea && Number(p.lamela)===lamela);
-    if(!opts.length) return {h:0,w:0};
+    if(!opts.length) return {h:0,w:0,valid:false,imposibil:false};
     const inaltimiDisponibile=[...new Set(opts.map(p=>p.inaltime))].sort((a,b)=>a-b);
-    let hFolosit=inaltimiDisponibile.find(x=>x>=h);
-    if(hFolosit===undefined) hFolosit=inaltimiDisponibile[inaltimiDisponibile.length-1];
+    const maxH=inaltimiDisponibile[inaltimiDisponibile.length-1];
+    if(h>maxH) return {h:0,w:0,valid:false,imposibil:true};
+    const hFolosit=inaltimiDisponibile.find(x=>x>=h);
     const optsH=opts.filter(p=>p.inaltime===hFolosit);
     const latimiDisponibile=[...new Set(optsH.map(p=>p.latime))].sort((a,b)=>a-b);
-    let wFolosit=latimiDisponibile.find(x=>x>=w);
-    if(wFolosit===undefined) wFolosit=latimiDisponibile[latimiDisponibile.length-1];
-    return {h:hFolosit, w:wFolosit};
+    const maxW=latimiDisponibile[latimiDisponibile.length-1];
+    if(w>maxW) return {h:0,w:0,valid:false,imposibil:true};
+    const wFolosit=latimiDisponibile.find(x=>x>=w);
+    return {h:hFolosit, w:wFolosit, valid:true, imposibil:false};
   };
   const calculeazaPretJaluzea=(pr)=>{
-    const {h,w}=dimensiuniSteppedJaluzea(pr);
-    if(!h||!w) return 0;
+    const {h,w,valid}=dimensiuniSteppedJaluzea(pr);
+    if(!valid) return 0;
     const lamela=Number(pr.lamelaJaluzea)||0;
     const match=catalogJaluzele.find(p=>p.grupaPret===pr.grupaPretJaluzea && Number(p.lamela)===lamela && p.inaltime===h && p.latime===w);
     return match?match.pretLei:0;
@@ -4036,6 +4043,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         }
         if(jaluzeaActiva && !pr.lamelaJaluzea){
           alert(`Lipsește lamela la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}". Alege una (5, 3.5 sau 2.5) înainte să generezi oferta.`);
+          return;
+        }
+        if(estePliseu(pr) && pr.grupaPretPliseu && pr.latimePliseuCm && pr.inaltimePliseuCm && dimensiuniSteppedPliseu(pr).imposibil){
+          alert(`Dimensiune imposibilă la pliseul „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — lățimea sau înălțimea depășește ce există în catalog pentru grupa aleasă. Verifică dimensiunile înainte să generezi oferta.`);
+          return;
+        }
+        if(esteJaluzea(pr) && pr.grupaPretJaluzea && pr.latimeJaluzeaCm && pr.inaltimeJaluzeaCm && dimensiuniSteppedJaluzea(pr).imposibil){
+          alert(`Dimensiune imposibilă la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — lățimea sau înălțimea depășește ce există în catalog pentru grupa/lamela alese. Verifică dimensiunile înainte să generezi oferta.`);
           return;
         }
       }
@@ -4268,7 +4283,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
             <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55}}/>
             <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
-            {pr.grupaPretPliseu&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
+            {pr.grupaPretPliseu&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&(dimensiuniSteppedPliseu(pr).imposibil?<span style={{fontSize:12,fontWeight:700,color:"#B5504A",marginLeft:"auto"}}>⚠ Dimensiune imposibilă — verifică lățimea/înălțimea (depășește ce există în catalog)</span>:<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>)}
           </div>
           </>}
           {esteJaluzea(pr)&&<>
@@ -4308,7 +4323,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
             <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55}}/>
             <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
-            {pr.grupaPretJaluzea&&pr.latimeJaluzeaCm&&pr.inaltimeJaluzeaCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedJaluzea(pr).w}×{dimensiuniSteppedJaluzea(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
+            {pr.grupaPretJaluzea&&pr.latimeJaluzeaCm&&pr.inaltimeJaluzeaCm&&(dimensiuniSteppedJaluzea(pr).imposibil?<span style={{fontSize:12,fontWeight:700,color:"#B5504A",marginLeft:"auto"}}>⚠ Dimensiune imposibilă — verifică lățimea/înălțimea (depășește ce există în catalog)</span>:<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedJaluzea(pr).w}×{dimensiuniSteppedJaluzea(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>)}
           </div>
           </>}
           </div>
