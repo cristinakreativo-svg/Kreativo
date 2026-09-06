@@ -3756,7 +3756,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:""});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298"});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -3789,9 +3789,18 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       if(field==="tip" && val==="sina electrica"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="150"; }
       if(field==="tip" && val==="pliseu"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; }
       if(field==="tip" && val==="jaluzea"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; if(!pr.lamelaJaluzea) upd.lamelaJaluzea="5"; }
+      if(field==="tip" && val==="stor roman transparent"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretBanda="75"; upd.pretManopera="75"; upd.pretMecanism="298"; upd.pretMontaj="100"; }
       if(esteSina(upd) && ["material","lungimeSinaCm","wave","culoare","tip"].includes(field)){
         const pretCalculat=calculeazaPretSina(upd);
         if(pretCalculat>0) upd.pretUnitarSina=String(pretCalculat);
+      }
+      if(estePliseu(upd) && ["grupaPretPliseu","latimePliseuCm","inaltimePliseuCm","tip"].includes(field)){
+        const pretCalculat=calculeazaPretPliseu(upd);
+        if(pretCalculat>0) upd.pretUnitarPliseu=String(pretCalculat);
+      }
+      if(esteJaluzea(upd) && ["grupaPretJaluzea","lamelaJaluzea","latimeJaluzeaCm","inaltimeJaluzeaCm","tip"].includes(field)){
+        const pretCalculat=calculeazaPretJaluzea(upd);
+        if(pretCalculat>0) upd.pretUnitarJaluzea=String(pretCalculat);
       }
       return upd;
     })};
@@ -3806,6 +3815,13 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     setPickerFor(null);
   };
   const esteTextil=(pr)=>pr.tip==="perdea"||pr.tip==="draperie";
+  const esteStorRomanTransparent=(pr)=>pr.tip==="stor roman transparent";
+  const areBandaManopera=(pr)=>esteTextil(pr)||esteStorRomanTransparent(pr);
+  const mpStor=(pr)=>{
+    const l=Number(pr.latimeStorCm)||0;
+    const h=Number(pr.inaltimeStorCm)||0;
+    return (l&&h)?(l/100)*(h/100):0;
+  };
   const esteSina=(pr)=>pr.tip==="sina electrica";
   const calculeazaPretSina=(pr)=>{
     const cm=Number(pr.lungimeSinaCm)||0;
@@ -3876,11 +3892,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     return match?match.pretLei:0;
   };
   const pretUnitarSinaEfectiv=(pr)=>(pr.pretUnitarSina!==undefined && pr.pretUnitarSina!=="")?Number(pr.pretUnitarSina)||0:calculeazaPretSina(pr);
-  const valoareMaterial=(pr)=>esteSina(pr)?pretUnitarSinaEfectiv(pr)*(Number(pr.cantitate)||0):estePliseu(pr)?calculeazaPretPliseu(pr)*(Number(pr.cantitate)||0):esteJaluzea(pr)?calculeazaPretJaluzea(pr)*(Number(pr.cantitate)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
-  const valoareBanda=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretBanda)||0):0;
-  const valoareManopera=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretManopera)||0):0;
-  const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr)||esteJaluzea(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
-  const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr)+valoareMontaj(pr);
+  const pretUnitarPliseuEfectiv=(pr)=>(pr.pretUnitarPliseu!==undefined && pr.pretUnitarPliseu!=="")?Number(pr.pretUnitarPliseu)||0:calculeazaPretPliseu(pr);
+  const pretUnitarJaluzeaEfectiv=(pr)=>(pr.pretUnitarJaluzea!==undefined && pr.pretUnitarJaluzea!=="")?Number(pr.pretUnitarJaluzea)||0:calculeazaPretJaluzea(pr);
+  const valoareMaterial=(pr)=>esteSina(pr)?pretUnitarSinaEfectiv(pr)*(Number(pr.cantitate)||0):estePliseu(pr)?pretUnitarPliseuEfectiv(pr)*(Number(pr.cantitate)||0):esteJaluzea(pr)?pretUnitarJaluzeaEfectiv(pr)*(Number(pr.cantitate)||0):esteStorRomanTransparent(pr)?mpStor(pr)*(Number(pr.pretUnitar)||0)*(Number(pr.cantitate)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const valoareBanda=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretBanda)||0):esteStorRomanTransparent(pr)?mpStor(pr)*(Number(pr.pretBanda)||0)*(Number(pr.cantitate)||0):0;
+  const valoareManopera=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretManopera)||0):esteStorRomanTransparent(pr)?mpStor(pr)*(Number(pr.pretManopera)||0)*(Number(pr.cantitate)||0):0;
+  const valoareMecanism=(pr)=>esteStorRomanTransparent(pr)?(Number(pr.latimeStorCm)||0)/100*(Number(pr.pretMecanism)||0)*(Number(pr.cantitate)||0):0;
+  const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr)||esteJaluzea(pr)||esteStorRomanTransparent(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
+  const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr)+valoareMecanism(pr)+valoareMontaj(pr);
   const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
   const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
@@ -3898,7 +3917,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       if(estePliseu(pr)){
         const {h:hAfisat,w:wAfisat}=dimensiuniSteppedPliseu(pr);
         const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm${pr.grupaPretPliseu?", Grupa "+pr.grupaPretPliseu:""})`:"";
-        const rPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${calculeazaPretPliseu(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarPliseuEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
         const rMontajPliseu=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
         const rTotalPliseu=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rPliseu+rMontajPliseu+rTotalPliseu;
@@ -3906,10 +3925,21 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       if(esteJaluzea(pr)){
         const {h:hAfisat,w:wAfisat}=dimensiuniSteppedJaluzea(pr);
         const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm, Lamelă ${pr.lamelaJaluzea}cm${pr.grupaPretJaluzea?", Grupa "+pr.grupaPretJaluzea:""})`:"";
-        const rJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${calculeazaPretJaluzea(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarJaluzeaEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
         const rMontajJaluzea=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
         const rTotalJaluzea=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rJaluzea+rMontajJaluzea+rTotalJaluzea;
+      }
+      if(esteStorRomanTransparent(pr)){
+        const mp=mpStor(pr);
+        const dimensiuniAfisate=(pr.latimeStorCm&&pr.inaltimeStorCm)?`(${pr.latimeStorCm}×${pr.inaltimeStorCm} cm)`:"";
+        const rMaterialStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${mp.toFixed(2)} mp × ${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rBandaStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${mp.toFixed(2)} mp</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
+        const rManoperaStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${mp.toFixed(2)} mp</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
+        const rMecanism=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Mecanism stor roman</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${((Number(pr.latimeStorCm)||0)/100).toFixed(2)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMecanism||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMecanism(pr).toFixed(0)} lei</td></tr>`;
+        const rMontajStor=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
+        const rTotalStor=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        return rMaterialStor+rBandaStor+rManoperaStor+rMecanism+rMontajStor+rTotalStor;
       }
       const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
@@ -3951,7 +3981,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     if(!furnizori.length) return "";
     const blocuri=furnizori.map(furn=>{
       const rows=grupe[furn].map(pr=>
-        `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #D8CDBA">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #D8CDBA">${pr.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D8CDBA">${pr.cantitate||0} m</td></tr>`
+        `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #D8CDBA">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #D8CDBA">${pr.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D8CDBA">${esteStorRomanTransparent(pr)?(mpStor(pr)*(Number(pr.cantitate)||1)).toFixed(2)+" mp":(pr.cantitate||0)+" m"}</td></tr>`
       ).join("");
       return `<div style="margin-bottom:12px">
         <div style="font:700 .82em/1 'Source Sans 3',Calibri,sans-serif;color:#5C4A2E;margin-bottom:5px">${furn}</div>
@@ -4009,6 +4039,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         const pretVechi=calculeazaPretSina(copie);
         if(pretVechi>0) copie.pretUnitarSina=String(pretVechi);
       }
+      if(estePliseu(copie) && !copie.pretUnitarPliseu){
+        const pretVechi=calculeazaPretPliseu(copie);
+        if(pretVechi>0) copie.pretUnitarPliseu=String(pretVechi);
+      }
+      if(esteJaluzea(copie) && !copie.pretUnitarJaluzea){
+        const pretVechi=calculeazaPretJaluzea(copie);
+        if(pretVechi>0) copie.pretUnitarJaluzea=String(pretVechi);
+      }
       return copie;
     })})));
     setEditingId(oferta.id);
@@ -4057,12 +4095,12 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           alert(`Lipsește lamela la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}". Alege una (5, 3.5 sau 2.5) înainte să generezi oferta.`);
           return;
         }
-        if(estePliseu(pr) && pr.grupaPretPliseu && pr.latimePliseuCm && pr.inaltimePliseuCm && dimensiuniSteppedPliseu(pr).imposibil){
-          alert(`Dimensiune imposibilă la pliseul „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — lățimea sau înălțimea depășește ce există în catalog pentru grupa aleasă. Verifică dimensiunile înainte să generezi oferta.`);
+        if(estePliseu(pr) && pr.grupaPretPliseu && pr.latimePliseuCm && pr.inaltimePliseuCm && dimensiuniSteppedPliseu(pr).imposibil && !pr.pretUnitarPliseu){
+          alert(`Dimensiune imposibilă la pliseul „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — lățimea sau înălțimea depășește ce există în catalog pentru grupa aleasă. Verifică dimensiunile, sau completează manual un preț dacă e o comandă specială.`);
           return;
         }
-        if(esteJaluzea(pr) && pr.grupaPretJaluzea && pr.latimeJaluzeaCm && pr.inaltimeJaluzeaCm && dimensiuniSteppedJaluzea(pr).imposibil){
-          alert(`Dimensiune imposibilă la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — lățimea sau înălțimea depășește ce există în catalog pentru grupa/lamela alese. Verifică dimensiunile înainte să generezi oferta.`);
+        if(esteJaluzea(pr) && pr.grupaPretJaluzea && pr.latimeJaluzeaCm && pr.inaltimeJaluzeaCm && dimensiuniSteppedJaluzea(pr).imposibil && !pr.pretUnitarJaluzea){
+          alert(`Dimensiune imposibilă la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — lățimea sau înălțimea depășește ce există în catalog pentru grupa/lamela alese. Verifică dimensiunile, sau completează manual un preț dacă e o comandă specială.`);
           return;
         }
       }
@@ -4149,7 +4187,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:13,fontWeight:700,color:C.text,marginLeft:"auto"}}>{valoareLinie(pr).toFixed(0)} lei</span>
           </div>
           <div style={{padding:8}}>
-          {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&<>
+          {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&!esteStorRomanTransparent(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
@@ -4159,6 +4197,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="sina electrica">Șină electrică</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
+              <option value="stor roman transparent">Stor roman transparent</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Material — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
@@ -4218,6 +4257,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="sina electrica">Șină electrică</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
+              <option value="stor roman transparent">Stor roman transparent</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege modelul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
@@ -4243,6 +4283,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
             {pr.material&&pr.lungimeSinaCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({lungimeSteppedSina(pr)} m rotunjit × {pr.cantitate||1} buc.)</span>}
           </div>
+          {pr.material&&pr.pretUnitarSina&&calculeazaPretSina(pr)>0&&Number(pr.pretUnitarSina)!==calculeazaPretSina(pr)&&<div style={{marginTop:6,fontSize:12,fontWeight:600,color:"#B5504A"}}>⚠ Ai modificat prețul de catalog (preț catalog: {calculeazaPretSina(pr).toFixed(0)} lei)</div>}
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
             <div style={{maxHeight:220,overflowY:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
@@ -4271,6 +4312,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="sina electrica">Șină electrică</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
+              <option value="stor roman transparent">Stor roman transparent</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Cod material (max 4 cifre)" maxLength={4} style={selStyle} autoComplete="off"/>
@@ -4294,6 +4336,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
                 {["Weiss","Silber","Bronze","Anthrazit RAL7016","Schwarz"].map(cul=><option key={cul} value={cul}>{cul}</option>)}
               </select>
             </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Preț/buc:</span>
+              <input value={pr.pretUnitarPliseu} onChange={e=>updProdus(c.id,pr.id,"pretUnitarPliseu",e.target.value)} style={{...selStyle,width:70}}/>
+            </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
             <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
@@ -4304,6 +4350,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
             {pr.grupaPretPliseu&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&(dimensiuniSteppedPliseu(pr).imposibil?<span style={{fontSize:12,fontWeight:700,color:"#B5504A",marginLeft:"auto"}}>⚠ Dimensiune imposibilă — verifică lățimea/înălțimea (depășește ce există în catalog)</span>:<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>)}
           </div>
+          {pr.pretUnitarPliseu&&calculeazaPretPliseu(pr)>0&&Number(pr.pretUnitarPliseu)!==calculeazaPretPliseu(pr)&&<div style={{marginTop:6,fontSize:12,fontWeight:600,color:"#B5504A"}}>⚠ Ai modificat prețul de catalog (preț catalog: {calculeazaPretPliseu(pr).toFixed(0)} lei)</div>}
           </>}
           {esteJaluzea(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 90px 80px auto",gap:8,alignItems:"center"}}>
@@ -4315,6 +4362,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="sina electrica">Șină electrică</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
+              <option value="stor roman transparent">Stor roman transparent</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Cod culoare" style={selStyle} autoComplete="off"/>
@@ -4337,6 +4385,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
                 {["A","B","C","D"].map(g=><option key={g} value={g}>{g}</option>)}
               </select>
             </div>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <span style={{fontSize:11,color:C.textMuted}}>Preț/buc:</span>
+              <input value={pr.pretUnitarJaluzea} onChange={e=>updProdus(c.id,pr.id,"pretUnitarJaluzea",e.target.value)} style={{...selStyle,width:70}}/>
+            </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
             <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
@@ -4347,6 +4399,77 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
             {pr.grupaPretJaluzea&&pr.latimeJaluzeaCm&&pr.inaltimeJaluzeaCm&&(dimensiuniSteppedJaluzea(pr).imposibil?<span style={{fontSize:12,fontWeight:700,color:"#B5504A",marginLeft:"auto"}}>⚠ Dimensiune imposibilă — verifică lățimea/înălțimea (depășește ce există în catalog)</span>:<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedJaluzea(pr).w}×{dimensiuniSteppedJaluzea(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>)}
           </div>
+          {pr.pretUnitarJaluzea&&calculeazaPretJaluzea(pr)>0&&Number(pr.pretUnitarJaluzea)!==calculeazaPretJaluzea(pr)&&<div style={{marginTop:6,fontSize:12,fontWeight:600,color:"#B5504A"}}>⚠ Ai modificat prețul de catalog (preț catalog: {calculeazaPretJaluzea(pr).toFixed(0)} lei)</div>}
+          </>}
+          {esteStorRomanTransparent(pr)&&<>
+          <div style={{display:"grid",gridTemplateColumns:"150px 1fr 110px 80px auto",gap:8,alignItems:"center"}}>
+            <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="perdea">Perdea</option>
+              <option value="draperie">Draperie</option>
+              <option value="stor">Stor</option>
+              <option value="șină">Șină</option>
+              <option value="sina electrica">Șină electrică</option>
+              <option value="pliseu">Pliseu</option>
+              <option value="jaluzea">Jaluzea venețiană</option>
+              <option value="stor roman transparent">Stor roman transparent</option>
+              <option value="altele">Altele</option>
+            </select>
+            <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Material — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
+            <input value={pr.culoare} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} placeholder="Cod culoare *" style={{...selStyle,border:pr.material.trim()&&!pr.culoare.trim()?`1px solid #B5504A`:selStyle.border}}/>
+            <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
+            {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Lățime (cm):</span>
+            <input value={pr.latimeStorCm} onChange={e=>updProdus(c.id,pr.id,"latimeStorCm",e.target.value)} style={{...selStyle,width:70}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>Înălțime (cm):</span>
+            <input value={pr.inaltimeStorCm} onChange={e=>updProdus(c.id,pr.id,"inaltimeStorCm",e.target.value)} style={{...selStyle,width:70}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>Preț/m material:</span>
+            <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} style={{...selStyle,width:70}}/>
+            {mpStor(pr)>0&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({mpStor(pr).toFixed(2)} mp × {pr.cantitate||1} buc.)</span>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Bandă:</span>
+            <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/mp ({valoareBanda(pr).toFixed(0)} lei)</span>
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:10}}>Manoperă:</span>
+            <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/mp ({valoareManopera(pr).toFixed(0)} lei)</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Mecanism stor roman:</span>
+            <input value={pr.pretMecanism} onChange={e=>updProdus(c.id,pr.id,"pretMecanism",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/m ({valoareMecanism(pr).toFixed(0)} lei)</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+              <input type="checkbox" checked={pr.montajInclus!==false} onChange={e=>updProdus(c.id,pr.id,"montajInclus",e.target.checked)}/>
+              <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
+            </label>
+            <input value={pr.pretMontaj} disabled={pr.montajInclus===false} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55,opacity:pr.montajInclus===false?0.5:1}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
+          </div>
+          {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
+            <div style={{maxHeight:220,overflowY:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
+                  <th style={{padding:"6px 10px",textAlign:"left"}}>Design</th>
+                  <th style={{padding:"6px 10px",textAlign:"left"}}>Sursă</th>
+                  <th style={{padding:"6px 10px",textAlign:"right"}}>Preț</th>
+                </tr></thead>
+                <tbody>
+                  {catalogMateriale.filter(m=>!pr.material.trim()||m.design.toLowerCase().includes(pr.material.toLowerCase())||m.sursa.toLowerCase().includes(pr.material.toLowerCase())).slice(0,200).map(m=>
+                    <tr key={m.id} onMouseDown={e=>{e.preventDefault();alegeMaterial(c.id,pr.id,m);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.design}</td>
+                      <td style={{padding:"7px 10px",color:C.textMuted}}>{m.sursa}</td>
+                      <td style={{padding:"7px 10px",textAlign:"right",color:C.text}}>{m.pretLei} lei</td>
+                    </tr>
+                  )}
+                  {catalogMateriale.length===0&&<tr><td colSpan={3} style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Catalogul de materiale e gol — adaugă întâi materiale în tab-ul „Catalog materiale".</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>}
           </>}
           </div>
           </div>
