@@ -3412,20 +3412,25 @@ function TabCatalogSine({C,catalogSine,setCatalogSine}){
 function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
   const [cauta,setCauta]=React.useState("");
   const [denumire,setDenumire]=React.useState("");
+  const [sistem,setSistem]=React.useState("");
+  const [grupaPret,setGrupaPret]=React.useState("");
   const [inaltime,setInaltime]=React.useState("");
   const [latime,setLatime]=React.useState("");
   const [pretLei,setPretLei]=React.useState("");
+  const [furnizor,setFurnizor]=React.useState("");
   const [importing,setImporting]=React.useState(false);
   const inputRef=React.useRef(null);
 
   const adauga=()=>{
-    if(!denumire.trim()){ alert("Completează denumirea (ex: Pliseu VS2 Deluxe - Grupa A)."); return; }
+    if(!sistem.trim()){ alert("Completează sistemul (ex: VS2 Deluxe)."); return; }
+    if(!grupaPret.trim()){ alert("Completează grupa de preț (ex: A, 0, 1, 2, 3, 4)."); return; }
     if(!inaltime.trim() || isNaN(Number(inaltime))){ alert("Completează înălțimea (număr, în cm)."); return; }
     if(!latime.trim() || isNaN(Number(latime))){ alert("Completează lățimea (număr, în cm)."); return; }
     if(!pretLei.trim() || isNaN(Number(pretLei))){ alert("Completează prețul (număr, în lei)."); return; }
-    const nou={id:gid(), denumire:denumire.trim(), inaltime:Number(inaltime), latime:Number(latime), pretLei:Number(pretLei)};
-    setCatalogPlisse(p=>[...p, nou].sort((a,b)=>a.denumire.localeCompare(b.denumire,"ro")||a.inaltime-b.inaltime||a.latime-b.latime));
-    setDenumire(""); setInaltime(""); setLatime(""); setPretLei("");
+    const den=denumire.trim()||`Pliseu ${sistem.trim()} - Grupa ${grupaPret.trim()}`;
+    const nou={id:gid(), denumire:den, sistem:sistem.trim(), grupaPret:grupaPret.trim(), inaltime:Number(inaltime), latime:Number(latime), pretLei:Number(pretLei), furnizor:furnizor.trim()||"—"};
+    setCatalogPlisse(p=>[...p, nou].sort((a,b)=>a.sistem.localeCompare(b.sistem,"ro")||a.grupaPret.localeCompare(b.grupaPret,"ro")||a.inaltime-b.inaltime||a.latime-b.latime));
+    setDenumire(""); setSistem(""); setGrupaPret(""); setInaltime(""); setLatime(""); setPretLei(""); setFurnizor("");
   };
   const sterge=(id)=>{
     if(window.confirm("Ștergi această poziție din nomenclator?")) setCatalogPlisse(p=>p.filter(m=>m.id!==id));
@@ -3445,30 +3450,33 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
         const ws=wb.Sheets[wb.SheetNames[0]];
         const rows=XLSX.utils.sheet_to_json(ws,{header:1});
         const existingMap={};
-        catalogPlisse.forEach(m=>{ existingMap[(m.denumire+"|"+m.inaltime+"|"+m.latime).toLowerCase()]=m.id; });
+        catalogPlisse.forEach(m=>{ existingMap[(m.sistem+"|"+m.grupaPret+"|"+m.inaltime+"|"+m.latime).toLowerCase()]=m.id; });
         const noi=[];
         const actualizariMap={};
         for(let i=1;i<rows.length;i++){
           const r=rows[i];
           if(!r || !r[0]) continue;
           const den=String(r[0]).trim();
+          const sis=r[1]?String(r[1]).trim():"";
+          const grp=r[2]!==undefined&&r[2]!==null?String(r[2]).trim():"";
           const h=Number(r[3]);
           const w=Number(r[4]);
           const pretL=Number(r[6]);
-          if(!den || isNaN(h) || isNaN(w) || isNaN(pretL)) continue;
-          const key=(den+"|"+h+"|"+w).toLowerCase();
-          if(existingMap[key]){ actualizariMap[existingMap[key]]=pretL; continue; }
+          const furn=r[7]?String(r[7]).trim():"";
+          if(!den || !sis || !grp || isNaN(h) || isNaN(w) || isNaN(pretL)) continue;
+          const key=(sis+"|"+grp+"|"+h+"|"+w).toLowerCase();
+          if(existingMap[key]){ actualizariMap[existingMap[key]]={pretLei:pretL,furnizor:furn}; continue; }
           if(actualizariMap[key]) continue;
           existingMap[key]="pending-"+den;
-          noi.push({id:gid(), denumire:den, inaltime:h, latime:w, pretLei:pretL});
+          noi.push({id:gid(), denumire:den, sistem:sis, grupaPret:grp, inaltime:h, latime:w, pretLei:pretL, furnizor:furn||"—"});
         }
         const nrActualizari=Object.keys(actualizariMap).length;
-        if(nrActualizari) setCatalogPlisse(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretLei:actualizariMap[m.id]}:m));
-        if(noi.length) setCatalogPlisse(p=>[...p, ...noi].sort((a,b)=>a.denumire.localeCompare(b.denumire,"ro")||a.inaltime-b.inaltime||a.latime-b.latime));
+        if(nrActualizari) setCatalogPlisse(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretLei:actualizariMap[m.id].pretLei,furnizor:actualizariMap[m.id].furnizor||m.furnizor}:m));
+        if(noi.length) setCatalogPlisse(p=>[...p, ...noi].sort((a,b)=>a.sistem.localeCompare(b.sistem,"ro")||a.grupaPret.localeCompare(b.grupaPret,"ro")||a.inaltime-b.inaltime||a.latime-b.latime));
         const mesaje=[];
         if(noi.length) mesaje.push(`${noi.length} poziții noi importate`);
         if(nrActualizari) mesaje.push(`${nrActualizari} poziții existente actualizate`);
-        alert(mesaje.length?mesaje.join(" · ")+".":"Nu am găsit poziții noi sau actualizări (verifică formatul: Denumire / Sistem / Grupă preț / Înălțime / Lățime / Preț EUR / Preț lei).");
+        alert(mesaje.length?mesaje.join(" · ")+".":"Nu am găsit poziții noi sau actualizări (verifică formatul: Denumire / Sistem / Grupă preț / Înălțime / Lățime / Preț EUR / Preț lei / Furnizor).");
       }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
       setImporting(false);
       if(inputRef.current) inputRef.current.value="";
@@ -3476,7 +3484,7 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
     reader.readAsArrayBuffer(file);
   };
 
-  const filtrate = catalogPlisse.filter(m=>!cauta.trim()||m.denumire.toLowerCase().includes(cauta.toLowerCase()));
+  const filtrate = catalogPlisse.filter(m=>!cauta.trim()||m.sistem.toLowerCase().includes(cauta.toLowerCase())||m.denumire.toLowerCase().includes(cauta.toLowerCase()));
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
@@ -3495,11 +3503,13 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
 
     <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:20}}>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>+ Adaugă poziție manual</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:10}}>
-        <div style={{gridColumn:"span 2"}}><label style={lblStyle}>Denumire (pentru ofertă)</label><input value={denumire} onChange={e=>setDenumire(e.target.value)} placeholder="ex: Pliseu VS2 Deluxe - Grupa A" style={selStyle}/></div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:10}}>
+        <div><label style={lblStyle}>Sistem</label><input value={sistem} onChange={e=>setSistem(e.target.value)} placeholder="ex: VS2 Deluxe" style={selStyle}/></div>
+        <div><label style={lblStyle}>Grupă preț</label><input value={grupaPret} onChange={e=>setGrupaPret(e.target.value)} placeholder="ex: A, 0, 1, 2, 3, 4" style={selStyle}/></div>
         <div><label style={lblStyle}>Înălțime (cm)</label><input value={inaltime} onChange={e=>setInaltime(e.target.value)} placeholder="ex: 100" style={selStyle}/></div>
         <div><label style={lblStyle}>Lățime (cm)</label><input value={latime} onChange={e=>setLatime(e.target.value)} placeholder="ex: 90" style={selStyle}/></div>
         <div><label style={lblStyle}>Preț (lei)</label><input value={pretLei} onChange={e=>setPretLei(e.target.value)} placeholder="ex: 894" style={selStyle}/></div>
+        <div><label style={lblStyle}>Furnizor</label><input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="ex: Schrader" style={selStyle}/></div>
       </div>
       <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
     </div>
@@ -3507,10 +3517,12 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
     <table style={{width:"100%",borderCollapse:"collapse"}}>
       <thead>
         <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:"left"}}>
-          <th style={{padding:"6px 10px"}}>Denumire</th>
+          <th style={{padding:"6px 10px"}}>Sistem</th>
+          <th style={{padding:"6px 10px"}}>Grupă</th>
           <th style={{padding:"6px 10px"}}>Înălțime (cm)</th>
           <th style={{padding:"6px 10px"}}>Lățime (cm)</th>
           <th style={{padding:"6px 10px"}}>Preț (lei)</th>
+          <th style={{padding:"6px 10px"}}>Furnizor</th>
           <th style={{padding:"6px 10px"}}></th>
         </tr>
       </thead>
@@ -3518,7 +3530,10 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
         {filtrate.map((m,i)=>
           <tr key={m.id} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
             <td style={{padding:"6px 10px"}}>
-              <input value={m.denumire} onChange={e=>editeaza(m.id,"denumire",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+              <input value={m.sistem} onChange={e=>editeaza(m.id,"sistem",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.grupaPret} onChange={e=>editeaza(m.id,"grupaPret",e.target.value)} style={{width:40,border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
             </td>
             <td style={{padding:"6px 10px"}}>
               <input value={m.inaltime} onChange={e=>editeaza(m.id,"inaltime",Number(e.target.value)||0)} style={{width:60,border:"none",background:"transparent",fontSize:13,color:C.text,outline:"none"}}/>
@@ -3529,12 +3544,15 @@ function TabCatalogPlisse({C,catalogPlisse,setCatalogPlisse}){
             <td style={{padding:"6px 10px"}}>
               <input value={m.pretLei} onChange={e=>editeaza(m.id,"pretLei",Number(e.target.value)||0)} style={{width:80,border:"none",background:"transparent",fontSize:13,fontWeight:600,color:"#2255AA",outline:"none"}}/>
             </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.furnizor||""} onChange={e=>editeaza(m.id,"furnizor",e.target.value)} style={{width:100,border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
+            </td>
             <td style={{padding:"6px 10px",textAlign:"right"}}>
               <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
             </td>
           </tr>
         )}
-        {filtrate.length===0&&<tr><td colSpan={5} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogPlisse.length===0?"Nomenclatorul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
+        {filtrate.length===0&&<tr><td colSpan={7} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogPlisse.length===0?"Nomenclatorul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
       </tbody>
     </table>
   </div>;
@@ -3575,7 +3593,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150", latimePliseuCm:"", inaltimePliseuCm:""});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150", latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:""});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -3651,8 +3669,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   };
   const calculeazaPretPliseu=(pr)=>{
     const {h,w}=dimensiuniSteppedPliseu(pr);
-    if(!h || !w || !pr.material) return 0;
-    const opts=catalogPlisse.filter(p=>p.denumire===pr.material);
+    if(!h || !w || !pr.material || !pr.grupaPretPliseu) return 0;
+    const opts=catalogPlisse.filter(p=>p.sistem===pr.material && p.grupaPret===pr.grupaPretPliseu);
     if(!opts.length) return 0;
     const inaltimiDisponibile=[...new Set(opts.map(p=>p.inaltime))];
     let hFolosit=inaltimiDisponibile.find(x=>x===h);
@@ -3683,7 +3701,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       }
       if(estePliseu(pr)){
         const {h:hAfisat,w:wAfisat}=dimensiuniSteppedPliseu(pr);
-        const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm)`:"";
+        const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm${pr.grupaPretPliseu?", Grupa "+pr.grupaPretPliseu:""})`:"";
         const rPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${calculeazaPretPliseu(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
         const rMontajPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
         const rTotalPliseu=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
@@ -3798,8 +3816,16 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     if(!camereValide.length){ alert("Adaugă cel puțin o cameră cu un produs (material completat)."); return; }
     for(const c of camereValide){
       for(const pr of c.produse){
-        if(pr.material.trim() && !pr.culoare.trim()){
+        if(pr.material.trim() && !estePliseu(pr) && !pr.culoare.trim()){
           alert(`Lipsește codul de culoare la „${pr.material}" din camera „${c.numeCamera}". Completează-l înainte să generezi oferta — fără el nu vei ști exact ce nuanță ai comandat.`);
+          return;
+        }
+        if(estePliseu(pr) && pr.material.trim() && !pr.grupaPretPliseu){
+          alert(`Lipsește grupa de preț la pliseul „${pr.material}" din camera „${c.numeCamera}". Alege una (A, 0, 1, 2, 3 sau 4) înainte să generezi oferta.`);
+          return;
+        }
+        if(estePliseu(pr) && pr.material.trim() && !pr.culoare.trim()){
+          alert(`Lipsește culoarea șinei la pliseul „${pr.material}" din camera „${c.numeCamera}". Alege una înainte să generezi oferta.`);
           return;
         }
       }
@@ -3878,9 +3904,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         </div>
 
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",fontWeight:600,marginBottom:8}}>Materiale / produse pentru toată camera</div>
-        {c.produse.map(pr=>
-          <div key={pr.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:8,background:C.bg}}>
-          {!esteSina(pr)&&<>
+        {c.produse.map((pr,pIdx)=>
+          <div key={pr.id} style={{border:`1px solid ${C.border}`,marginBottom:10,background:C.bg}}>
+          <div style={{display:"flex",alignItems:"center",padding:"6px 10px",background:C.surface,borderBottom:`1px solid ${C.border}`}}>
+            <span style={{fontSize:11,fontWeight:700,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.04em"}}>Produs {pIdx+1} · {cap(pr.tip)||"—"}</span>
+            <span style={{fontSize:13,fontWeight:700,color:C.text,marginLeft:"auto"}}>{valoareLinie(pr).toFixed(0)} lei</span>
+          </div>
+          <div style={{padding:8}}>
+          {!esteSina(pr)&&!estePliseu(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="perdea">Perdea</option>
@@ -3897,24 +3928,13 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginTop:8}}>
-            <span></span>
-            <input value="Bandă fronsare" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
-            <span></span>
-            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
-            <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={selStyle}/>
-            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareBanda(pr).toFixed(0)} lei</span>
-          </div>}
-          {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px auto",gap:8,alignItems:"center",marginTop:8}}>
-            <span></span>
-            <input value="Manoperă" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
-            <span></span>
-            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
-            <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={selStyle}/>
-            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareManopera(pr).toFixed(0)} lei</span>
-          </div>}
-          {esteTextil(pr)&&<div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:`1px solid ${C.border}`}}>
-            <span style={{fontSize:13,fontWeight:700,color:C.text}}>Total {pr.tip}: {valoareLinie(pr).toFixed(0)} lei</span>
+          {esteTextil(pr)&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Bandă fronsare:</span>
+            <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/m ({valoareBanda(pr).toFixed(0)} lei)</span>
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:10}}>Manoperă:</span>
+            <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/m ({valoareManopera(pr).toFixed(0)} lei)</span>
           </div>}
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
             <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -3954,31 +3974,19 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:14,marginTop:8,flexWrap:"wrap"}}>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <span style={{fontSize:11,color:C.textMuted}}>Culoare:</span>
-              {["Alb","Negru"].map(cul=>
-                <button key={cul} onClick={()=>updProdus(c.id,pr.id,"culoare",cul)} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:pr.culoare===cul?C.accent:C.surface,color:pr.culoare===cul?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{cul}</button>
-              )}
-            </div>
-            <div style={{display:"flex",gap:6,alignItems:"center"}}>
-              <span style={{fontSize:11,color:C.textMuted}}>Călăreți:</span>
-              {[["Normal",false],["Wave",true]].map(([lbl,val])=>
-                <button key={lbl} onClick={()=>updProdus(c.id,pr.id,"wave",val)} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:pr.wave===val?C.accent:C.surface,color:pr.wave===val?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{lbl}</button>
-              )}
-            </div>
-            {pr.material&&pr.lungimeSinaCm&&<span style={{fontSize:12,color:C.textMuted,marginLeft:"auto"}}>({lungimeSteppedSina(pr)} m rotunjit × {pr.cantitate||1} buc.)</span>}
-            <span style={{fontSize:14,fontWeight:700,color:C.text}}>{valoareMaterial(pr).toFixed(0)} lei</span>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"120px 1fr 90px 100px auto",gap:8,alignItems:"center",marginTop:8}}>
-            <span></span>
-            <input value="Montaj" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
-            <span></span>
-            <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={selStyle}/>
-            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareMontaj(pr).toFixed(0)} lei</span>
-          </div>
-          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:`1px solid ${C.border}`}}>
-            <span style={{fontSize:13,fontWeight:700,color:C.text}}>Total șină electrică: {valoareLinie(pr).toFixed(0)} lei</span>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Culoare:</span>
+            {["Alb","Negru"].map(cul=>
+              <button key={cul} onClick={()=>updProdus(c.id,pr.id,"culoare",cul)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:pr.culoare===cul?C.accent:C.surface,color:pr.culoare===cul?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{cul}</button>
+            )}
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>Călăreți:</span>
+            {[["Normal",false],["Wave",true]].map(([lbl,val])=>
+              <button key={lbl} onClick={()=>updProdus(c.id,pr.id,"wave",val)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:pr.wave===val?C.accent:C.surface,color:pr.wave===val?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{lbl}</button>
+            )}
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>Montaj:</span>
+            <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
+            {pr.material&&pr.lungimeSinaCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({lungimeSteppedSina(pr)} m rotunjit × {pr.cantitate||1} buc.)</span>}
           </div>
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
             <div style={{maxHeight:220,overflowY:"auto"}}>
@@ -4009,35 +4017,38 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="pliseu">Pliseu</option>
               <option value="altele">Altele</option>
             </select>
-            <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege pliseul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
+            <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege sistemul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
             <input value={pr.latimePliseuCm} onChange={e=>updProdus(c.id,pr.id,"latimePliseuCm",e.target.value)} placeholder="Lățime (cm)" style={selStyle}/>
             <input value={pr.inaltimePliseuCm} onChange={e=>updProdus(c.id,pr.id,"inaltimePliseuCm",e.target.value)} placeholder="Înălțime (cm)" style={selStyle}/>
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:14,marginTop:8,flexWrap:"wrap"}}>
-            {pr.material&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&<span style={{fontSize:12,color:C.textMuted}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
-            <span style={{fontSize:14,fontWeight:700,color:C.text,marginLeft:"auto"}}>{valoareMaterial(pr).toFixed(0)} lei</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Grupă preț:</span>
+            {["A","0","1","2","3","4"].map(g=>
+              <button key={g} onClick={()=>updProdus(c.id,pr.id,"grupaPretPliseu",g)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:pr.grupaPretPliseu===g?C.accent:C.surface,color:pr.grupaPretPliseu===g?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{g}</button>
+            )}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"90px 1fr 90px 90px 80px auto",gap:8,alignItems:"center",marginTop:8}}>
-            <span></span>
-            <input value="Montaj" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
-            <span></span>
-            <span></span>
-            <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={selStyle}/>
-            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right",minWidth:70}}>{valoareMontaj(pr).toFixed(0)} lei</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Culoare șină:</span>
+            {["Weiss","Silber","Bronze","Anthrazit RAL7016","Schwarz"].map(cul=>
+              <button key={cul} onClick={()=>updProdus(c.id,pr.id,"culoare",cul)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:pr.culoare===cul?C.accent:C.surface,color:pr.culoare===cul?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{cul}</button>
+            )}
           </div>
-          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:`1px solid ${C.border}`}}>
-            <span style={{fontSize:13,fontWeight:700,color:C.text}}>Total pliseu: {valoareLinie(pr).toFixed(0)} lei</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
+            <input value={pr.pretMontaj} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} style={{...selStyle,width:55}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/buc</span>
+            {pr.material&&pr.grupaPretPliseu&&pr.latimePliseuCm&&pr.inaltimePliseuCm&&<span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>({dimensiuniSteppedPliseu(pr).w}×{dimensiuniSteppedPliseu(pr).h} cm rotunjit × {pr.cantitate||1} buc.)</span>}
           </div>
           {pickerFor&&pickerFor.camId===c.id&&pickerFor.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginTop:6}}>
             <div style={{maxHeight:220,overflowY:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
-                  <th style={{padding:"6px 10px",textAlign:"left"}}>Denumire</th>
+                  <th style={{padding:"6px 10px",textAlign:"left"}}>Sistem</th>
                 </tr></thead>
                 <tbody>
-                  {[...new Set(catalogPlisse.map(s=>s.denumire))].filter(d=>!pr.material.trim()||d.toLowerCase().includes(pr.material.toLowerCase())).map(d=>
+                  {[...new Set(catalogPlisse.map(s=>s.sistem))].filter(d=>!pr.material.trim()||d.toLowerCase().includes(pr.material.toLowerCase())).map(d=>
                     <tr key={d} onMouseDown={e=>{e.preventDefault();alegePliseu(c.id,pr.id,d);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{d}</td>
                     </tr>
@@ -4048,6 +4059,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             </div>
           </div>}
           </>}
+          </div>
           </div>
         )}
         <button onClick={()=>addProdus(c.id)} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:8}}>+ adaugă produs</button>
