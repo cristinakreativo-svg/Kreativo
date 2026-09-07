@@ -3964,7 +3964,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75"});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75"});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -3993,6 +3993,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       if(field==="material"){
         const match=catalogMap[val.trim().toLowerCase()];
         if(match) upd.pretUnitar=String(match.pretLei);
+      }
+      if(field==="cantitate" && esteTextil(upd)){
+        if(!pr.cantitateBanda.trim()) upd.cantitateBanda=val;
+        if(!pr.cantitateManopera.trim()) upd.cantitateManopera=val;
       }
       if(field==="tip" && val==="sina electrica"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="150"; }
       if(field==="tip" && val==="pliseu"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; }
@@ -4103,8 +4107,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const pretUnitarPliseuEfectiv=(pr)=>(pr.pretUnitarPliseu!==undefined && pr.pretUnitarPliseu!=="")?Number(pr.pretUnitarPliseu)||0:calculeazaPretPliseu(pr);
   const pretUnitarJaluzeaEfectiv=(pr)=>(pr.pretUnitarJaluzea!==undefined && pr.pretUnitarJaluzea!=="")?Number(pr.pretUnitarJaluzea)||0:calculeazaPretJaluzea(pr);
   const valoareMaterial=(pr)=>esteSina(pr)?pretUnitarSinaEfectiv(pr)*(Number(pr.cantitate)||0):estePliseu(pr)?pretUnitarPliseuEfectiv(pr)*(Number(pr.cantitate)||0):esteJaluzea(pr)?pretUnitarJaluzeaEfectiv(pr)*(Number(pr.cantitate)||0):esteStorRomanTransparent(pr)?(Number(pr.cantitateMaterialStor)||0)*(Number(pr.pretUnitar)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
-  const valoareBanda=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretBanda)||0):0;
-  const valoareManopera=(pr)=>esteTextil(pr)?(Number(pr.cantitate)||0)*(Number(pr.pretManopera)||0):0;
+  const cantitateBandaEfectiva=(pr)=>(pr.cantitateBanda!==undefined && pr.cantitateBanda!=="")?Number(pr.cantitateBanda)||0:(Number(pr.cantitate)||0);
+  const cantitateManoperaEfectiva=(pr)=>(pr.cantitateManopera!==undefined && pr.cantitateManopera!=="")?Number(pr.cantitateManopera)||0:(Number(pr.cantitate)||0);
+  const valoareBanda=(pr)=>esteTextil(pr)?cantitateBandaEfectiva(pr)*(Number(pr.pretBanda)||0):0;
+  const valoareManopera=(pr)=>esteTextil(pr)?cantitateManoperaEfectiva(pr)*(Number(pr.pretManopera)||0):0;
   const valoareBenziManopera=(pr)=>esteStorRomanTransparent(pr)?mpStor(pr)*(Number(pr.pretBenziManopera)||0)*(Number(pr.cantitate)||0):0;
   const valoareMecanism=(pr)=>esteStorRomanTransparent(pr)?(Number(pr.latimeStorCm)||0)/100*(Number(pr.pretMecanism)||0)*(Number(pr.cantitate)||0):0;
   const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr)||esteJaluzea(pr)||esteStorRomanTransparent(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
@@ -4151,8 +4157,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       }
       const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)) return rMaterial;
-      const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
-      const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
+      const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateBandaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
+      const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateManoperaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
       const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
       return rMaterial+rBanda+rManopera+rTotal;
     }).join("");
@@ -4419,7 +4425,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span></span>
             <input value="Bandă fronsare" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
             <span></span>
-            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
+            <input value={pr.cantitateBanda} onChange={e=>updProdus(c.id,pr.id,"cantitateBanda",e.target.value)} placeholder="m" style={selStyle}/>
             <input value={pr.pretBanda} onChange={e=>updProdus(c.id,pr.id,"pretBanda",e.target.value)} style={selStyle}/>
             <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareBanda(pr).toFixed(0)} lei</span>
             <span></span>
@@ -4428,7 +4434,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span></span>
             <input value="Manoperă" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
             <span></span>
-            <input value={pr.cantitate||0} disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
+            <input value={pr.cantitateManopera} onChange={e=>updProdus(c.id,pr.id,"cantitateManopera",e.target.value)} placeholder="m" style={selStyle}/>
             <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={selStyle}/>
             <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareManopera(pr).toFixed(0)} lei</span>
             <span></span>
