@@ -2267,7 +2267,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   </div>;
 }
 
-function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCamereLista}){
+function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg}){
   const [width,setWidth]=React.useState(2000);
   const [height,setHeight]=React.useState(2500);
   const [motorKey,setMotorKey]=React.useState("CM-57");
@@ -2281,8 +2281,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
   const [camera,setCamera]=React.useState("");
   const [observatii,setObservatii]=React.useState("");
   const [savedMsg,setSavedMsg]=React.useState("");
-
-  const toggleOption=(opt)=>setOptions(p=>p.includes(opt)?p.filter(o=>o!==opt):[...p,opt]);
+  const [editingCfgId,setEditingCfgId]=React.useState(null);
 
   let result=null, parts=[], error=null;
   try{
@@ -2337,18 +2336,49 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       setCamereLista(p=>[...p,camera.trim()]);
     }
     const cfg={
-      id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
+      id:editingCfgId||gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
       input:{width:Number(width),height:Number(height),motorKey,gliderKey,packKey,colourKey,railSegments:Number(railSegments),quantity:Number(quantity)||1,options},
       result, parts
     };
-    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:[...(c.configuratiiSina||[]),cfg]}));
-    setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    if(editingCfgId){
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:cfg)}));
+      setSavedMsg(`Actualizat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+      setEditingCfgId(null);
+    } else {
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:[...(c.configuratiiSina||[]),cfg]}));
+      setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    }
     setCamera(""); setObservatii("");
     setTimeout(()=>setSavedMsg(""),3000);
   };
+  const incarcaConfig=(cfg)=>{
+    if(!window.confirm("Editezi o configurație deja creată — modificările vor înlocui varianta salvată anterior. Sigur vrei să continui?")) return;
+    const i=cfg.input;
+    setWidth(i.width); setHeight(i.height); setMotorKey(i.motorKey); setGliderKey(i.gliderKey);
+    setPackKey(i.packKey); setColourKey(i.colourKey); setRailSegments(i.railSegments); setQuantity(i.quantity||1);
+    setOptions(i.options||[]);
+    setCamera(cfg.camera||""); setObservatii(cfg.observatii||"");
+    setEditingCfgId(cfg.id);
+  };
+  const anuleazaEditareCfg=()=>{
+    setEditingCfgId(null);
+    setCamera(""); setObservatii("");
+  };
+
+  React.useEffect(()=>{
+    if(pendingEditCfg && pendingEditCfg.type==="sina"){
+      setClientId(pendingEditCfg.clientId);
+      incarcaConfig(pendingEditCfg.cfg);
+      setPendingEditCfg(null);
+    }
+  },[pendingEditCfg]);
 
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator șină Coulisse SmartCurtain</div>
+    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+      <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o configurație deja creată — la salvare, se actualizează, nu se creează una nouă.</span>
+      <button onClick={anuleazaEditareCfg} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
+    </div>}
 
     {clients&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
       <div><label style={lblStyle}>Client</label>
@@ -2461,13 +2491,13 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Configurații salvate la {clientObj.name} ({(clientObj.configuratiiSina||[]).length})</div>
       {(clientObj.configuratiiSina||[]).map(cfg=>
-        <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})}/>
+        <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
       )}
     </div>}
   </div>;
 }
 
-function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint}){
+function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>x.id!==cfg.id)}));
@@ -2532,6 +2562,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint}){
       </div>)}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -2758,7 +2789,7 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
   </div>;
 }
 
-function ConfigPanouSalvataRow({cfg,clientId,setClients,C,onPrint}){
+function ConfigPanouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiPanou:(c.configuratiiPanou||[]).filter(x=>x.id!==cfg.id)}));
@@ -2821,6 +2852,7 @@ function ConfigPanouSalvataRow({cfg,clientId,setClients,C,onPrint}){
       </div>)}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -4653,7 +4685,7 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
   </div>;
 }
 
-function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista}){
+function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1000);
   const [installHeight,setInstallHeight]=React.useState(1000);
@@ -4666,8 +4698,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
   const [camera,setCamera]=React.useState("");
   const [observatii,setObservatii]=React.useState("");
   const [savedMsg,setSavedMsg]=React.useState("");
-
-  const isMotor = mechKey==="RSC-B10 motorised";
+  const [editingCfgId,setEditingCfgId]=React.useState(null);
   const availOptions = RS_MECHOPTIONS[mechKey].map(x=>x[0]).filter(o=>o!=="CM-07 DC midmotor");
   React.useEffect(()=>{ setOptions(p=>p.filter(o=>availOptions.includes(o))); },[mechKey]);
   const toggleOption=(opt)=>setOptions(p=>{
@@ -4698,17 +4729,48 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
     if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())){
       setCamereLista(p=>[...p,camera.trim()]);
     }
-    const cfg={id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
+    const cfg={id:editingCfgId||gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
       input:{width:Number(width),height:Number(height),installHeight:Number(installHeight),mechKey,fabricKey,controlSide,cordsSpools,options},
       result, parts};
-    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:[...(c.configuratiiRoman||[]),cfg]}));
-    setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    if(editingCfgId){
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).map(x=>x.id!==editingCfgId?x:cfg)}));
+      setSavedMsg(`Actualizat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+      setEditingCfgId(null);
+    } else {
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:[...(c.configuratiiRoman||[]),cfg]}));
+      setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    }
     setCamera(""); setObservatii("");
     setTimeout(()=>setSavedMsg(""),3000);
   };
+  const incarcaConfig=(cfg)=>{
+    if(!window.confirm("Editezi o configurație deja creată — modificările vor înlocui varianta salvată anterior. Sigur vrei să continui?")) return;
+    const i=cfg.input;
+    setWidth(i.width); setHeight(i.height); setInstallHeight(i.installHeight);
+    setMechKey(i.mechKey); setFabricKey(i.fabricKey); setControlSide(i.controlSide||"Left");
+    setCordsSpools(i.cordsSpools||"Auto"); setOptions(i.options||[]);
+    setCamera(cfg.camera||""); setObservatii(cfg.observatii||"");
+    setEditingCfgId(cfg.id);
+  };
+  const anuleazaEditareCfg=()=>{
+    setEditingCfgId(null);
+    setCamera(""); setObservatii("");
+  };
+
+  React.useEffect(()=>{
+    if(pendingEditCfg && pendingEditCfg.type==="roman"){
+      setClientId(pendingEditCfg.clientId);
+      incarcaConfig(pendingEditCfg.cfg);
+      setPendingEditCfg(null);
+    }
+  },[pendingEditCfg]);
 
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator Stor Roman (Absolute Roman)</div>
+    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+      <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o configurație deja creată — la salvare, se actualizează, nu se creează una nouă.</span>
+      <button onClick={anuleazaEditareCfg} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
+    </div>}
 
     {clients&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
       <div><label style={lblStyle}>Client</label>
@@ -4814,13 +4876,13 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista})
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Storuri romane salvate la {clientObj.name} ({(clientObj.configuratiiRoman||[]).length})</div>
       {(clientObj.configuratiiRoman||[]).map(cfg=>
-        <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})}/>
+        <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
       )}
     </div>}
   </div>;
 }
 
-function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
+function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).filter(x=>x.id!==cfg.id)}));
@@ -4876,6 +4938,7 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint}){
       </div>)}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -5050,7 +5113,7 @@ function ListaTaiereProfile({clients,C}){
   </div>;
 }
 
-function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale,camereLista,setCamereLista}){
+function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1500);
   const [installHeight,setInstallHeight]=React.useState("");
@@ -5080,6 +5143,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
   const [camera,setCamera]=React.useState("");
   const [observatii,setObservatii]=React.useState("");
   const [savedMsg,setSavedMsg]=React.useState("");
+  const [editingCfgId,setEditingCfgId]=React.useState(null);
 
   const systems = rulouSystemsForSize(size);
   React.useEffect(()=>{ if(!systems.includes(system)) setSystem(systems[0]||""); },[size]);
@@ -5160,16 +5224,70 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       const upd=rulouUpsertMaterial(savedMateriale,{name:materialName,thickness:Number(fabricThickness),weight:Number(fabricWeight)});
       setSavedMateriale(upd);
     }
-    const cfg={id:gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
+    const cfg={id:editingCfgId||gid(), camera:camera.trim(), observatii:observatii.trim(), dataCreat:tday(),
       qty:Number(qty)||1, input:inp, result, parts};
-    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:[...(c.configuratiiRulou||[]),cfg]}));
-    setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    if(editingCfgId){
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).map(x=>x.id!==editingCfgId?x:cfg)}));
+      setSavedMsg(`Actualizat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+      setEditingCfgId(null);
+    } else {
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:[...(c.configuratiiRulou||[]),cfg]}));
+      setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
+    }
     setCamera(""); setObservatii("");
     setTimeout(()=>setSavedMsg(""),3000);
   };
+  const incarcaConfig=(cfg)=>{
+    if(!window.confirm("Editezi o configurație deja creată — modificările vor înlocui varianta salvată anterior. Sigur vrei să continui?")) return;
+    const i=cfg.input;
+    setWidth(i.width); setHeight(i.height); setInstallHeight(i.installHeight!=null?i.installHeight:"");
+    setSize(i.size); setSystem(i.system); setControl(i.control);
+    setOptions(i.options||[]);
+    setColor(i.color); setMech(i.mech||""); setTube(i.tube); setSide(i.side||"Left");
+    setFabricKey(i.fabric); setFabricManual(!!i.fabricManual);
+    setFabricThickness(i.fabricThickness!=null?i.fabricThickness:0.45);
+    setFabricWeight(i.fabricWeight!=null?i.fabricWeight:350);
+    setMaterialName(i.materialName||"");
+    setBtbManual(!!i.btbManual);
+    if(i.btbManual){ setBtbManualName(i.btb||""); setBtbManualColor(i.btbManualColor||""); }
+    else { setBtb(i.btb||""); setBtbManualName(""); setBtbManualColor(""); }
+    const mo=i.mechOptions||[];
+    const isChain=o=>/ballchain \(roll\)|Endless.*ballchain/i.test(o);
+    const isCsd=o=>/^(CSD-|SafetyClip|Ballchain breakaway)/i.test(o);
+    const isPull=o=>/Pull (cord|chain|wand) Twinpull/i.test(o);
+    if(i.control==="A"){
+      setChainType(mo.find(isChain)||""); setCsdType(mo.find(isCsd)||""); setPullType("");
+      setAccessories(mo.filter(o=>!isChain(o)&&!isCsd(o)));
+    } else if(i.control==="I"){
+      setPullType(mo.find(isPull)||""); setChainType(""); setCsdType("");
+      setAccessories(mo.filter(o=>!isPull(o)));
+    } else {
+      setChainType(""); setCsdType(""); setPullType("");
+      setAccessories(mo);
+    }
+    setQty(cfg.qty||1);
+    setCamera(cfg.camera||""); setObservatii(cfg.observatii||"");
+    setEditingCfgId(cfg.id);
+  };
+  const anuleazaEditareCfg=()=>{
+    setEditingCfgId(null);
+    setCamera(""); setObservatii("");
+  };
+
+  React.useEffect(()=>{
+    if(pendingEditCfg && pendingEditCfg.type==="rulou"){
+      setClientId(pendingEditCfg.clientId);
+      incarcaConfig(pendingEditCfg.cfg);
+      setPendingEditCfg(null);
+    }
+  },[pendingEditCfg]);
 
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator Rulou (Absolute Roller Blind)</div>
+    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+      <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o configurație deja creată — la salvare, se actualizează, nu se creează una nouă.</span>
+      <button onClick={anuleazaEditareCfg} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
+    </div>}
 
     {clients&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
       <div><label style={lblStyle}>Client</label>
@@ -5386,13 +5504,13 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Rulouri salvate la {clientObj.name} ({(clientObj.configuratiiRulou||[]).length})</div>
       {(clientObj.configuratiiRulou||[]).map(cfg=>
-        <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})}/>
+        <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
       )}
     </div>}
   </div>;
 }
 
-function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
+function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).filter(x=>x.id!==cfg.id)}));
@@ -5453,6 +5571,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint}){
       </div>)}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -5508,7 +5627,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg}){
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
@@ -5634,7 +5753,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
           {(client.configuratiiSina||[]).map(cfg=>
-            <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onPrint={()=>{
+            <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"sina",cfg,clientId:client.id});setDanView("cfg");}} onPrint={()=>{
               const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
               const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
               printHtmlDoc(html);
@@ -5644,7 +5763,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         {(client.configuratiiRoman||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Storuri romane ({(client.configuratiiRoman||[]).length})</div>
           {(client.configuratiiRoman||[]).map(cfg=>
-            <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onPrint={()=>{
+            <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"roman",cfg,clientId:client.id});setDanView("cfgroman");}} onPrint={()=>{
               printHtmlDoc(buildRomanPrintHtml({...cfg,clientName:client.name}));
             }}/>
           )}
@@ -5652,7 +5771,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         {(client.configuratiiRulou||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Rulouri ({(client.configuratiiRulou||[]).length})</div>
           {(client.configuratiiRulou||[]).map(cfg=>
-            <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onPrint={()=>{
+            <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"rulou",cfg,clientId:client.id});setDanView("cfgrulou");}} onPrint={()=>{
               printHtmlDoc(buildRulouPrintHtml({...cfg,clientName:client.name}));
             }}/>
           )}
@@ -6491,6 +6610,7 @@ function App() {
   const [newObName,setNewObName]=useState("");
   const [obMonth,setObMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [danView,setDanView]=useState("dan");
+  const [pendingEditCfg,setPendingEditCfg]=useState(null);
   const [newTaskPr,setNewTaskPr]=useState({});
   const [addingToPr,setAddingToPr]=useState(null);
   const [addingPr,setAddingPr]=useState(false);
@@ -6994,14 +7114,14 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
-      danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
+      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>}
+      <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>}
     </div>;
   }
 
@@ -7622,13 +7742,13 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
+      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
+      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter}/>}
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg}/>}
     </div>}
 
     {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele}/>}
