@@ -80,6 +80,7 @@ const OFK2 = "kreativo_oferta_counter_v1";
 const CSK = "kreativo_catalog_sine_v1";
 const CPK = "kreativo_catalog_plisse_v1";
 const CJK = "kreativo_catalog_jaluzele_v1";
+const CCK = "kreativo_catalog_costcomponente_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -284,6 +285,24 @@ const PARTS = [
   {code:"WPPC25-W",  desc:"Pulling cord 1.7mm", colour:"white", used:["PUL8"], excl:["OVL"], colourCode:"WH", qty:(c)=>c.center?2:1},
 ];
 
+function costProductieConfig(cfg, catalogCostComponente){
+  if(!cfg || !cfg.parts || !cfg.parts.length || !catalogCostComponente || !catalogCostComponente.length) return {total:0, lipsa:[]};
+  const priceMap={};
+  catalogCostComponente.forEach(c=>{ priceMap[c.cod.toLowerCase()]=c.pretLei; });
+  let total=0;
+  const lipsa=[];
+  const qty=Number(cfg.qty)||1;
+  cfg.parts.forEach(p=>{
+    const cod=(p.code||p.article||"").toLowerCase();
+    if(!cod) return;
+    if(priceMap[cod]!==undefined){
+      total += priceMap[cod]*(p.qty||0)*qty;
+    } else {
+      lipsa.push(p.code||p.article);
+    }
+  });
+  return {total, lipsa:[...new Set(lipsa)]};
+}
 function getPartsList(articleCode, calcResult, numberOfSystems){
   const mult = numberOfSystems||1;
   return PARTS.map(p=>{
@@ -1313,7 +1332,7 @@ ${data.camereHtml}
 </div>
 </div>
 
-<p style="margin:16px 0 4px;font-size:.92em;color:#4A3F31">Prețurile sunt exprimate în lei și includ TVA. Oferta este orientativă și devine fermă după confirmarea măsurătorilor la fața locului. Valabilitate ofertă: 30 de zile de la data emiterii.</p>
+<p style="margin:16px 0 4px;font-size:.92em;color:#4A3F31">Prețurile sunt exprimate în lei și includ TVA.</p>
 <p style="margin:0 0 4px;font-size:.92em;color:#4A3F31">La lansarea comenzii se achită un avans de 50% din valoarea ofertei; diferența se achită cu o zi înaintea livrării.</p>
 <p style="margin:0;font-size:.92em;color:#4A3F31">Pentru sistemele de acționare electrică ale căror șine necesită conectare directă la instalația electrică, Clientul va asigura prezența unui electrician autorizat.</p>
 
@@ -1321,7 +1340,7 @@ ${data.necesarHtml||""}
 
 <div style="break-inside:avoid;margin:18px 0 0;padding-top:9px;border-top:1px solid #D4C9B8">
 <div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#5C6B65;margin-bottom:11px">Confirmare client</div>
-<p style="margin:0 0 10px">Prin semnătura de mai jos, Clientul confirmă acceptarea integrală a prezentei oferte, în forma și la valoarea de mai sus.</p>
+<p style="margin:0 0 10px;font-size:.92em;color:#4A3F31">Valabilitate ofertă: 30 de zile de la data emiterii.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 34px;margin-top:20px">
 <div>
 <div style="border-bottom:1px solid #A99C86;height:40px"></div>
@@ -2267,7 +2286,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   </div>;
 }
 
-function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg}){
+function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg,catalogCostComponente}){
   const [width,setWidth]=React.useState(2000);
   const [height,setHeight]=React.useState(2500);
   const [motorKey,setMotorKey]=React.useState("CM-57");
@@ -2491,19 +2510,20 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Configurații salvate la {clientObj.name} ({(clientObj.configuratiiSina||[]).length})</div>
       {(clientObj.configuratiiSina||[]).map(cfg=>
-        <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
+        <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} catalogCostComponente={catalogCostComponente} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
       )}
     </div>}
   </div>;
 }
 
-function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
+function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostComponente}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
   const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
   const {errors:vErrors,warnings:vWarnings}=validateCoulisseInput(cfg.input);
+  const cost=costProductieConfig(cfg, catalogCostComponente);
   return <div style={{border:`1px solid ${vErrors.length?"#3A3128":C.border}`,marginBottom:6,background:C.surface}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
@@ -2513,6 +2533,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
         {vErrors.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#3A3128",padding:"2px 8px",marginLeft:8}}>imposibil</span>}
         {vErrors.length===0&&vWarnings.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#2A2118",background:"#B8A88F",padding:"2px 8px",marginLeft:8}}>atenție</span>}
         {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>observație</span>}
+        {catalogCostComponente&&catalogCostComponente.length>0&&cost.total>0&&<span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost producție: {cost.total.toFixed(0)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț)`:""}</span>}
       </div>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
@@ -3751,13 +3772,144 @@ function TabCatalogJaluzele({C,catalogJaluzele,setCatalogJaluzele}){
   </div>;
 }
 
-function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine,catalogPlisse,setCatalogPlisse,catalogJaluzele,setCatalogJaluzele}){
+function TabCatalogCostComponente({C,catalogCostComponente,setCatalogCostComponente}){
+  const [cauta,setCauta]=React.useState("");
+  const [afisate,setAfisate]=React.useState(40);
+  const [cod,setCod]=React.useState("");
+  const [descriere,setDescriere]=React.useState("");
+  const [pretLei,setPretLei]=React.useState("");
+  const [importing,setImporting]=React.useState(false);
+  const inputRef=React.useRef(null);
+
+  const adauga=()=>{
+    if(!cod.trim()){ alert("Completează codul componentei."); return; }
+    if(!pretLei.trim() || isNaN(Number(pretLei))){ alert("Completează prețul (număr, în lei)."); return; }
+    const nou={id:gid(), cod:cod.trim(), descriere:descriere.trim(), pretLei:Number(pretLei)};
+    setCatalogCostComponente(p=>[...p, nou].sort((a,b)=>a.cod.localeCompare(b.cod,"ro")));
+    setCod(""); setDescriere(""); setPretLei("");
+  };
+  const sterge=(id)=>{
+    if(window.confirm("Ștergi această poziție din catalog?")) setCatalogCostComponente(p=>p.filter(m=>m.id!==id));
+  };
+  const editeaza=(id,field,val)=>{
+    setCatalogCostComponente(p=>p.map(m=>m.id!==id?m:{...m,[field]:val}));
+  };
+
+  const importaExcel=(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    setImporting(true);
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+        const existingMap={};
+        catalogCostComponente.forEach(m=>{ existingMap[m.cod.toLowerCase()]=m.id; });
+        const noi=[];
+        const actualizariMap={};
+        for(let i=1;i<rows.length;i++){
+          try{
+            const r=rows[i];
+            if(!r || !r[0]) continue;
+            const codVal=String(r[0]).trim();
+            const desc=r[1]?String(r[1]).trim():"";
+            const pretL=Number(r[2]);
+            if(!codVal || isNaN(pretL)) continue;
+            const key=codVal.toLowerCase();
+            if(existingMap[key]){ actualizariMap[existingMap[key]]={pretLei:pretL,descriere:desc}; continue; }
+            if(actualizariMap[key]) continue;
+            existingMap[key]="pending-"+i;
+            noi.push({id:gid(), cod:codVal, descriere:desc, pretLei:pretL});
+          }catch(rowErr){ console.error("Rând ignorat la import (linie "+(i+1)+"):", rowErr); }
+        }
+        const nrActualizari=Object.keys(actualizariMap).length;
+        if(nrActualizari) setCatalogCostComponente(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretLei:actualizariMap[m.id].pretLei,descriere:actualizariMap[m.id].descriere||m.descriere}:m));
+        if(noi.length) setCatalogCostComponente(p=>[...p, ...noi].sort((a,b)=>a.cod.localeCompare(b.cod,"ro")));
+        const mesaje=[];
+        if(noi.length) mesaje.push(`${noi.length} componente noi importate`);
+        if(nrActualizari) mesaje.push(`${nrActualizari} componente existente actualizate`);
+        alert(mesaje.length?mesaje.join(" · ")+".":"Nu am găsit poziții noi sau actualizări (verifică formatul: Cod / Descriere / Preț).");
+      }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
+      setImporting(false);
+      if(inputRef.current) inputRef.current.value="";
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const filtrate = catalogCostComponente.filter(m=>!cauta.trim()||m.cod.toLowerCase().includes(cauta.toLowerCase())||(m.descriere||"").toLowerCase().includes(cauta.toLowerCase()));
+  const afisateLista = filtrate.slice(0, afisate);
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  return <div style={{padding:"20px"}}>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Cost componente — șină, roman, rulou ({catalogCostComponente.length} poziții)</div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Prețurile de aici (cost de la furnizor, per componentă) se folosesc pentru a calcula automat costul de producție al fiecărei configurații salvate (Șină, Roman, Rulou), comparând codul fiecărei piese din listă cu codul introdus aici.</div>
+
+    <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <input value={cauta} onChange={e=>{setCauta(e.target.value);setAfisate(40);}} placeholder="🔍 caută după cod sau descriere..." style={{...selStyle,flex:1,minWidth:200}}/>
+      <label style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:importing?C.border:"#5C6B65",color:importing?C.text:"#fff",cursor:importing?"default":"pointer",whiteSpace:"nowrap"}}>
+        {importing?"Se importă...":"Importă din Excel"}
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
+      </label>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: <b>Cod</b>, Descriere, <b>Preț (lei)</b>. Codul trebuie să fie identic cu cel din nomenclatorul furnizorului (ex: „RC3001-W", „CM-05-E"). Pozițiile deja existente (același cod) se actualizează cu noul preț, nu se dublează.</div>
+
+    <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:20}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>+ Adaugă poziție manual</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:10}}>
+        <div><label style={lblStyle}>Cod</label><input value={cod} onChange={e=>setCod(e.target.value)} placeholder="ex: RC3001-W" style={selStyle}/></div>
+        <div><label style={lblStyle}>Descriere</label><input value={descriere} onChange={e=>setDescriere(e.target.value)} placeholder="ex: Roller blind mechanism M white" style={selStyle}/></div>
+        <div><label style={lblStyle}>Preț (lei)</label><input value={pretLei} onChange={e=>setPretLei(e.target.value)} placeholder="ex: 25" style={selStyle}/></div>
+      </div>
+      <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
+    </div>
+
+    <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <thead>
+        <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:"left"}}>
+          <th style={{padding:"6px 10px"}}>Cod</th>
+          <th style={{padding:"6px 10px"}}>Descriere</th>
+          <th style={{padding:"6px 10px"}}>Preț (lei)</th>
+          <th style={{padding:"6px 10px"}}></th>
+        </tr>
+      </thead>
+      <tbody>
+        {afisateLista.map((m,i)=>
+          <tr key={m.id} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.cod} onChange={e=>editeaza(m.id,"cod",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:13,fontWeight:600,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.descriere||""} onChange={e=>editeaza(m.id,"descriere",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.pretLei} onChange={e=>editeaza(m.id,"pretLei",Number(e.target.value)||0)} style={{width:80,border:"none",background:"transparent",fontSize:13,fontWeight:600,color:"#2255AA",outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px",textAlign:"right"}}>
+              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
+            </td>
+          </tr>
+        )}
+        {filtrate.length===0&&<tr><td colSpan={4} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogCostComponente.length===0?"Catalogul e gol — importă un Excel sau adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
+      </tbody>
+    </table>
+    {filtrate.length>afisate&&<div style={{textAlign:"center",marginTop:14}}>
+      <button onClick={()=>setAfisate(p=>p+40)} style={{fontSize:12,fontWeight:600,padding:"8px 18px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>Arată încă 40 (din {filtrate.length-afisate} rămase)</button>
+    </div>}
+  </div>;
+}
+
+function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine,catalogPlisse,setCatalogPlisse,catalogJaluzele,setCatalogJaluzele,catalogCostComponente,setCatalogCostComponente}){
   const [sub,setSub]=React.useState("materiale");
   const OPTIUNI=[
     {id:"materiale",l:"Materiale (perdele/draperii)"},
     {id:"sine",l:"Șine electrice"},
     {id:"plisse",l:"Plisate"},
     {id:"jaluzele",l:"Jaluzele venețiene"},
+    {id:"costcomponente",l:"Cost componente"},
   ];
   return <div>
     <div style={{display:"flex",gap:4,padding:"14px 20px 0",borderBottom:`1px solid ${C.border}`}}>
@@ -3770,6 +3922,7 @@ function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCat
     {sub==="sine"&&<TabCatalogSine C={C} catalogSine={catalogSine} setCatalogSine={setCatalogSine}/>}
     {sub==="plisse"&&<TabCatalogPlisse C={C} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse}/>}
     {sub==="jaluzele"&&<TabCatalogJaluzele C={C} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele}/>}
+    {sub==="costcomponente"&&<TabCatalogCostComponente C={C} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente}/>}
   </div>;
 }
 
@@ -4277,6 +4430,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
                 </tbody>
               </table>
             </div>
+            <button onMouseDown={e=>{e.preventDefault();setPickerFor(null);}} style={{width:"100%",fontSize:12,fontWeight:600,padding:"9px 10px",background:C.bg,color:C.textSub,border:"none",borderTop:`1px solid ${C.border}`,cursor:"pointer"}}>✕ Nu e în catalog — păstrează „{pr.material||"..."}" și introdu preț/cantitate manual</button>
           </div>}
           </>}
           {esteSina(pr)&&<>
@@ -4503,6 +4657,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
                 </tbody>
               </table>
             </div>
+            <button onMouseDown={e=>{e.preventDefault();setPickerFor(null);}} style={{width:"100%",fontSize:12,fontWeight:600,padding:"9px 10px",background:C.bg,color:C.textSub,border:"none",borderTop:`1px solid ${C.border}`,cursor:"pointer"}}>✕ Nu e în catalog — păstrează „{pr.material||"..."}" și introdu preț/cantitate manual</button>
           </div>}
           </>}
           </div>
@@ -4685,7 +4840,7 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
   </div>;
 }
 
-function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg}){
+function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg,catalogCostComponente}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1000);
   const [installHeight,setInstallHeight]=React.useState(1000);
@@ -4876,18 +5031,19 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Storuri romane salvate la {clientObj.name} ({(clientObj.configuratiiRoman||[]).length})</div>
       {(clientObj.configuratiiRoman||[]).map(cfg=>
-        <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
+        <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} catalogCostComponente={catalogCostComponente} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
       )}
     </div>}
   </div>;
 }
 
-function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
+function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostComponente}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
   const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRoman:(c.configuratiiRoman||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
+  const cost=costProductieConfig(cfg, catalogCostComponente);
   return <div style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
@@ -4895,6 +5051,7 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
         <span style={{fontSize:13,fontWeight:600,color:cfg.produs?C.textMuted:C.text}}>{cfg.camera||"(fără cameră)"}</span>
         <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.width}×{cfg.input.height}mm · {cfg.input.mechKey}</span>
         {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>observație</span>}
+        {catalogCostComponente&&catalogCostComponente.length>0&&cost.total>0&&<span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost producție: {cost.total.toFixed(0)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț)`:""}</span>}
       </div>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
@@ -5113,7 +5270,7 @@ function ListaTaiereProfile({clients,C}){
   </div>;
 }
 
-function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg}){
+function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMateriale,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg,catalogCostComponente}){
   const [width,setWidth]=React.useState(1000);
   const [height,setHeight]=React.useState(1500);
   const [installHeight,setInstallHeight]=React.useState("");
@@ -5504,18 +5661,19 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Rulouri salvate la {clientObj.name} ({(clientObj.configuratiiRulou||[]).length})</div>
       {(clientObj.configuratiiRulou||[]).map(cfg=>
-        <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
+        <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} catalogCostComponente={catalogCostComponente} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
       )}
     </div>}
   </div>;
 }
 
-function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
+function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostComponente}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
   const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiRulou:(c.configuratiiRulou||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
+  const cost=costProductieConfig(cfg, catalogCostComponente);
   return <div style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
@@ -5523,6 +5681,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
         <span style={{fontSize:13,fontWeight:600,color:cfg.produs?C.textMuted:C.text}}>{cfg.camera||"(fără cameră)"}</span>
         <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.width}×{cfg.input.height}mm · {cfg.input.tube}</span>
         {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>observație</span>}
+        {catalogCostComponente&&catalogCostComponente.length>0&&cost.total>0&&<span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost producție: {cost.total.toFixed(0)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț)`:""}</span>}
       </div>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
@@ -5627,7 +5786,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente}){
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
@@ -5753,7 +5912,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
           {(client.configuratiiSina||[]).map(cfg=>
-            <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"sina",cfg,clientId:client.id});setDanView("cfg");}} onPrint={()=>{
+            <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"sina",cfg,clientId:client.id});setDanView("cfg");}} catalogCostComponente={catalogCostComponente} onPrint={()=>{
               const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
               const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
               printHtmlDoc(html);
@@ -5763,7 +5922,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         {(client.configuratiiRoman||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Storuri romane ({(client.configuratiiRoman||[]).length})</div>
           {(client.configuratiiRoman||[]).map(cfg=>
-            <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"roman",cfg,clientId:client.id});setDanView("cfgroman");}} onPrint={()=>{
+            <ConfigRomanSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"roman",cfg,clientId:client.id});setDanView("cfgroman");}} catalogCostComponente={catalogCostComponente} onPrint={()=>{
               printHtmlDoc(buildRomanPrintHtml({...cfg,clientName:client.name}));
             }}/>
           )}
@@ -5771,7 +5930,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         {(client.configuratiiRulou||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Rulouri ({(client.configuratiiRulou||[]).length})</div>
           {(client.configuratiiRulou||[]).map(cfg=>
-            <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"rulou",cfg,clientId:client.id});setDanView("cfgrulou");}} onPrint={()=>{
+            <ConfigRulouSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"rulou",cfg,clientId:client.id});setDanView("cfgrulou");}} catalogCostComponente={catalogCostComponente} onPrint={()=>{
               printHtmlDoc(buildRulouPrintHtml({...cfg,clientName:client.name}));
             }}/>
           )}
@@ -6571,6 +6730,7 @@ function App() {
   const [catalogSine,setCatalogSine]=useState([]);
   const [catalogPlisse,setCatalogPlisse]=useState([]);
   const [catalogJaluzele,setCatalogJaluzele]=useState([]);
+  const [catalogCostComponente,setCatalogCostComponente]=useState([]);
   const [log,setLog]=useState({});
   const [chat,setChat]=useState([]);
   const [chatInput,setChatInput]=useState("");
@@ -6684,14 +6844,15 @@ function App() {
           const csv=await sbGet(CSK); if(csv){setCatalogSine(csv);gotAnyData=true;}
           const cpv=await sbGet(CPK); if(cpv){setCatalogPlisse(Array.isArray(cpv)?cpv.filter(m=>m&&m.sistem&&m.grupaPret):[]);gotAnyData=true;}
           const cjv=await sbGet(CJK); if(cjv){setCatalogJaluzele(Array.isArray(cjv)?cjv.filter(m=>m&&m.grupaPret&&m.lamela):[]);gotAnyData=true;}
+          const ccv=await sbGet(CCK); if(ccv){setCatalogCostComponente(Array.isArray(ccv)?ccv:[]);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -6724,6 +6885,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CSK,catalogSine);},[catalogSine,loaded]);
   useEffect(()=>{if(loaded) sbSave(CPK,catalogPlisse);},[catalogPlisse,loaded]);
   useEffect(()=>{if(loaded) sbSave(CJK,catalogJaluzele);},[catalogJaluzele,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CCK,catalogCostComponente);},[catalogCostComponente,loaded]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
@@ -6903,7 +7065,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -6929,7 +7091,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente
         }
       };
       const writable=await handle.createWritable();
@@ -6992,6 +7154,7 @@ function App() {
         if(d[CSK]) setCatalogSine(d[CSK]);
         if(d[CPK]) setCatalogPlisse(Array.isArray(d[CPK])?d[CPK].filter(m=>m&&m.sistem&&m.grupaPret):[]);
         if(d[CJK]) setCatalogJaluzele(Array.isArray(d[CJK])?d[CJK].filter(m=>m&&m.grupaPret&&m.lamela):[]);
+        if(d[CCK]) setCatalogCostComponente(Array.isArray(d[CCK])?d[CCK]:[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -7114,14 +7277,14 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
-      danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
-      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
+      danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
+      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>}
+      <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>}
     </div>;
   }
 
@@ -7742,16 +7905,16 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
-      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
-      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>:
+      {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
+      danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
+      danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="taiere"?<ListaTaiereRulouri clients={clients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg}/>}
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>}
     </div>}
 
-    {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele}/>}
+    {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente}/>}
 
     {tab==="achizitii"&&<div>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
