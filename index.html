@@ -53,6 +53,7 @@ button:active{transform:scale(0.98);}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>if(window['pdfjsLib']) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 <script type="text/babel">
 const { useState, useEffect, useRef, useCallback } = React;
@@ -285,6 +286,28 @@ const PARTS = [
   {code:"WPPC25-W",  desc:"Pulling cord 1.7mm", colour:"white", used:["PUL8"], excl:["OVL"], colourCode:"WH", qty:(c)=>c.center?2:1},
 ];
 
+function descarcaPDF(html, filename, onDone){
+  const iframe=document.createElement("iframe");
+  iframe.style.position="fixed"; iframe.style.right="0"; iframe.style.bottom="0";
+  iframe.style.width="900px"; iframe.style.height="1px"; iframe.style.opacity="0"; iframe.style.border="none";
+  document.body.appendChild(iframe);
+  const doc=iframe.contentWindow.document;
+  doc.open(); doc.write(html); doc.close();
+  const cleanup=()=>{ if(iframe.parentNode) document.body.removeChild(iframe); if(onDone) onDone(); };
+  setTimeout(()=>{
+    try{
+      const opt={
+        margin:0,
+        filename: filename.endsWith(".pdf")?filename:filename+".pdf",
+        image:{type:"jpeg",quality:0.98},
+        html2canvas:{scale:2, useCORS:true, windowWidth:900},
+        jsPDF:{unit:"in", format:"a4", orientation:"portrait"},
+        pagebreak:{mode:["css","legacy"]}
+      };
+      html2pdf().set(opt).from(doc.body).save().then(cleanup).catch(err=>{ console.error("Eroare generare PDF:", err); alert("Nu am putut genera PDF-ul: "+err.message); cleanup(); });
+    }catch(err){ console.error("Eroare generare PDF:", err); alert("Nu am putut genera PDF-ul: "+err.message); cleanup(); }
+  }, 500);
+}
 function costProductieConfig(cfg, catalogCostComponente){
   if(!cfg || !cfg.parts || !cfg.parts.length || !catalogCostComponente || !catalogCostComponente.length) return {total:0, lipsa:[]};
   const priceMap={};
@@ -4692,7 +4715,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           <button onClick={()=>editeazaOferta(oferta)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>
           <button onClick={()=>vizualizeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Vizualizează</button>
           <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
-          <button onClick={()=>descarca(htmlFor(oferta),oferta.numar)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă</button>
+          <button onClick={()=>descarcaPDF(htmlFor(oferta),`Oferta_${oferta.numar.replace("/","-")}_${(oferta.numeClient||client.name).replace(/[^a-zA-Z0-9]+/g,"_")}`)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă PDF</button>
           <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.numar}? Nu poate fi recuperată.`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).filter(x=>x.id!==oferta.id)}));}} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"5px 6px"}}></button>
         </div>
       )}
