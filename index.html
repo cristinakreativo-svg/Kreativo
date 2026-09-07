@@ -3964,7 +3964,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75"});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75"});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -3995,9 +3995,11 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         if(match) upd.pretUnitar=String(match.pretLei);
       }
       if(field==="cantitate" && esteTextil(upd)){
-        if(!pr.cantitateBanda.trim()) upd.cantitateBanda=val;
-        if(!pr.cantitateManopera.trim()) upd.cantitateManopera=val;
+        if(!pr.cantitateBandaCustom) upd.cantitateBanda=val;
+        if(!pr.cantitateManoperaCustom) upd.cantitateManopera=val;
       }
+      if(field==="cantitateBanda"){ upd.cantitateBandaCustom=true; }
+      if(field==="cantitateManopera"){ upd.cantitateManoperaCustom=true; }
       if(field==="tip" && val==="sina electrica"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="150"; }
       if(field==="tip" && val==="pliseu"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; }
       if(field==="tip" && val==="jaluzea"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; if(!pr.lamelaJaluzea) upd.lamelaJaluzea="5"; }
@@ -4177,7 +4179,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div style="display:flex;justify-content:flex-end;font-size:.92em;color:#4A3F31;padding-top:2px">Subtotal ${c.numeCamera||"cameră"}: <b style="margin-left:6px">${subtotalCamera(c).toFixed(0)} lei</b></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:1.05em;font-weight:700;color:#2A2118;background:#EDE4D3;padding:8px 10px;margin-top:4px;border-top:2px solid #A0845C"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.82em">Subtotal ${c.numeCamera||"cameră"}</span><span>${subtotalCamera(c).toFixed(0)} lei</span></div>
     </div>
     </div>`;
   }).join("");
@@ -4721,7 +4723,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           <button onClick={()=>editeazaOferta(oferta)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>
           <button onClick={()=>vizualizeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Vizualizează</button>
           <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
-          <button onClick={()=>descarcaPDF(htmlFor(oferta),`Oferta_${oferta.numar.replace("/","-")}_${(oferta.numeClient||client.name).replace(/[^a-zA-Z0-9]+/g,"_")}`)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă PDF</button>
+          <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă PDF</button>
           <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.numar}? Nu poate fi recuperată.`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).filter(x=>x.id!==oferta.id)}));}} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"5px 6px"}}></button>
         </div>
       )}
