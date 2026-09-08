@@ -314,12 +314,13 @@ function costProductieConfig(cfg, catalogCostComponente){
   catalogCostComponente.forEach(c=>{ priceMap[c.cod.toLowerCase()]=c.pretLei; });
   let total=0;
   const lipsa=[];
-  const qty=Number(cfg.qty)||1;
+  // NOTĂ: cfg.parts conține deja cantitățile finale (înmulțite cu nr. de bucăți configurate, acolo unde e cazul —
+  // ex: rulouPartsList înmulțește cu qty la generare). NU se mai înmulțește încă o dată aici cu cfg.qty.
   cfg.parts.forEach(p=>{
     const cod=(p.code||p.article||"").toLowerCase();
     if(!cod) return;
     if(priceMap[cod]!==undefined){
-      total += priceMap[cod]*(p.qty||0)*qty;
+      total += priceMap[cod]*(p.qty||0);
     } else {
       lipsa.push(p.code||p.article);
     }
@@ -580,7 +581,6 @@ function rulouCalc(inp){
   if(cfgd && cfgd.maxH && H>cfgd.maxH) errs.push(`Înălțimea depășește maximul sistemului (${cfgd.maxH}mm).`);
   if(code.includes("SPA") && (W<500 || H>3500)) errs.push("Springassist: lățime min. 500mm, înălțime max. 3500mm.");
   if(H/W>3) warns.push("Raport H:L peste 3:1 — verifică stabilitatea.");
-  if(fabricH>2800) warns.push(`Înălțimea stofă necesară (${fabricH.toFixed(1)}mm) depășește 2800mm — majoritatea materialelor au lățimea de rolă de 2800mm, verifică disponibilitatea la furnizor.`);
   if(roll.halfTurns/2 > 18*(isDR?2:1)) errs.push("Numărul de rotații depășește limita mecanismului (18).");
 
   const isChainCfg = /RC-.?A/.test(cfg);
@@ -6815,9 +6815,6 @@ function App() {
   const [catalogJaluzele,setCatalogJaluzele]=useState([]);
   const [catalogCostComponente,setCatalogCostComponente]=useState([]);
   const [log,setLog]=useState({});
-  const [chat,setChat]=useState([]);
-  const [chatInput,setChatInput]=useState("");
-  const [loading,setLoading]=useState(false);
   const [mit,setMit]=useState({tasks:["","",""],done:[false,false,false],date:tday()});
   const [jurnal,setJurnal]=useState({});
   const [planMaine,setPlanMaine]=useState({});
@@ -6864,7 +6861,6 @@ function App() {
   const [openModel,setOpenModel]=useState({});
   const [loaded, setLoaded] = useState(false);
   const [energie, setEnergie] = useState({});
-  const chatRef=useRef(null);
   const saveTimer=useRef({});
 
   const lsGet=(key)=>{try{const v=localStorage.getItem("kr_"+key);return v?JSON.parse(v):null;}catch{return null;}};
@@ -6995,8 +6991,6 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(LGK,log);},[log,loaded]);
   useEffect(()=>{if(loaded) sbSave(TRK,trezorerie);},[trezorerie,loaded]);
   useEffect(()=>{if(loaded) sbSave(ENK,energie);},[energie,loaded]);
-
-  useEffect(()=>{if(chatRef.current) chatRef.current.scrollIntoView({behavior:"smooth"});},[chat,loading]);
 
   const addJurnal=(title,source)=>{
     const t=tday();
@@ -7144,7 +7138,7 @@ function App() {
       version:2,
       exportedAt:new Date().toISOString(),
       data:{
-        [SK]:data,[CK]:chat,[CLK]:clients,[AK]:admin,
+        [SK]:data,[CK]:[],[CLK]:clients,[AK]:admin,
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
@@ -7170,7 +7164,7 @@ function App() {
       const payload={
         version:2, exportedAt:new Date().toISOString(),
         data:{
-          [SK]:data,[CK]:chat,[CLK]:clients,[AK]:admin,
+          [SK]:data,[CK]:[],[CLK]:clients,[AK]:admin,
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
@@ -7245,21 +7239,6 @@ function App() {
     reader.readAsText(file);
     e.target.value="";
   };
-
-  async function sendChat() {
-    const msg=chatInput.trim();if(!msg||loading) return;
-    setChatInput("");const nc=[...chat,{role:"user",content:msg}];
-    setChat(nc);setLoading(true);
-    const t3=top3();const jAzi=jurnal[tday()]||[];
-    const sys=`Ești asistenta Cristinei (Kreativo Studio Brașov). Română. Directă. Aplici Pareto, MIT, Eat the Frog.\nREALIZAT AZI: ${JSON.stringify(jAzi)}\nTOP 3: ${JSON.stringify(t3)}\nPLAN MÂINE: ${JSON.stringify(tmPlan)}`;
-    try {
-      const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:sys,messages:nc.slice(-10).map(m=>({role:m.role,content:m.content}))})});
-      const result=await res.json();
-      const raw=result.content?.[0]?.text||"Eroare.";
-      setChat(c=>[...c,{role:"assistant",content:raw}]);
-    } catch { setChat(c=>[...c,{role:"assistant",content:"Eroare conexiune."}]); }
-    setLoading(false);
-  }
 
   const calItems=buildCal();
   const t3=top3();const del=delegated();
@@ -8301,24 +8280,6 @@ function App() {
 
     {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
 
-    {tab==="chat"&&<div>
-      <div style={{fontSize:11,color:C.textMuted,marginBottom:14,textTransform:"uppercase",letterSpacing:"0.06em"}}>Asistentă · prioritizare · execuție</div>
-      <div style={{background:C.surface,border:`1px solid ${C.border}`,minHeight:280,maxHeight:400,overflowY:"auto",padding:16,marginBottom:12,display:"flex",flexDirection:"column",gap:10}}>
-        {chat.length===0&&<div style={{color:C.textMuted,fontSize:13,textAlign:"center",marginTop:"3rem",lineHeight:1.7}}>Ce faci <strong>mai întâi</strong> azi?<br/><span style={{fontSize:12}}>Sau scrie "bună dimineața" să stabilim top 3 împreună.</span></div>}
-        {chat.map((m,i)=><div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"80%"}}>
-          <div style={{background:m.role==="user"?C.accent:C.bg,color:m.role==="user"?"#fff":C.text,border:m.role==="assistant"?`1px solid ${C.border}`:"none",padding:"10px 14px",fontSize:13,lineHeight:1.6}}>{m.content}</div>
-        </div>)}
-        {loading&&<div style={{alignSelf:"flex-start"}}><div style={{background:C.bg,border:`1px solid ${C.border}`,padding:"10px 14px",fontSize:13,color:C.textMuted}}>···</div></div>}
-        <div ref={chatRef}/>
-      </div>
-      <div style={row}>
-        <input style={{...inp,flex:1}} value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&sendChat()} placeholder="Ce faci acum? Ce te blochează?"/>
-        <button style={btnP()} onClick={sendChat} disabled={loading}>{loading?"···":"Trimite"}</button>
-      </div>
-      <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
-        {["Bună dimineața, stabilim top 3","Ce am amânat?","Ce pot delega azi?"].map(s=><button key={s} style={{fontSize:11,padding:"5px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",color:C.textSub}} onClick={()=>setChatInput(s)}>{s}</button>)}
-      </div>
-    </div>}
 
     </div>
   </div>;
