@@ -4108,14 +4108,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const pretUnitarSinaEfectiv=(pr)=>(pr.pretUnitarSina!==undefined && pr.pretUnitarSina!=="")?Number(pr.pretUnitarSina)||0:calculeazaPretSina(pr);
   const pretUnitarPliseuEfectiv=(pr)=>(pr.pretUnitarPliseu!==undefined && pr.pretUnitarPliseu!=="")?Number(pr.pretUnitarPliseu)||0:calculeazaPretPliseu(pr);
   const pretUnitarJaluzeaEfectiv=(pr)=>(pr.pretUnitarJaluzea!==undefined && pr.pretUnitarJaluzea!=="")?Number(pr.pretUnitarJaluzea)||0:calculeazaPretJaluzea(pr);
-  const valoareMaterial=(pr)=>esteSina(pr)?pretUnitarSinaEfectiv(pr)*(Number(pr.cantitate)||0):estePliseu(pr)?pretUnitarPliseuEfectiv(pr)*(Number(pr.cantitate)||0):esteJaluzea(pr)?pretUnitarJaluzeaEfectiv(pr)*(Number(pr.cantitate)||0):esteStorRomanTransparent(pr)?(Number(pr.cantitateMaterialStor)||0)*(Number(pr.pretUnitar)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const valoareMaterial=(pr)=>esteSina(pr)?pretUnitarSinaEfectiv(pr)*(Number(pr.cantitate)||1):estePliseu(pr)?pretUnitarPliseuEfectiv(pr)*(Number(pr.cantitate)||1):esteJaluzea(pr)?pretUnitarJaluzeaEfectiv(pr)*(Number(pr.cantitate)||1):esteStorRomanTransparent(pr)?(Number(pr.cantitateMaterialStor)||0)*(Number(pr.pretUnitar)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
   const cantitateBandaEfectiva=(pr)=>(pr.cantitateBanda!==undefined && pr.cantitateBanda!=="")?Number(pr.cantitateBanda)||0:(Number(pr.cantitate)||0);
   const cantitateManoperaEfectiva=(pr)=>(pr.cantitateManopera!==undefined && pr.cantitateManopera!=="")?Number(pr.cantitateManopera)||0:(Number(pr.cantitate)||0);
   const valoareBanda=(pr)=>esteTextil(pr)?cantitateBandaEfectiva(pr)*(Number(pr.pretBanda)||0):0;
   const valoareManopera=(pr)=>esteTextil(pr)?cantitateManoperaEfectiva(pr)*(Number(pr.pretManopera)||0):0;
-  const valoareBenziManopera=(pr)=>esteStorRomanTransparent(pr)?mpStor(pr)*(Number(pr.pretBenziManopera)||0)*(Number(pr.cantitate)||0):0;
-  const valoareMecanism=(pr)=>esteStorRomanTransparent(pr)?(Number(pr.latimeStorCm)||0)/100*(Number(pr.pretMecanism)||0)*(Number(pr.cantitate)||0):0;
-  const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr)||esteJaluzea(pr)||esteStorRomanTransparent(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
+  const valoareBenziManopera=(pr)=>esteStorRomanTransparent(pr)?mpStor(pr)*(Number(pr.pretBenziManopera)||0)*(Number(pr.cantitate)||1):0;
+  const valoareMecanism=(pr)=>esteStorRomanTransparent(pr)?(Number(pr.latimeStorCm)||0)/100*(Number(pr.pretMecanism)||0)*(Number(pr.cantitate)||1):0;
+  const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr)||esteJaluzea(pr)||esteStorRomanTransparent(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||1)*(Number(pr.pretMontaj)||0):0;
   const valoareLinie=(pr)=>Math.round(valoareMaterial(pr))+Math.round(valoareBanda(pr))+Math.round(valoareManopera(pr))+Math.round(valoareBenziManopera(pr))+Math.round(valoareMecanism(pr))+Math.round(valoareMontaj(pr));
   const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
@@ -4318,6 +4318,58 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         if(esteJaluzea(pr) && pr.grupaPretJaluzea && pr.latimeJaluzeaCm && pr.inaltimeJaluzeaCm && dimensiuniSteppedJaluzea(pr).imposibil && !pr.pretUnitarJaluzea){
           alert(`Dimensiune imposibilă la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — lățimea sau înălțimea depășește ce există în catalog pentru grupa/lamela alese. Verifică dimensiunile, sau completează manual un preț dacă e o comandă specială.`);
           return;
+        }
+        const areMaterial = pr.material.trim()||pliseuActiv||jaluzeaActiva;
+        const esteTipGeneric = !esteSina(pr) && !estePliseu(pr) && !esteJaluzea(pr) && !esteStorRomanTransparent(pr) && !esteTextil(pr);
+        if(areMaterial && !esteTextil(pr) && !esteStorRomanTransparent(pr) && !(Number(pr.cantitate)>0)){
+          alert(`Lipsește cantitatea (nr. buc.) la „${pr.material||cap(pr.tip)}" din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`);
+          return;
+        }
+        if(esteTipGeneric && pr.material.trim() && !(Number(pr.pretUnitar)>0)){
+          alert(`Lipsește prețul unitar la „${pr.material}" din camera „${c.numeCamera}". Completeaz-l înainte să generezi oferta.`);
+          return;
+        }
+        if(esteTextil(pr) && pr.material.trim() && !(Number(pr.cantitate)>0)){
+          alert(`Lipsește cantitatea (m) la „${pr.material}" din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`);
+          return;
+        }
+        if(esteTextil(pr) && pr.material.trim() && !(Number(pr.pretUnitar)>0)){
+          alert(`Lipsește prețul unitar la „${pr.material}" din camera „${c.numeCamera}". Completeaz-l înainte să generezi oferta.`);
+          return;
+        }
+        if(esteSina(pr) && pr.material.trim() && !pr.lungimeSinaCm.trim()){
+          alert(`Lipsește lungimea la șina „${pr.material}" din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`);
+          return;
+        }
+        if(esteSina(pr) && pr.material.trim() && !(pretUnitarSinaEfectiv(pr)>0)){
+          alert(`Lipsește prețul la șina „${pr.material}" din camera „${c.numeCamera}" — verifică modelul ales sau completează manual un preț.`);
+          return;
+        }
+        if(pliseuActiv && !(pretUnitarPliseuEfectiv(pr)>0)){
+          alert(`Lipsește prețul la pliseul „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — verifică dimensiunile/grupa alese sau completează manual un preț.`);
+          return;
+        }
+        if(jaluzeaActiva && !(pretUnitarJaluzeaEfectiv(pr)>0)){
+          alert(`Lipsește prețul la jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — verifică dimensiunile/grupa alese sau completează manual un preț.`);
+          return;
+        }
+        if(esteStorRomanTransparent(pr) && pr.material.trim()){
+          if(!pr.latimeStorCm.trim()||!pr.inaltimeStorCm.trim()){
+            alert(`Lipsește lățimea sau înălțimea la stor-ul roman „${pr.material}" din camera „${c.numeCamera}". Completează-le înainte să generezi oferta.`);
+            return;
+          }
+          if(!(Number(pr.cantitateMaterialStor)>0)){
+            alert(`Lipsește cantitatea de material la stor-ul roman „${pr.material}" din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`);
+            return;
+          }
+          if(!(Number(pr.pretUnitar)>0)){
+            alert(`Lipsește prețul materialului la stor-ul roman „${pr.material}" din camera „${c.numeCamera}". Completeaz-l înainte să generezi oferta.`);
+            return;
+          }
+          if(!(Number(pr.cantitate)>0)){
+            alert(`Lipsește numărul de bucăți la stor-ul roman „${pr.material}" din camera „${c.numeCamera}". Completeaz-l înainte să generezi oferta.`);
+            return;
+          }
         }
       }
     }
