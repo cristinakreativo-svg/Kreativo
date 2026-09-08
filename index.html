@@ -4116,7 +4116,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const valoareBenziManopera=(pr)=>esteStorRomanTransparent(pr)?mpStor(pr)*(Number(pr.pretBenziManopera)||0)*(Number(pr.cantitate)||0):0;
   const valoareMecanism=(pr)=>esteStorRomanTransparent(pr)?(Number(pr.latimeStorCm)||0)/100*(Number(pr.pretMecanism)||0)*(Number(pr.cantitate)||0):0;
   const valoareMontaj=(pr)=>(esteSina(pr)||estePliseu(pr)||esteJaluzea(pr)||esteStorRomanTransparent(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||0)*(Number(pr.pretMontaj)||0):0;
-  const valoareLinie=(pr)=>valoareMaterial(pr)+valoareBanda(pr)+valoareManopera(pr)+valoareBenziManopera(pr)+valoareMecanism(pr)+valoareMontaj(pr);
+  const valoareLinie=(pr)=>Math.round(valoareMaterial(pr))+Math.round(valoareBanda(pr))+Math.round(valoareManopera(pr))+Math.round(valoareBenziManopera(pr))+Math.round(valoareMecanism(pr))+Math.round(valoareMontaj(pr));
   const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
   const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
@@ -4242,7 +4242,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     if(oferta.editedHtml) return oferta.editedHtml;
     return buildOferta({
       numar:oferta.numar, dataFmt:fmtD(oferta.data), numeClient:oferta.numeClient,
-      camereHtml: camereHtmlBuild(oferta.camere), necesarHtml: necesarHtmlBuild(oferta.camere), totalGeneral: oferta.camere.reduce((s,c)=>s+c.produse.reduce((s2,pr)=>s2+(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0),0),0).toFixed(0),
+      camereHtml: camereHtmlBuild(oferta.camere), necesarHtml: necesarHtmlBuild(oferta.camere), totalGeneral: oferta.camere.reduce((s,c)=>s+subtotalCamera(c),0).toFixed(0),
       clientId: client.id, ofertaId: oferta.id,
     });
   };
