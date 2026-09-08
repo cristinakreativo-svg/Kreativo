@@ -581,7 +581,7 @@ function rulouCalc(inp){
   if(cfgd && cfgd.maxH && H>cfgd.maxH) errs.push(`Înălțimea depășește maximul sistemului (${cfgd.maxH}mm).`);
   if(code.includes("SPA") && (W<500 || H>3500)) errs.push("Springassist: lățime min. 500mm, înălțime max. 3500mm.");
   if(H/W>3) warns.push("Raport H:L peste 3:1 — verifică stabilitatea.");
-  if(roll.halfTurns/2 > 18*(isDR?2:1)) errs.push("Numărul de rotații depășește limita mecanismului (18).");
+  if(roll.halfTurns/2 > 18*(isDR?2:1)) warns.push("Numărul de rotații depășește limita mecanismului (18).");
 
   const isChainCfg = /RC-.?A/.test(cfg);
   if(isChainCfg && !/CH(P|M|EP|EM|K)/.test(code)) errs.push("Alege un lanț de acționare (Plastic/Metal ballchain) — obligatoriu, fără el ruloul nu poate fi acționat.");
@@ -4928,6 +4928,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
   const [height,setHeight]=React.useState(1000);
   const [installHeight,setInstallHeight]=React.useState(1000);
   const [mechKey,setMechKey]=React.useState("RSC-A10 chain");
+  const isMotor = mechKey==="RSC-B10 motorised";
   const [fabricKey,setFabricKey]=React.useState("normal 500 gr");
   const [controlSide,setControlSide]=React.useState("Left");
   const [cordsSpools,setCordsSpools]=React.useState("Auto");
