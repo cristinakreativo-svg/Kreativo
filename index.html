@@ -2130,6 +2130,12 @@ function ClientDocumente({client,ci,setClients,C,sb,tday,fmtD}){
   </div>;
 }
 
+function cmToM(cm){
+  if(cm===""||cm===null||cm===undefined||isNaN(Number(cm))) return "";
+  const m=Number(cm)/100;
+  const r=Math.round(m*100)/100;
+  return (r%1===0)?String(r):r.toFixed(2).replace(/0$/,"");
+}
 function construiesteLiniiExecutie(oferta){
   const TIPURI_PERMISE=["perdea","draperie","stor roman transparent"];
   return (oferta.camere||[]).map(c=>{
@@ -2138,8 +2144,8 @@ function construiesteLiniiExecutie(oferta){
     (c.produse||[]).filter(pr=>TIPURI_PERMISE.includes(pr.tip)).forEach(pr=>{
       for(let i=0;i<nrGeamuri;i++){
         const geam=c.geamuri&&c.geamuri[i];
-        const h=geam&&geam.inaltime?geam.inaltime:"";
-        const l=pr.tip==="perdea"&&geam&&geam.lungime?Math.round(Number(geam.lungime)*2):"";
+        const h=geam&&geam.inaltime?cmToM(geam.inaltime):"";
+        const l=pr.tip==="perdea"&&geam&&geam.lungime?cmToM(Number(geam.lungime)*2):"";
         linii.push({
           id:gid(), tip:pr.tip, material:pr.material, culoare:pr.culoare,
           geamNr:i+1, h, l,
@@ -2194,10 +2200,10 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
       </tr>`).join("");
       return `<div style="margin-bottom:22px;break-inside:avoid">
         <div style="font:600 1.05em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">${cam.numeCamera||"Cameră"}</div>
-        ${(cam.geamuri||[]).length>0?`<div style="display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px;background:#F7F3EA;font-size:.85em;color:#5C4F3E;border-bottom:1px solid #D4C9B8">${(cam.geamuri||[]).map((g,gi)=>`<span><b>Geam ${gi+1}:</b> H=${g.inaltime||"—"} · L=${g.lungime||"—"}</span>`).join("")}</div>`:""}
+        ${(cam.geamuri||[]).length>0?`<div style="display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px;background:#F7F3EA;font-size:.85em;color:#5C4F3E;border-bottom:1px solid #D4C9B8">${(cam.geamuri||[]).map((g,gi)=>`<span><b>Geam ${gi+1}:</b> H=${g.inaltime?cmToM(g.inaltime):"—"} · L=${g.lungime?cmToM(g.lungime):"—"}</span>`).join("")}</div>`:""}
         <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
           <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
-            <td style="padding:6px 10px;border:1px solid #D4C9B8">Tip</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Material</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Geam</td><td style="padding:6px 10px;border:1px solid #D4C9B8">H (cm)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">L (cm)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Buc.</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Bandă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Obs.</td>
+            <td style="padding:6px 10px;border:1px solid #D4C9B8">Tip</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Material</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Geam</td><td style="padding:6px 10px;border:1px solid #D4C9B8">H (m)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">L (m)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Buc.</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Bandă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Obs.</td>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -2231,7 +2237,7 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
             <button onClick={()=>delCamera(cam.id)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑 cameră</button>
           </div>
           {(cam.geamuri||[]).length>0&&<div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:11,color:C.textMuted,marginBottom:8,padding:"6px 8px",background:C.bg}}>
-            {(cam.geamuri||[]).map((g,gi)=><span key={gi}><b style={{color:C.textSub}}>Geam {gi+1}:</b> H={g.inaltime||"—"} · L={g.lungime||"—"}</span>)}
+            {(cam.geamuri||[]).map((g,gi)=><span key={gi}><b style={{color:C.textSub}}>Geam {gi+1}:</b> H={g.inaltime?cmToM(g.inaltime):"—"} · L={g.lungime?cmToM(g.lungime):"—"}</span>)}
           </div>}
           {cam.linii.map(l=>
             <div key={l.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:6,background:C.bg}}>
@@ -2246,8 +2252,8 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
                 <button onClick={()=>delLinie(cam.id,l.id)} style={{fontSize:14,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"70px 70px 70px 140px 1fr",gap:8,alignItems:"center"}}>
-                <input value={l.h} onChange={e=>updLinie(cam.id,l.id,"h",e.target.value)} placeholder="H (cm)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
-                <input value={l.l} onChange={e=>updLinie(cam.id,l.id,"l",e.target.value)} placeholder="L (cm)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+                <input value={l.h} onChange={e=>updLinie(cam.id,l.id,"h",e.target.value)} placeholder="H (m)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+                <input value={l.l} onChange={e=>updLinie(cam.id,l.id,"l",e.target.value)} placeholder="L (m)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
                 <input value={l.nrBucati} onChange={e=>updLinie(cam.id,l.id,"nrBucati",e.target.value)} placeholder="Buc." style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
                 <select value={l.banda} onChange={e=>updLinie(cam.id,l.id,"banda",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}>
                   <option value="">Bandă — alege</option>
@@ -4565,15 +4571,22 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     camereList.forEach(c=>{
       c.produse.filter(pr=>pr.material.trim() && !esteSina(pr) && !estePliseu(pr) && !esteJaluzea(pr)).forEach(pr=>{
         const furn=pr.furnizor&&pr.furnizor.trim()?pr.furnizor.trim():"Furnizor nespecificat";
-        if(!grupe[furn]) grupe[furn]=[];
-        grupe[furn].push(pr);
+        if(!grupe[furn]) grupe[furn]={};
+        const materialTxt=pr.material.trim();
+        const culoareTxt=(pr.culoare||"").trim();
+        const cheie=(materialTxt+"|"+culoareTxt).toLowerCase();
+        const cantitate=Number(esteStorRomanTransparent(pr)?(pr.cantitateMaterialStor||0):(pr.cantitate||0))||0;
+        if(!grupe[furn][cheie]) grupe[furn][cheie]={material:materialTxt, culoare:culoareTxt, cantitate:0};
+        grupe[furn][cheie].cantitate+=cantitate;
       });
     });
     const furnizori=Object.keys(grupe).sort((a,b)=>a.localeCompare(b,"ro"));
     if(!furnizori.length) return "";
+    const fmtCant=(n)=>{ const r=Math.round(n*100)/100; return (r%1===0)?String(r):r.toFixed(2).replace(/0$/,""); };
     const blocuri=furnizori.map(furn=>{
-      const rows=grupe[furn].map(pr=>
-        `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #D8CDBA">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #D8CDBA">${pr.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D8CDBA">${esteStorRomanTransparent(pr)?(pr.cantitateMaterialStor||0)+" m":(pr.cantitate||0)+" m"}</td></tr>`
+      const pozitii=Object.values(grupe[furn]).sort((a,b)=>a.material.localeCompare(b.material,"ro")||a.culoare.localeCompare(b.culoare,"ro"));
+      const rows=pozitii.map(p=>
+        `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #D8CDBA">${p.material}</td><td style="padding:5px 8px;border-bottom:1px solid #D8CDBA">${p.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #D8CDBA">${fmtCant(p.cantitate)} m</td></tr>`
       ).join("");
       return `<div style="margin-bottom:12px">
         <div style="font:700 .82em/1 'Source Sans 3',Calibri,sans-serif;color:#5C4A2E;margin-bottom:5px">${furn}</div>
@@ -4581,7 +4594,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           <thead><tr style="font:600 .7em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#8A7A64">
             <td style="padding:4px 8px 4px 0;border-bottom:1px solid #C9BC9E">Material</td>
             <td style="padding:4px 8px;border-bottom:1px solid #C9BC9E">Culoare</td>
-            <td style="padding:4px 0 4px 8px;text-align:right;border-bottom:1px solid #C9BC9E">Cantitate</td>
+            <td style="padding:4px 0 4px 8px;text-align:right;border-bottom:1px solid #C9BC9E">Total de comandat</td>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
