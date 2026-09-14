@@ -2136,6 +2136,28 @@ function cmToM(cm){
   const r=Math.round(m*100)/100;
   return (r%1===0)?String(r):r.toFixed(2).replace(/0$/,"");
 }
+function construiesteConsumMaterialeInitial(oferta){
+  const grupe={};
+  (oferta.camere||[]).forEach(c=>{
+    (c.produse||[]).filter(pr=>(pr.tip==="perdea"||pr.tip==="draperie") && pr.material&&pr.material.trim()).forEach(pr=>{
+      const cheie=pr.material.trim().toLowerCase();
+      if(!grupe[cheie]) grupe[cheie]={id:gid(), material:pr.material.trim(), cantitate:0, sursa:"auto"};
+      grupe[cheie].cantitate+=Number(pr.cantitate)||0;
+    });
+  });
+  return Object.values(grupe).map(g=>({...g, cantitate:Math.round(g.cantitate*100)/100}));
+}
+function construiesteConsumBandaDinLinii(camere){
+  const grupe={};
+  (camere||[]).forEach(cam=>{
+    (cam.linii||[]).filter(l=>(l.tip==="perdea"||l.tip==="draperie") && l.banda&&l.banda.trim()).forEach(l=>{
+      const cheie=l.banda.trim().toLowerCase();
+      if(!grupe[cheie]) grupe[cheie]={id:gid(), tipBanda:l.banda.trim(), cantitate:0, sursa:"auto"};
+      grupe[cheie].cantitate+=Number(l.l)||0;
+    });
+  });
+  return Object.values(grupe).map(g=>({...g, cantitate:Math.round(g.cantitate*100)/100}));
+}
 function construiesteLiniiExecutie(oferta){
   const TIPURI_PERMISE=["perdea","draperie","stor roman transparent"];
   return (oferta.camere||[]).map(c=>{
@@ -2180,6 +2202,23 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
   const delCamera=(camId)=>{
     if(!window.confirm("Ștergi această cameră din comandă, cu tot ce conține?")) return;
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.filter(cam=>cam.id!==camId)})}));
+  };
+  const consum=comanda.consumMateriale||{materiale:[],banda:[],liniiManuale:[],verificatNico:false};
+  const updConsum=(field,val)=>{
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,consumMateriale:{...consum,[field]:val}})}));
+  };
+  const updPozitieConsum=(grupa,itemId,field,val,esteAuto)=>{
+    if(esteAuto && !window.confirm("Modifici o cantitate calculată automat (din ofertă/linii). Sigur vrei să o schimbi manual?")) return;
+    updConsum(grupa, consum[grupa].map(it=>it.id!==itemId?it:{...it,[field]:val}));
+  };
+  const stergePozitieConsum=(grupa,itemId)=>{
+    updConsum(grupa, consum[grupa].filter(it=>it.id!==itemId));
+  };
+  const actualizeazaConsumBanda=()=>{
+    updConsum("banda", construiesteConsumBandaDinLinii(comanda.camere));
+  };
+  const adaugaLinieManualaConsum=()=>{
+    updConsum("liniiManuale", [...(consum.liniiManuale||[]), {id:gid(), denumire:"", cantitate:"", obs:""}]);
   };
   const delComanda=()=>{
     if(!window.confirm(`Ștergi comanda de execuție nr. ${comanda.numar||""}? Nu poate fi recuperată.`)) return;
@@ -2227,6 +2266,7 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
         <span style={{fontSize:13,fontWeight:600,color:C.text}}>Comandă execuție nr. {comanda.numar}</span>
         <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{fmtD(comanda.dataCreat)} · {comanda.camere.reduce((s,c)=>s+c.linii.length,0)} linii{!comanda.ofertaId?" · manuală":""}</span>
       </div>
+      <button onClick={e=>{e.stopPropagation();delComanda();}} style={{fontSize:14,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"2px 6px"}} title="Șterge comanda">🗑</button>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
     {open&&<div style={{padding:"12px 14px"}}>
@@ -2252,8 +2292,14 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
                 <button onClick={()=>delLinie(cam.id,l.id)} style={{fontSize:14,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"70px 70px 70px 140px 1fr",gap:8,alignItems:"center"}}>
-                <input value={l.h} onChange={e=>updLinie(cam.id,l.id,"h",e.target.value)} placeholder="H (m)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
-                <input value={l.l} onChange={e=>updLinie(cam.id,l.id,"l",e.target.value)} placeholder="L (m)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+                <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,background:C.surface}}>
+                  <span style={{fontSize:11,fontWeight:700,color:C.textSub,padding:"0 0 0 8px"}}>H</span>
+                  <input value={l.h} onChange={e=>updLinie(cam.id,l.id,"h",e.target.value)} style={{fontSize:12,border:"none",padding:"6px 8px",background:"transparent",outline:"none",width:"100%",minWidth:0}}/>
+                </div>
+                <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,background:C.surface}}>
+                  <span style={{fontSize:11,fontWeight:700,color:C.textSub,padding:"0 0 0 8px"}}>L</span>
+                  <input value={l.l} onChange={e=>updLinie(cam.id,l.id,"l",e.target.value)} style={{fontSize:12,border:"none",padding:"6px 8px",background:"transparent",outline:"none",width:"100%",minWidth:0}}/>
+                </div>
                 <input value={l.nrBucati} onChange={e=>updLinie(cam.id,l.id,"nrBucati",e.target.value)} placeholder="Buc." style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
                 <select value={l.banda} onChange={e=>updLinie(cam.id,l.id,"banda",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}>
                   <option value="">Bandă — alege</option>
@@ -2270,7 +2316,57 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
         </div>
       )}
       <button onClick={adaugaCamera} style={{fontSize:12,fontWeight:600,padding:"6px 12px",background:"transparent",color:C.textSub,border:`1px dashed ${C.border}`,cursor:"pointer",marginBottom:8}}>+ Adaugă cameră</button>
-      <div style={{display:"flex",gap:8}}>
+
+      <div style={{marginTop:18,paddingTop:14,borderTop:`2px solid ${C.accent}`}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.text,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:10}}>Consum materiale — Perdea și Draperie</div>
+
+        <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>Material (adunat pe toate camerele)</div>
+        {consum.materiale.length===0&&<div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>{comanda.ofertaId?"Nimic de calculat — verifică oferta de bază.":"Comandă manuală — nu există material de calculat automat."}</div>}
+        {consum.materiale.map(it=>
+          <div key={it.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 30px",gap:8,alignItems:"center",marginBottom:6}}>
+            <input value={it.material} onChange={e=>updPozitieConsum("materiale",it.id,"material",e.target.value,it.sursa==="auto")} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <input value={it.cantitate} onChange={e=>updPozitieConsum("materiale",it.id,"cantitate",e.target.value,it.sursa==="auto")} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none",width:60}}/>
+              <span style={{fontSize:11,color:C.textMuted}}>m</span>
+            </div>
+            <button onClick={()=>stergePozitieConsum("materiale",it.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
+          </div>
+        )}
+
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:14,marginBottom:6}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>Bandă (pe tip — Wave mic, Wave mare, Wave normal, Creață)</div>
+          <button onClick={actualizeazaConsumBanda} style={{fontSize:11,fontWeight:600,padding:"4px 10px",background:"transparent",color:C.textSub,border:`1px dashed ${C.border}`,cursor:"pointer"}}>Actualizează din liniile completate</button>
+        </div>
+        {consum.banda.length===0&&<div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>Nimic calculat încă — completează „Bandă" la liniile de mai sus, apoi apasă „Actualizează".</div>}
+        {consum.banda.map(it=>
+          <div key={it.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 30px",gap:8,alignItems:"center",marginBottom:6}}>
+            <input value={it.tipBanda} onChange={e=>updPozitieConsum("banda",it.id,"tipBanda",e.target.value,it.sursa==="auto")} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <input value={it.cantitate} onChange={e=>updPozitieConsum("banda",it.id,"cantitate",e.target.value,it.sursa==="auto")} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none",width:60}}/>
+              <span style={{fontSize:11,color:C.textMuted}}>m</span>
+            </div>
+            <button onClick={()=>stergePozitieConsum("banda",it.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
+          </div>
+        )}
+
+        <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",marginTop:14,marginBottom:6}}>Linii adăugate manual (Nicoleta)</div>
+        {(consum.liniiManuale||[]).map(it=>
+          <div key={it.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 1fr 30px",gap:8,alignItems:"center",marginBottom:6}}>
+            <input value={it.denumire} onChange={e=>updPozitieConsum("liniiManuale",it.id,"denumire",e.target.value,false)} placeholder="Denumire" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
+            <input value={it.cantitate} onChange={e=>updPozitieConsum("liniiManuale",it.id,"cantitate",e.target.value,false)} placeholder="Cantitate" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
+            <input value={it.obs} onChange={e=>updPozitieConsum("liniiManuale",it.id,"obs",e.target.value,false)} placeholder="Observații" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
+            <button onClick={()=>stergePozitieConsum("liniiManuale",it.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
+          </div>
+        )}
+        <button onClick={adaugaLinieManualaConsum} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"transparent",color:C.textSub,border:`1px dashed ${C.border}`,cursor:"pointer",marginBottom:14}}>+ Adaugă linie manuală</button>
+
+        <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",padding:"10px 12px",background:consum.verificatNico?"#DCE8DC":C.bg,border:`1px solid ${consum.verificatNico?"#7A9A7A":C.border}`}}>
+          <input type="checkbox" checked={!!consum.verificatNico} onChange={e=>updConsum("verificatNico",e.target.checked)}/>
+          <span style={{fontSize:12,fontWeight:600,color:consum.verificatNico?"#3A5A3A":C.text}}>{consum.verificatNico?"✓ Verificat de Nico":"Verificat de Nico"}</span>
+        </label>
+      </div>
+
+      <div style={{display:"flex",gap:8,marginTop:14}}>
         <button onClick={printeazaComanda} style={{flex:1,fontSize:12,fontWeight:600,padding:"8px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează comanda</button>
         <button onClick={delComanda} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"8px 10px"}}>🗑</button>
       </div>
@@ -2390,7 +2486,8 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
     if(!oferta) return;
     const camere=construiesteLiniiExecutie(oferta);
     if(!camere.length){ alert("Nu am găsit nicio linie de Perdea, Draperie sau Stor roman în această ofertă."); return; }
-    const comanda={id:gid(), numar:comandaExecutieCounter, ofertaId:oferta.id, ofertaNumar:oferta.numar, dataCreat:tday(), camere};
+    const consumMateriale={materiale:construiesteConsumMaterialeInitial(oferta), banda:[], liniiManuale:[], verificatNico:false};
+    const comanda={id:gid(), numar:comandaExecutieCounter, ofertaId:oferta.id, ofertaNumar:oferta.numar, dataCreat:tday(), camere, consumMateriale};
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,comenziExecutieNico:[...(c.comenziExecutieNico||[]),comanda]}));
     setComandaExecutieCounter(p=>p+1);
     setOfertaSelectataId("");
@@ -2398,7 +2495,8 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   const creeazaComandaManuala=()=>{
     if(!client) return;
     const comanda={id:gid(), numar:comandaExecutieCounter, ofertaId:null, ofertaNumar:null, dataCreat:tday(),
-      camere:[{id:gid(), numeCamera:"", geamuri:[], linii:[{id:gid(), tip:"perdea", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""}]}]};
+      camere:[{id:gid(), numeCamera:"", geamuri:[], linii:[{id:gid(), tip:"perdea", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""}]}],
+      consumMateriale:{materiale:[], banda:[], liniiManuale:[], verificatNico:false}};
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,comenziExecutieNico:[...(c.comenziExecutieNico||[]),comanda]}));
     setComandaExecutieCounter(p=>p+1);
   };
