@@ -1787,6 +1787,19 @@ const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2);
 const tday=()=>{const f=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Bucharest",year:"numeric",month:"2-digit",day:"2-digit"});return f.format(new Date());};
 const dateToKey=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
+function golProdusDefault(){
+  return {id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75"};
+}
+function normalizeazaCamereOferta(camereRaw){
+  if(!Array.isArray(camereRaw)||!camereRaw.length) return null;
+  return camereRaw.map(c=>({
+    id: c&&c.id||gid(),
+    numeCamera: (c&&c.numeCamera)||"",
+    nrGeamuri: (c&&c.nrGeamuri)||1,
+    geamuri: (c&&Array.isArray(c.geamuri)&&c.geamuri.length) ? c.geamuri.map(g=>({id:(g&&g.id)||gid(), nr:(g&&g.nr)||1, lungime:(g&&g.lungime)||"", inaltime:(g&&g.inaltime)||""})) : [{id:gid(),nr:1,lungime:"",inaltime:""}],
+    produse: (c&&Array.isArray(c.produse)&&c.produse.length) ? c.produse.map(pr=>({...golProdusDefault(), ...(pr||{}), id:(pr&&pr.id)||gid()})) : [golProdusDefault()]
+  }));
+}
 function printHtmlDoc(html){
   const iframe=document.createElement("iframe");
   iframe.style.position="fixed";
@@ -4278,13 +4291,20 @@ function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCat
 }
 
 function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,catalogSinaSimpla,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
-  const [numeClient,setNumeClient]=React.useState(client.name||"");
-  const [camere,setCamere]=React.useState([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[{id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25"}]}]);
+  const [numeClient,setNumeClient]=React.useState(client.ciornaOferta?client.ciornaOferta.numeClient:(client.name||""));
+  const [camere,setCamere]=React.useState(()=>normalizeazaCamereOferta(client.ciornaOferta&&client.ciornaOferta.camere)||[{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[golProdusDefault()]}]);
+  const [editingId,setEditingId]=React.useState(client.ciornaOferta?client.ciornaOferta.editingId||null:null);
+  const [formOpen,setFormOpen]=React.useState(client.ciornaOferta?!!client.ciornaOferta.formOpen:false);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null — picker de Articol (Material)
   const [pickerCuloareFor,setPickerCuloareFor]=React.useState(null); // {camId, prodId} sau null — picker de Cod culoare, filtrat după articolul ales
-  const [editingId,setEditingId]=React.useState(null); // id-ul ofertei editate, sau null la creare nouă
-  const [formOpen,setFormOpen]=React.useState(false);
   const formTopRef=React.useRef(null);
+
+  React.useEffect(()=>{
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,ciornaOferta:{numeClient,camere,editingId,formOpen}}));
+  },[numeClient,camere,editingId,formOpen]);
+  const golesteCiorna=()=>{
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,ciornaOferta:undefined}));
+  };
 
   const catalogMap=React.useMemo(()=>{
     const m={};
@@ -4605,7 +4625,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
 
   const editeazaOferta=(oferta)=>{
     setNumeClient(oferta.numeClient);
-    setCamere(oferta.camere.map(c=>({...c, geamuri:c.geamuri||[golGeam(1)], produse:c.produse.map(pr=>{
+    setCamere(normalizeazaCamereOferta(oferta.camere).map(c=>({...c, produse:c.produse.map(pr=>{
       const copie={...pr};
       if(esteSina(copie) && !copie.pretUnitarSina){
         const pretVechi=calculeazaPretSina(copie);
@@ -4630,6 +4650,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     setFormOpen(false);
     setNumeClient(client.name||"");
     setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+    golesteCiorna();
   };
   const genereaza=()=>{
     if(!numeClient.trim()){ alert("Completează numele clientului."); return; }
@@ -4752,6 +4773,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     vizualizeaza(html);
     setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
     setFormOpen(false);
+    golesteCiorna();
   };
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
