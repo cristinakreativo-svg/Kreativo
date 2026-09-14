@@ -2267,6 +2267,51 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
     </body></html>`;
     printHtmlDoc(html);
   };
+  const printeazaConsum=()=>{
+    const randMaterial=(m)=>`<tr><td style="padding:7px 10px;border:1px solid #D4C9B8">${m.material}</td><td style="padding:7px 10px;border:1px solid #D4C9B8">${m.culoare||"—"}</td><td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${m.cantitate} m</td></tr>`;
+    const randBanda=(b)=>`<tr><td style="padding:7px 10px;border:1px solid #D4C9B8">${b.tipBanda}</td><td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${b.cantitate} m</td></tr>`;
+    const randManual=(l)=>`<tr><td style="padding:7px 10px;border:1px solid #D4C9B8">${l.denumire||"—"}</td><td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${l.cantitate||"—"}</td><td style="padding:7px 10px;border:1px solid #D4C9B8">${l.obs||""}</td></tr>`;
+    const secMaterial=consum.materiale.length?`<div style="margin-bottom:20px">
+      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">Material — Perdea și Draperie</div>
+      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
+        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
+          <td style="padding:6px 10px;border:1px solid #D4C9B8">Material</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cantitate</td>
+        </tr></thead>
+        <tbody>${consum.materiale.map(randMaterial).join("")}</tbody>
+      </table>
+    </div>`:"";
+    const secBanda=consum.banda.length?`<div style="margin-bottom:20px">
+      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">Bandă — pe tip</div>
+      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
+        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
+          <td style="padding:6px 10px;border:1px solid #D4C9B8">Tip bandă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cantitate</td>
+        </tr></thead>
+        <tbody>${consum.banda.map(randBanda).join("")}</tbody>
+      </table>
+    </div>`:"";
+    const secManual=(consum.liniiManuale||[]).length?`<div style="margin-bottom:20px">
+      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">Linii adăugate manual</div>
+      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
+        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
+          <td style="padding:6px 10px;border:1px solid #D4C9B8">Denumire</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cantitate</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Observații</td>
+        </tr></thead>
+        <tbody>${consum.liniiManuale.map(randManual).join("")}</tbody>
+      </table>
+    </div>`:"";
+    const html=`<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><title>Consum materiale — comandă nr. ${comanda.numar||""}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+    <style>@page{size:A4;margin:0.5in}body{margin:0;background:#fff;font-family:'Source Sans 3',sans-serif}</style></head>
+    <body>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #D4C9B8;padding-bottom:10px;margin-bottom:16px">
+        <div><div style="font:600 1.3em 'Source Sans 3',sans-serif;color:#2A2118">KREATIVO STUDIO</div><div style="font-size:.85em;color:#8A7A64">Consum materiale — comandă execuție nr. ${comanda.numar||""} · Client: ${clientNume}</div></div>
+        <div style="font-size:.8em;color:#8A7A64">${fmtD(comanda.dataCreat)}</div>
+      </div>
+      ${secMaterial}${secBanda}${secManual}
+      ${!secMaterial&&!secBanda&&!secManual?`<div style="color:#8A7A64;font-style:italic">Nimic calculat sau adăugat încă.</div>`:""}
+      <div style="margin-top:24px;padding:10px 14px;border:1px solid ${consum.verificatNico?"#7A9A7A":"#D4C9B8"};background:${consum.verificatNico?"#DCE8DC":"#F7F3EA"};font-size:13px;font-weight:600;color:${consum.verificatNico?"#3A5A3A":"#5C4F3E"}">${consum.verificatNico?"✓ Verificat de Nico":"☐ Neverificat încă de Nico"}</div>
+    </body></html>`;
+    printHtmlDoc(html);
+  };
   return <div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:8}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <div style={{flex:1}}>
@@ -2375,6 +2420,7 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
           <input type="checkbox" checked={!!consum.verificatNico} onChange={e=>updConsum("verificatNico",e.target.checked)}/>
           <span style={{fontSize:12,fontWeight:600,color:consum.verificatNico?"#3A5A3A":C.text}}>{consum.verificatNico?"✓ Verificat de Nico":"Verificat de Nico"}</span>
         </label>
+        <button onClick={printeazaConsum} style={{width:"100%",fontSize:12,fontWeight:600,padding:"8px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer",marginTop:8}}>Printează consumul</button>
       </div>
 
       <div style={{display:"flex",gap:8,marginTop:14}}>
