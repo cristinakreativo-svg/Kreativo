@@ -2140,8 +2140,9 @@ function construiesteConsumMaterialeInitial(oferta){
   const grupe={};
   (oferta.camere||[]).forEach(c=>{
     (c.produse||[]).filter(pr=>(pr.tip==="perdea"||pr.tip==="draperie") && pr.material&&pr.material.trim()).forEach(pr=>{
-      const cheie=pr.material.trim().toLowerCase();
-      if(!grupe[cheie]) grupe[cheie]={id:gid(), material:pr.material.trim(), cantitate:0, sursa:"auto"};
+      const culoareTxt=(pr.culoare||"").trim();
+      const cheie=(pr.material.trim()+"|"+culoareTxt).toLowerCase();
+      if(!grupe[cheie]) grupe[cheie]={id:gid(), material:pr.material.trim(), culoare:culoareTxt, cantitate:0, sursa:"auto"};
       grupe[cheie].cantitate+=Number(pr.cantitate)||0;
     });
   });
@@ -2332,8 +2333,9 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
         </div>
         {consum.materiale.length===0&&<div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>{comanda.ofertaId?"Nimic calculat încă — apasă „Calculează din ofertă”.":"Comandă manuală — nu există material de calculat automat."}</div>}
         {consum.materiale.map(it=>
-          <div key={it.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 30px",gap:8,alignItems:"center",marginBottom:6}}>
+          <div key={it.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 90px 30px",gap:8,alignItems:"center",marginBottom:6}}>
             <input value={it.material} onChange={e=>updPozitieConsum("materiale",it.id,"material",e.target.value,it.sursa==="auto")} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
+            <input value={it.culoare||""} onChange={e=>updPozitieConsum("materiale",it.id,"culoare",e.target.value,it.sursa==="auto")} placeholder="Cod culoare" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
             <div style={{display:"flex",alignItems:"center",gap:4}}>
               <input value={it.cantitate} onChange={e=>updPozitieConsum("materiale",it.id,"cantitate",e.target.value,it.sursa==="auto")} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none",width:60}}/>
               <span style={{fontSize:11,color:C.textMuted}}>m</span>
