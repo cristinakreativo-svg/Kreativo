@@ -2116,6 +2116,112 @@ function ClientDocumente({client,ci,setClients,C,sb,tday,fmtD}){
   </div>;
 }
 
+function construiesteLiniiExecutie(oferta){
+  const TIPURI_PERMISE=["perdea","draperie","stor roman transparent"];
+  return (oferta.camere||[]).map(c=>{
+    const nrGeamuri=c.nrGeamuri||(c.geamuri?c.geamuri.length:1)||1;
+    const linii=[];
+    (c.produse||[]).filter(pr=>TIPURI_PERMISE.includes(pr.tip)).forEach(pr=>{
+      for(let i=0;i<nrGeamuri;i++){
+        const geam=c.geamuri&&c.geamuri[i];
+        linii.push({
+          id:gid(), tip:pr.tip, material:pr.material, culoare:pr.culoare,
+          geamNr:i+1,
+          h:geam&&geam.inaltime?geam.inaltime:"",
+          l:geam&&geam.lungime?geam.lungime:"",
+          nrBucati:"", banda:"", obs:""
+        });
+      }
+    });
+    return {id:gid(), numeCamera:c.numeCamera, linii};
+  }).filter(cam=>cam.linii.length>0);
+}
+
+function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
+  const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+  const [open,setOpen]=React.useState(false);
+  const updLinie=(camId,liniaId,field,val)=>{
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.map(cam=>cam.id!==camId?cam:{...cam,linii:cam.linii.map(l=>l.id!==liniaId?l:{...l,[field]:val})})})}));
+  };
+  const delComanda=()=>{
+    if(!window.confirm(`Ștergi comanda ${comanda.ofertaNumar||""}? Nu poate fi recuperată.`)) return;
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).filter(x=>x.id!==comanda.id)}));
+  };
+  const printeazaComanda=()=>{
+    const secțiuni=comanda.camere.map(cam=>{
+      const rows=cam.linii.map(l=>`<tr>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8">${cap(l.tip)}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.material||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.culoare||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:center">${l.geamNr}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right">${l.h||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right">${l.l||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:center">${l.nrBucati||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.banda||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.obs||""}</td>
+      </tr>`).join("");
+      return `<div style="margin-bottom:22px;break-inside:avoid">
+        <div style="font:600 1.05em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">${cam.numeCamera||"Cameră"}</div>
+        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
+          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
+            <td style="padding:6px 10px;border:1px solid #D4C9B8">Tip</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Material</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Geam</td><td style="padding:6px 10px;border:1px solid #D4C9B8">H (cm)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">L (cm)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Buc.</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Bandă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Obs.</td>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }).join("");
+    const html=`<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><title>Comandă execuție ${comanda.ofertaNumar||""}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+    <style>@page{size:A4;margin:0.5in}body{margin:0;background:#fff;font-family:'Source Sans 3',sans-serif}</style></head>
+    <body>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #D4C9B8;padding-bottom:10px;margin-bottom:16px">
+        <div><div style="font:600 1.3em 'Source Sans 3',sans-serif;color:#2A2118">KREATIVO STUDIO</div><div style="font-size:.85em;color:#8A7A64">Comandă execuție — croitorie · Client: ${clientNume}${comanda.ofertaNumar?" · Ofertă "+comanda.ofertaNumar:""}</div></div>
+        <div style="font-size:.8em;color:#8A7A64">${fmtD(comanda.dataCreat)}</div>
+      </div>
+      ${secțiuni}
+    </body></html>`;
+    printHtmlDoc(html);
+  };
+  return <div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:8}}>
+    <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
+      <div style={{flex:1}}>
+        <span style={{fontSize:13,fontWeight:600,color:C.text}}>{comanda.ofertaNumar?`Ofertă ${comanda.ofertaNumar}`:"Comandă manuală"}</span>
+        <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{fmtD(comanda.dataCreat)} · {comanda.camere.reduce((s,c)=>s+c.linii.length,0)} linii</span>
+      </div>
+      <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
+    </div>
+    {open&&<div style={{padding:"12px 14px"}}>
+      {comanda.camere.map(cam=>
+        <div key={cam.id} style={{marginBottom:16}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.text,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:6,borderBottom:`2px solid ${C.accent}`,paddingBottom:4}}>{cam.numeCamera||"Cameră"}</div>
+          {cam.linii.map(l=>
+            <div key={l.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:6,background:C.bg}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:6}}>{cap(l.tip)} — {l.material} <span style={{color:C.textMuted,fontWeight:400}}>({l.culoare||"fără cod"}) · geam {l.geamNr}</span></div>
+              <div style={{display:"grid",gridTemplateColumns:"70px 70px 70px 140px 1fr",gap:8,alignItems:"center"}}>
+                <input value={l.h} onChange={e=>updLinie(cam.id,l.id,"h",e.target.value)} placeholder="H (cm)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+                <input value={l.l} onChange={e=>updLinie(cam.id,l.id,"l",e.target.value)} placeholder="L (cm)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+                <input value={l.nrBucati} onChange={e=>updLinie(cam.id,l.id,"nrBucati",e.target.value)} placeholder="Buc." style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+                <select value={l.banda} onChange={e=>updLinie(cam.id,l.id,"banda",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}>
+                  <option value="">Bandă — alege</option>
+                  <option value="Wave mic">Wave mic</option>
+                  <option value="Wave mare">Wave mare</option>
+                  <option value="Wave normal">Wave normal</option>
+                  <option value="Creață">Creață</option>
+                </select>
+                <input value={l.obs} onChange={e=>updLinie(cam.id,l.id,"obs",e.target.value)} placeholder="Observații" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      <div style={{display:"flex",gap:8,marginTop:8}}>
+        <button onClick={printeazaComanda} style={{flex:1,fontSize:12,fontWeight:600,padding:"8px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează comanda</button>
+        <button onClick={delComanda} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"8px 10px"}}>🗑</button>
+      </div>
+    </div>}
+  </div>;
+}
+
 function ComenziNico({client,ci,setClients,C,sb,tday,fmtD}){
   const [uploading,setUploading]=React.useState(false);
   const inputRef=React.useRef(null);
@@ -2221,6 +2327,18 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
     printHtmlDoc(html);
   };
 
+  const [ofertaSelectataId,setOfertaSelectataId]=React.useState("");
+  const creeazaComandaDinOferta=()=>{
+    if(!client || !ofertaSelectataId) return;
+    const oferta=(client.oferte||[]).find(o=>o.id===ofertaSelectataId);
+    if(!oferta) return;
+    const camere=construiesteLiniiExecutie(oferta);
+    if(!camere.length){ alert("Nu am găsit nicio linie de Perdea, Draperie sau Stor roman în această ofertă."); return; }
+    const comanda={id:gid(), ofertaId:oferta.id, ofertaNumar:oferta.numar, dataCreat:tday(), camere};
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,comenziExecutieNico:[...(c.comenziExecutieNico||[]),comanda]}));
+    setOfertaSelectataId("");
+  };
+
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10,fontWeight:600}}>Alocare producție</div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
@@ -2277,6 +2395,20 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
           <input type="date" value={client.prodStart||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,prodStart:e.target.value}))} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",background:C.surface}}/>
           <span style={{fontSize:12,color:C.textMuted}}>→</span>
           <input type="date" value={client.prodEnd||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,prodEnd:e.target.value}))} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",background:C.surface}}/>
+        </div>
+
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comandă execuție (din ofertă) — perdele, draperii, stor roman</div>
+          {(client.oferte||[]).length>0?<div style={{display:"flex",gap:8,marginBottom:10}}>
+            <select value={ofertaSelectataId} onChange={e=>setOfertaSelectataId(e.target.value)} style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"7px 8px",background:C.surface,outline:"none"}}>
+              <option value="">— alege oferta —</option>
+              {(client.oferte||[]).slice().reverse().map(o=><option key={o.id} value={o.id}>Ofertă {o.numar} · {o.total} lei{o.acceptata?" · acceptată":""}</option>)}
+            </select>
+            <button onClick={creeazaComandaDinOferta} disabled={!ofertaSelectataId} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:ofertaSelectataId?"#5C6B65":C.border,color:"#fff",border:"none",cursor:ofertaSelectataId?"pointer":"default",whiteSpace:"nowrap"}}>+ Creează comandă</button>
+          </div>:<div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>Acest client nu are încă nicio ofertă salvată.</div>}
+          {(client.comenziExecutieNico||[]).slice().reverse().map(cx=>
+            <ComandaExecutieCard key={cx.id} comanda={cx} clientId={client.id} setClients={setClients} C={C} clientNume={client.name} fmtD={fmtD}/>
+          )}
         </div>
 
         <div style={{marginBottom:16}}>
