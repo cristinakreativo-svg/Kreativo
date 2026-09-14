@@ -2179,7 +2179,7 @@ function construiesteLiniiExecutie(oferta){
   }).filter(cam=>cam.linii.length>0);
 }
 
-function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
+function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,oferteClient}){
   const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
   const [open,setOpen]=React.useState(false);
   const updLinie=(camId,liniaId,field,val)=>{
@@ -2216,6 +2216,12 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
   };
   const actualizeazaConsumBanda=()=>{
     updConsum("banda", construiesteConsumBandaDinLinii(comanda.camere));
+  };
+  const recalculeazaConsumMaterial=()=>{
+    if(!comanda.ofertaId){ alert("Această comandă e manuală, fără ofertă la bază — adaugă materialul direct ca linie manuală, mai jos."); return; }
+    const oferta=(oferteClient||[]).find(o=>o.id===comanda.ofertaId);
+    if(!oferta){ alert("Nu mai găsesc oferta de bază (a fost cumva ștearsă) — nu pot recalcula automat."); return; }
+    updConsum("materiale", construiesteConsumMaterialeInitial(oferta));
   };
   const adaugaLinieManualaConsum=()=>{
     updConsum("liniiManuale", [...(consum.liniiManuale||[]), {id:gid(), denumire:"", cantitate:"", obs:""}]);
@@ -2320,8 +2326,11 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD}){
       <div style={{marginTop:18,paddingTop:14,borderTop:`2px solid ${C.accent}`}}>
         <div style={{fontSize:11,fontWeight:700,color:C.text,textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:10}}>Consum materiale — Perdea și Draperie</div>
 
-        <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>Material (adunat pe toate camerele)</div>
-        {consum.materiale.length===0&&<div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>{comanda.ofertaId?"Nimic de calculat — verifică oferta de bază.":"Comandă manuală — nu există material de calculat automat."}</div>}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>Material (adunat pe toate camerele)</div>
+          <button onClick={recalculeazaConsumMaterial} style={{fontSize:11,fontWeight:600,padding:"4px 10px",background:"transparent",color:C.textSub,border:`1px dashed ${C.border}`,cursor:"pointer"}}>Calculează din ofertă</button>
+        </div>
+        {consum.materiale.length===0&&<div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>{comanda.ofertaId?"Nimic calculat încă — apasă „Calculează din ofertă”.":"Comandă manuală — nu există material de calculat automat."}</div>}
         {consum.materiale.map(it=>
           <div key={it.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 30px",gap:8,alignItems:"center",marginBottom:6}}>
             <input value={it.material} onChange={e=>updPozitieConsum("materiale",it.id,"material",e.target.value,it.sursa==="auto")} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none"}}/>
@@ -2572,7 +2581,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
             <button onClick={creeazaComandaManuala} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>+ Comandă manuală (fără ofertă)</button>
           </div>
           {(client.comenziExecutieNico||[]).slice().reverse().map(cx=>
-            <ComandaExecutieCard key={cx.id} comanda={cx} clientId={client.id} setClients={setClients} C={C} clientNume={client.name} fmtD={fmtD}/>
+            <ComandaExecutieCard key={cx.id} comanda={cx} clientId={client.id} setClients={setClients} C={C} clientNume={client.name} fmtD={fmtD} oferteClient={client.oferte}/>
           )}
         </div>
 
