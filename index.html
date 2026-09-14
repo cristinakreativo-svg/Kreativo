@@ -3563,7 +3563,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
               {m.link&&<a href={m.link} target="_blank" rel="noopener noreferrer" title={m.link} style={{color:C.accent,textDecoration:"none",fontSize:14}}>🔗</a>}
             </td>
             <td style={{padding:"6px 10px",textAlign:"right"}}>
-              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}></button>
+              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
             </td>
           </tr>
         )}
@@ -3690,7 +3690,7 @@ function TabCatalogSine({C,catalogSine,setCatalogSine}){
               <input value={m.pretPropriu} onChange={e=>editeaza(m.id,"pretPropriu",Number(e.target.value)||0)} style={{width:80,border:"none",background:"transparent",fontSize:13,fontWeight:600,color:"#2255AA",outline:"none"}}/>
             </td>
             <td style={{padding:"6px 10px",textAlign:"right"}}>
-              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}></button>
+              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
             </td>
           </tr>
         )}
