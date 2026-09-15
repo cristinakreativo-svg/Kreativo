@@ -767,7 +767,12 @@ function buildRomanPrintHtml(cfg){
         Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Înălțime montaj: ${cfg.input.installHeight}mm<br/>Mecanism: ${cfg.input.mechKey}<br/>Țesătură: ${cfg.input.fabricKey}${!cfg.result.isMotor?"<br/>Parte comandă: "+cfg.input.controlSide:""}<br/>Opțiuni: ${(cfg.input.options||[]).length?cfg.input.options.join(", "):"—"}
       </div>
     </div>
-    <p><b>Rezultat calcul:</b> Șină: ${cfg.result.headrail}mm · Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?" + "+cfg.result.tiltrod2+"mm (2 bucăți)":""} · Bară de jos: ${cfg.result.bottombar}mm · Bobine: ${cfg.result.spools} · Console: ${cfg.result.clips}</p>
+    <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#EDE4D3;">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Rezultat calcul — dimensiuni de tăiere</div>
+      <div style="line-height:1.9;">
+        Șină: ${cfg.result.headrail}mm<br/>Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?"<br/>Tub/tijă (bucata 2): "+cfg.result.tiltrod2+"mm":""}<br/>Bară de jos: ${cfg.result.bottombar}mm<br/>Bobine: ${cfg.result.spools}<br/>Console: ${cfg.result.clips}
+      </div>
+    </div>
     <table style="border-collapse:collapse;width:100%;margin-top:14px;">
       <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
       ${rows}
