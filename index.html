@@ -84,6 +84,7 @@ const CPK = "kreativo_catalog_plisse_v1";
 const CJK = "kreativo_catalog_jaluzele_v1";
 const CCK = "kreativo_catalog_costcomponente_v1";
 const CSSK = "kreativo_catalog_sina_simpla_v1";
+const CSRE = "kreativo_catalog_stor_roman_electric_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -4426,7 +4427,132 @@ function TabCatalogSinaSimpla({C,catalogSinaSimpla,setCatalogSinaSimpla}){
   </div>;
 }
 
-function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine,catalogPlisse,setCatalogPlisse,catalogJaluzele,setCatalogJaluzele,catalogCostComponente,setCatalogCostComponente,catalogSinaSimpla,setCatalogSinaSimpla}){
+function TabCatalogStorRomanElectric({C,catalogStorRomanElectric,setCatalogStorRomanElectric}){
+  const [cauta,setCauta]=React.useState("");
+  const [denumire,setDenumire]=React.useState("");
+  const [pretLei,setPretLei]=React.useState("");
+  const [furnizor,setFurnizor]=React.useState("");
+  const [importing,setImporting]=React.useState(false);
+  const inputRef=React.useRef(null);
+
+  const adauga=()=>{
+    if(!denumire.trim()){ alert("Completează denumirea (ex: Stor roman electric 100cm)."); return; }
+    if(!pretLei.trim() || isNaN(Number(pretLei))){ alert("Completează prețul (număr, în lei)."); return; }
+    const nou={id:gid(), denumire:denumire.trim(), pretLei:Number(pretLei), furnizor:furnizor.trim()||"—"};
+    setCatalogStorRomanElectric(p=>[...p, nou].sort((a,b)=>a.denumire.localeCompare(b.denumire,"ro")));
+    setDenumire(""); setPretLei(""); setFurnizor("");
+  };
+  const sterge=(id)=>{
+    if(window.confirm("Ștergi această poziție din catalog?")) setCatalogStorRomanElectric(p=>p.filter(m=>m.id!==id));
+  };
+  const editeaza=(id,field,val)=>{
+    setCatalogStorRomanElectric(p=>p.map(m=>m.id!==id?m:{...m,[field]:val}));
+  };
+
+  const importaExcel=(e)=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    setImporting(true);
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+        const existingMap={};
+        catalogStorRomanElectric.forEach(m=>{ existingMap[m.denumire.toLowerCase()]=m.id; });
+        const noi=[];
+        const actualizariMap={};
+        for(let i=1;i<rows.length;i++){
+          try{
+            const r=rows[i];
+            if(!r || !r[0]) continue;
+            const den=String(r[0]).trim();
+            const pretL=Number(r[1]);
+            const furn=r[2]?String(r[2]).trim():"";
+            if(!den || isNaN(pretL)) continue;
+            const key=den.toLowerCase();
+            if(existingMap[key]){ actualizariMap[existingMap[key]]={pretLei:pretL,furnizor:furn}; continue; }
+            if(actualizariMap[key]) continue;
+            existingMap[key]="pending-"+i;
+            noi.push({id:gid(), denumire:den, pretLei:pretL, furnizor:furn||"—"});
+          }catch(rowErr){ console.error("Rând ignorat la import (linie "+(i+1)+"):", rowErr); }
+        }
+        const nrActualizari=Object.keys(actualizariMap).length;
+        if(nrActualizari) setCatalogStorRomanElectric(p=>p.map(m=>actualizariMap[m.id]!==undefined?{...m,pretLei:actualizariMap[m.id].pretLei,furnizor:actualizariMap[m.id].furnizor||m.furnizor}:m));
+        if(noi.length) setCatalogStorRomanElectric(p=>[...p, ...noi].sort((a,b)=>a.denumire.localeCompare(b.denumire,"ro")));
+        const mesaje=[];
+        if(noi.length) mesaje.push(`${noi.length} poziții noi importate`);
+        if(nrActualizari) mesaje.push(`${nrActualizari} poziții existente actualizate`);
+        alert(mesaje.length?mesaje.join(" · ")+".":"Nu am găsit poziții noi sau actualizări (verifică formatul: Denumire / Preț lei / Furnizor).");
+      }catch(err){ alert("Nu am putut citi acest Excel: "+err.message); }
+      setImporting(false);
+      if(inputRef.current) inputRef.current.value="";
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const filtrate = catalogStorRomanElectric.filter(m=>!cauta.trim()||m.denumire.toLowerCase().includes(cauta.toLowerCase()));
+
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
+
+  return <div style={{padding:"20px"}}>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Catalog stor roman electric (motorizat) — {catalogStorRomanElectric.length} poziții</div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Sisteme complete (motor+acumulator, pe lungime) și accesorii (telecomenzi, bridge, baghetă). Preț fix per poziție — cantitatea din ofertă se înmulțește direct cu acest preț.</div>
+
+    <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
+      <input value={cauta} onChange={e=>setCauta(e.target.value)} placeholder="🔍 caută după denumire..." style={{...selStyle,flex:1,minWidth:200}}/>
+      <label style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:importing?C.border:"#5C6B65",color:importing?C.text:"#fff",cursor:importing?"default":"pointer",whiteSpace:"nowrap"}}>
+        {importing?"Se importă...":"Importă din Excel"}
+        <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
+      </label>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: <b>Denumire</b>, <b>Preț (lei)</b>, Furnizor (opțional). Pozițiile deja existente (aceeași denumire) se actualizează cu noul preț, nu se dublează.</div>
+
+    <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:20}}>
+      <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>+ Adaugă poziție manual</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:10,marginBottom:10}}>
+        <div><label style={lblStyle}>Denumire</label><input value={denumire} onChange={e=>setDenumire(e.target.value)} placeholder="ex: Stor roman electric 100cm" style={selStyle}/></div>
+        <div><label style={lblStyle}>Preț (lei)</label><input value={pretLei} onChange={e=>setPretLei(e.target.value)} placeholder="ex: 2090" style={selStyle}/></div>
+        <div><label style={lblStyle}>Furnizor</label><input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="opțional" style={selStyle}/></div>
+      </div>
+      <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
+    </div>
+
+    <table style={{width:"100%",borderCollapse:"collapse"}}>
+      <thead>
+        <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",textAlign:"left"}}>
+          <th style={{padding:"6px 10px"}}>Denumire</th>
+          <th style={{padding:"6px 10px"}}>Preț (lei)</th>
+          <th style={{padding:"6px 10px"}}>Furnizor</th>
+          <th style={{padding:"6px 10px"}}></th>
+        </tr>
+      </thead>
+      <tbody>
+        {filtrate.map((m,i)=>
+          <tr key={m.id} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.denumire} onChange={e=>editeaza(m.id,"denumire",e.target.value)} style={{width:"100%",border:"none",background:"transparent",fontSize:13,fontWeight:600,color:C.text,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.pretLei} onChange={e=>editeaza(m.id,"pretLei",Number(e.target.value)||0)} style={{width:80,border:"none",background:"transparent",fontSize:13,fontWeight:600,color:"#2255AA",outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.furnizor||""} onChange={e=>editeaza(m.id,"furnizor",e.target.value)} style={{width:110,border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
+            </td>
+            <td style={{padding:"6px 10px",textAlign:"right"}}>
+              <button onClick={()=>sterge(m.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑</button>
+            </td>
+          </tr>
+        )}
+        {filtrate.length===0&&<tr><td colSpan={4} style={{padding:"20px 10px",textAlign:"center",color:C.textMuted,fontSize:13}}>{catalogStorRomanElectric.length===0?"Catalogul e gol — adaugă manual mai sus.":"Niciun rezultat pentru căutarea ta."}</td></tr>}
+      </tbody>
+    </table>
+  </div>;
+}
+
+function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine,catalogPlisse,setCatalogPlisse,catalogJaluzele,setCatalogJaluzele,catalogCostComponente,setCatalogCostComponente,catalogSinaSimpla,setCatalogSinaSimpla,catalogStorRomanElectric,setCatalogStorRomanElectric}){
   const [sub,setSub]=React.useState("materiale");
   const OPTIUNI=[
     {id:"materiale",l:"Materiale (perdele/draperii)"},
@@ -4435,6 +4561,7 @@ function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCat
     {id:"jaluzele",l:"Jaluzele venețiene"},
     {id:"costcomponente",l:"Cost componente"},
     {id:"sinasimpla",l:"Șină simplă"},
+    {id:"storromanelectric",l:"Stor roman electric"},
   ];
   return <div>
     <div style={{display:"flex",gap:4,padding:"14px 20px 0",borderBottom:`1px solid ${C.border}`}}>
@@ -4449,10 +4576,11 @@ function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCat
     {sub==="jaluzele"&&<TabCatalogJaluzele C={C} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele}/>}
     {sub==="costcomponente"&&<TabCatalogCostComponente C={C} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente}/>}
     {sub==="sinasimpla"&&<TabCatalogSinaSimpla C={C} catalogSinaSimpla={catalogSinaSimpla} setCatalogSinaSimpla={setCatalogSinaSimpla}/>}
+    {sub==="storromanelectric"&&<TabCatalogStorRomanElectric C={C} catalogStorRomanElectric={catalogStorRomanElectric} setCatalogStorRomanElectric={setCatalogStorRomanElectric}/>}
   </div>;
 }
 
-function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,catalogSinaSimpla,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
+function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,catalogSinaSimpla,catalogStorRomanElectric,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
   const [numeClient,setNumeClient]=React.useState(client.ciornaOferta?client.ciornaOferta.numeClient:(client.name||""));
   const [camere,setCamere]=React.useState(()=>normalizeazaCamereOferta(client.ciornaOferta&&client.ciornaOferta.camere)||[{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[golProdusDefault()]}]);
   const [editingId,setEditingId]=React.useState(client.ciornaOferta?client.ciornaOferta.editingId||null:null);
@@ -4553,6 +4681,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.denumire,pretUnitar:String(m.pretLei),furnizor:m.furnizor||""})}));
     setPickerFor(null);
   };
+  const alegeStorRomanElectric=(camId,prodId,m)=>{
+    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.denumire,pretUnitar:String(m.pretLei),furnizor:m.furnizor||""})}));
+    setPickerFor(null);
+  };
   const alegeSina=(camId,prodId,denumire)=>{
     setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:denumire})}));
     setPickerFor(null);
@@ -4561,6 +4693,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const esteStorRomanTransparent=(pr)=>pr.tip==="stor roman transparent";
   const esteStorRomanOpac=(pr)=>pr.tip==="stor roman opac";
   const esteStorRoman=(pr)=>esteStorRomanTransparent(pr)||esteStorRomanOpac(pr);
+  const esteStorRomanElectric=(pr)=>pr.tip==="stor roman electric";
   const areBandaManopera=(pr)=>esteTextil(pr)||esteStorRoman(pr);
   const mpStor=(pr)=>{
     const l=Number(pr.latimeStorCm)||0;
@@ -5023,6 +5156,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
               <option value="stor roman opac">Stor roman opac</option>
+              <option value="stor roman electric">Stor roman electric</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Articol — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
@@ -5074,6 +5208,20 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
                     </tr>
                   )}
                   {catalogSinaSimpla.length===0&&<tr><td colSpan={2} style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Catalogul de șină simplă e gol — adaugă întâi în Cataloage → „Șină simplă".</td></tr>}
+                </tbody>
+                </>:pr.tip==="stor roman electric"?<>
+                <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
+                  <th style={{padding:"6px 10px",textAlign:"left"}}>Denumire</th>
+                  <th style={{padding:"6px 10px",textAlign:"right"}}>Preț</th>
+                </tr></thead>
+                <tbody>
+                  {catalogStorRomanElectric.filter(m=>!pr.material.trim()||m.denumire.toLowerCase().includes(pr.material.toLowerCase())).slice(0,200).map(m=>
+                    <tr key={m.id} onMouseDown={e=>{e.preventDefault();alegeStorRomanElectric(c.id,pr.id,m);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.denumire}</td>
+                      <td style={{padding:"7px 10px",textAlign:"right",color:C.text}}>{m.pretLei} lei</td>
+                    </tr>
+                  )}
+                  {catalogStorRomanElectric.length===0&&<tr><td colSpan={2} style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Catalogul de stor roman electric e gol — adaugă întâi în Cataloage → „Stor roman electric".</td></tr>}
                 </tbody>
                 </>:<>
                 <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
@@ -5128,6 +5276,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
               <option value="stor roman opac">Stor roman opac</option>
+              <option value="stor roman electric">Stor roman electric</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Alege modelul — scrie ca să cauți" style={selStyle} autoComplete="off"/>
@@ -5184,6 +5333,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
               <option value="stor roman opac">Stor roman opac</option>
+              <option value="stor roman electric">Stor roman electric</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Cod material (max 4 cifre)" maxLength={4} style={selStyle} autoComplete="off"/>
@@ -5235,6 +5385,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
               <option value="stor roman opac">Stor roman opac</option>
+              <option value="stor roman electric">Stor roman electric</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} placeholder="Cod culoare" style={selStyle} autoComplete="off"/>
@@ -5285,6 +5436,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
               <option value="stor roman opac">Stor roman opac</option>
+              <option value="stor roman electric">Stor roman electric</option>
               <option value="altele">Altele</option>
             </select>
             <input value={pr.material} onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Articol — scrie ca să cauți în catalog" style={selStyle} autoComplete="off"/>
@@ -6703,7 +6855,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
         </div>}
         {(clientDetailTab[client.id]||"contract")==="oferta"&&<div style={{marginBottom:16,padding:"14px",background:C.bg}}>
-          <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} catalogSinaSimpla={catalogSinaSimpla} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
+          <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
         </div>}
         <div style={{marginBottom:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Poze și măsurători</div>
@@ -7543,6 +7695,20 @@ function App() {
     {id:gid(), denumire:"Șină alu 2 canale albă", pretLei:98, furnizor:"—"},
     {id:gid(), denumire:"Șină alu 1 canal albă", pretLei:56, furnizor:"—"},
   ]);
+  const [catalogStorRomanElectric,setCatalogStorRomanElectric]=useState([
+    {id:gid(), denumire:"Stor roman electric 75cm (complet motor+acumulator)", pretLei:2052, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Stor roman electric 100cm (complet motor+acumulator)", pretLei:2090, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Stor roman electric 125cm (complet motor+acumulator)", pretLei:2187, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Stor roman electric 150cm (complet motor+acumulator)", pretLei:2236, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Stor roman electric 175cm (complet motor+acumulator)", pretLei:2387, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Stor roman electric 200cm (complet motor+acumulator)", pretLei:2479, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Stor roman electric 225cm (complet motor+acumulator)", pretLei:2614, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Telecomandă de masă 4 canale", pretLei:346, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Telecomandă 5 canale", pretLei:194, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Telecomandă 5 canale (LCD)", pretLei:281, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Bridge CM-20", pretLei:1069, furnizor:"MotionBlinds"},
+    {id:gid(), denumire:"Baghetă fibră de sticlă (preț/ml)", pretLei:3.24, furnizor:"MotionBlinds"},
+  ]);
   const [log,setLog]=useState({});
   const [mit,setMit]=useState({tasks:["","",""],done:[false,false,false],date:tday()});
   const [jurnal,setJurnal]=useState({});
@@ -7655,14 +7821,15 @@ function App() {
           const cjv=await sbGet(CJK); if(cjv){setCatalogJaluzele(Array.isArray(cjv)?cjv.filter(m=>m&&m.grupaPret&&m.lamela):[]);gotAnyData=true;}
           const ccv=await sbGet(CCK); if(ccv){setCatalogCostComponente(Array.isArray(ccv)?ccv:[]);gotAnyData=true;}
           const cssv=await sbGet(CSSK); if(cssv){setCatalogSinaSimpla(Array.isArray(cssv)?cssv:[]);gotAnyData=true;}
+          const csrev=await sbGet(CSRE); if(csrev){setCatalogStorRomanElectric(Array.isArray(csrev)?csrev:[]);gotAnyData=true;}
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -7698,6 +7865,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CJK,catalogJaluzele);},[catalogJaluzele,loaded]);
   useEffect(()=>{if(loaded) sbSave(CCK,catalogCostComponente);},[catalogCostComponente,loaded]);
   useEffect(()=>{if(loaded) sbSave(CSSK,catalogSinaSimpla);},[catalogSinaSimpla,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CSRE,catalogStorRomanElectric);},[catalogStorRomanElectric,loaded]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
@@ -7875,7 +8043,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -7901,7 +8069,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric
         }
       };
       const writable=await handle.createWritable();
@@ -7967,6 +8135,7 @@ function App() {
         if(d[CJK]) setCatalogJaluzele(Array.isArray(d[CJK])?d[CJK].filter(m=>m&&m.grupaPret&&m.lamela):[]);
         if(d[CCK]) setCatalogCostComponente(Array.isArray(d[CCK])?d[CCK]:[]);
         if(d[CSSK]) setCatalogSinaSimpla(Array.isArray(d[CSSK])?d[CSSK]:[]);
+        if(d[CSRE]) setCatalogStorRomanElectric(Array.isArray(d[CSRE])?d[CSRE]:[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -8652,7 +8821,7 @@ function App() {
               <ProcesVerbalClientSection client={client} ci={ci} setClients={setClients} C={C} pvCounter={pvCounter} setPvCounter={setPvCounter}/>
             </div>}
             {(clientDetailTab[client.id]||(client.stadiu==="oferta"?"oferta":"contract"))==="oferta"&&<div style={{marginBottom:12,padding:"14px",background:C.bg}}>
-              <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} catalogSinaSimpla={catalogSinaSimpla} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
+              <OfertaClientSection client={client} ci={ci} setClients={setClients} C={C} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} camereLista={camereLista} setCamereLista={setCamereLista}/>
             </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
@@ -8711,7 +8880,7 @@ function App() {
       <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla}/>}
     </div>}
 
-    {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} setCatalogSinaSimpla={setCatalogSinaSimpla}/>}
+    {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} setCatalogSinaSimpla={setCatalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} setCatalogStorRomanElectric={setCatalogStorRomanElectric}/>}
 
     {tab==="achizitii"&&<div>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
