@@ -1583,7 +1583,7 @@ function romanValidate(input){
     errors.push(`Lățimea (${width}mm) depășește maximul admis (3600mm).`);
   }
   if(height>3500){
-    errors.push(`Înălțimea (${height}mm) depășește maximul admis (3500mm).`);
+    warnings.push(`Înălțimea (${height}mm) depășește maximul admis (3500mm).`);
   }
   return {errors, warnings};
 }
@@ -2345,7 +2345,7 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
                 <input value={l.culoare} onChange={e=>updLinie(cam.id,l.id,"culoare",e.target.value)} placeholder="Cod culoare" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
                 <button onClick={()=>delLinie(cam.id,l.id)} style={{fontSize:14,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"70px 70px 70px 140px 1fr",gap:8,alignItems:"center"}}>
+              <div style={{display:"grid",gridTemplateColumns:(l.tip==="perdea"||l.tip==="draperie")?"70px 70px 70px 140px 1fr":"70px 70px 70px 1fr",gap:8,alignItems:"center"}}>
                 <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,background:C.surface}}>
                   <span style={{fontSize:11,fontWeight:700,color:C.textSub,padding:"0 0 0 8px"}}>H</span>
                   <input value={l.h} onChange={e=>updLinie(cam.id,l.id,"h",e.target.value)} style={{fontSize:12,border:"none",padding:"6px 8px",background:"transparent",outline:"none",width:"100%",minWidth:0}}/>
@@ -2355,13 +2355,13 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
                   <input value={l.l} onChange={e=>updLinie(cam.id,l.id,"l",e.target.value)} style={{fontSize:12,border:"none",padding:"6px 8px",background:"transparent",outline:"none",width:"100%",minWidth:0}}/>
                 </div>
                 <input value={l.nrBucati} onChange={e=>updLinie(cam.id,l.id,"nrBucati",e.target.value)} placeholder="Buc." style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
-                <select value={l.banda} onChange={e=>updLinie(cam.id,l.id,"banda",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}>
+                {(l.tip==="perdea"||l.tip==="draperie")&&<select value={l.banda} onChange={e=>updLinie(cam.id,l.id,"banda",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}>
                   <option value="">Bandă — alege</option>
                   <option value="Wave mic">Wave mic</option>
                   <option value="Wave mare">Wave mare</option>
                   <option value="Wave normal">Wave normal</option>
                   <option value="Creață">Creață</option>
-                </select>
+                </select>}
                 <input value={l.obs} onChange={e=>updLinie(cam.id,l.id,"obs",e.target.value)} placeholder="Observații (ex: nr. agrafe)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
               </div>
             </div>
@@ -5746,6 +5746,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
   const salveazaLaClient=()=>{
     if(!clientId||!result) return;
     if(validErrors.length>0){ alert("Nu poți salva — erori de validare:\n\n"+validErrors.join("\n")); return; }
+    if(validWarnings.length>0 && !window.confirm("Atenție:\n\n"+validWarnings.join("\n")+"\n\nSigur vrei să salvezi oricum?")) return;
     if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
     if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())){
       setCamereLista(p=>[...p,camera.trim()]);
@@ -5857,6 +5858,10 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
     {validErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
       <div style={{fontWeight:700,marginBottom:6}}>Configurație imposibilă:</div>
       {validErrors.map((e,i)=><div key={i} style={{marginBottom:4}}>{e}</div>)}
+    </div>}
+    {validErrors.length===0&&validWarnings.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+      <div style={{fontWeight:700,marginBottom:6}}>Atenție:</div>
+      {validWarnings.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
     </div>}
 
     {result&&<div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:16}}>
