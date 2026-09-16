@@ -2732,7 +2732,8 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
   };
 
   const salveazaLaClient=()=>{
-    if(!clientId||!result) return;
+    if(!result) return;
+    if(!clientId){ alert("Alege întâi un client (destinatarul configurației) — apoi poți salva."); return; }
     if(validErrors.length>0){ alert("Nu poți salva — sunt erori de validare care trebuie corectate întâi:\n\n"+validErrors.join("\n")); return; }
     if(validWarnings.length>0 && !window.confirm("Atenție:\n\n"+validWarnings.join("\n")+"\n\nSigur vrei să salvezi oricum?")) return;
     if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
@@ -2873,7 +2874,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
     </div>}
 
     {result&&clients&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-      <button onClick={salveazaLaClient} disabled={!clientId} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:clientId?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:clientId?"pointer":"default"}}>Salvează configurația la client</button>
+      <button onClick={salveazaLaClient} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează configurația la client</button>
       {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
       {!clientId&&<span style={{fontSize:11,color:C.textMuted}}>Alege un client mai sus ca să poți salva.</span>}
     </div>}
@@ -3042,7 +3043,8 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
   const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
 
   const salveazaLaClient=()=>{
-    if(!clientId||!result) return;
+    if(!result) return;
+    if(!clientId){ alert("Alege întâi un client (destinatarul configurației) — apoi poți salva."); return; }
     if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
     if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())){
       setCamereLista(p=>[...p,camera.trim()]);
@@ -3168,7 +3170,7 @@ function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista})
     </div>}
 
     {result&&clients&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-      <button onClick={salveazaLaClient} disabled={!clientId} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:clientId?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:clientId?"pointer":"default"}}>Salvează configurația la client</button>
+      <button onClick={salveazaLaClient} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează configurația la client</button>
       {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
     </div>}
 
@@ -5749,7 +5751,8 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
   const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
 
   const salveazaLaClient=()=>{
-    if(!clientId||!result) return;
+    if(!result) return;
+    if(!clientId){ alert("Alege întâi un client (destinatarul configurației) — apoi poți salva."); return; }
     if(validErrors.length>0){ alert("Nu poți salva — erori de validare:\n\n"+validErrors.join("\n")); return; }
     if(validWarnings.length>0 && !window.confirm("Atenție:\n\n"+validWarnings.join("\n")+"\n\nSigur vrei să salvezi oricum?")) return;
     if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
@@ -5886,7 +5889,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
     </div>}
 
     {result&&clients&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-      <button onClick={salveazaLaClient} disabled={!clientId} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:clientId?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:clientId?"pointer":"default"}}>Salvează configurația la client</button>
+      <button onClick={salveazaLaClient} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează configurația la client</button>
       {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
     </div>}
 
@@ -6339,7 +6342,8 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
   const printSaved=(cfg)=>printHtmlDoc(buildPrintHtml(cfg));
 
   const salveazaLaClient=()=>{
-    if(!clientId||!result) return;
+    if(!result) return;
+    if(!clientId){ alert("Alege întâi un client (destinatarul configurației) — apoi poți salva."); return; }
     if(result.errs&&result.errs.length>0){ alert("Nu poți salva — lipsesc opțiuni obligatorii sau valorile depășesc limitele sistemului:\n\n"+result.errs.join("\n")+"\n\nAlege ce lipsește și încearcă din nou."); return; }
     if(result.warns&&result.warns.length>0 && !window.confirm("Atenție:\n\n"+result.warns.join("\n")+"\n\nSigur vrei să salvezi oricum?")) return;
     if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?\n\nApasă Anulează ca să o completezi întâi.")) return;
@@ -6578,8 +6582,8 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       <div style={{fontWeight:700,marginBottom:6}}>Lipsesc opțiuni obligatorii — nu poți salva:</div>
       {result.errs.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
     </div>}
-    {result&&result.warns.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
-      <div style={{fontWeight:700,marginBottom:6}}>Atenție:</div>
+    {result&&(!result.errs||result.errs.length===0)&&result.warns.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+      <div style={{fontWeight:700,marginBottom:6}}>Atenție — poți trece peste, la salvare te va întreba din nou:</div>
       {result.warns.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
     </div>}
 
@@ -6609,7 +6613,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
     </div>}
 
     {result&&clients&&<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-      <button onClick={salveazaLaClient} disabled={!clientId||(result.errs&&result.errs.length>0)} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:(clientId&&!(result.errs&&result.errs.length>0))?"#5C6B65":C.border,color:"#2A2118",border:"none",cursor:(clientId&&!(result.errs&&result.errs.length>0))?"pointer":"default"}}>Salvează configurația la client</button>
+      <button onClick={salveazaLaClient} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează configurația la client</button>
       {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
     </div>}
 
