@@ -3591,6 +3591,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
   const [design,setDesign]=React.useState("");
   const [culoare,setCuloare]=React.useState("");
   const [pretEur,setPretEur]=React.useState("");
+  const [pretLeiManual,setPretLeiManual]=React.useState("");
   const [sursa,setSursa]=React.useState("");
   const [furnizor,setFurnizor]=React.useState("");
   const [importing,setImporting]=React.useState(false);
@@ -3601,10 +3602,13 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
   const adauga=()=>{
     if(!design.trim()){ alert("Completează denumirea (Design/Articol)."); return; }
     if(!culoare.trim()){ alert("Completează codul de culoare."); return; }
-    if(!pretEur.trim() || isNaN(Number(pretEur))){ alert("Completează prețul EUR (număr)."); return; }
-    const nou={id:gid(), design:design.trim(), culoare:culoare.trim(), pretEur:Number(pretEur), pretLei:calcLei(pretEur), sursa:sursa.trim()||"manual", furnizor:furnizor.trim()||"—", link:""};
-    setCatalogMateriale(p=>[...p, nou].sort((a,b)=>a.design.localeCompare(b.design,"ro")||a.culoare.localeCompare(b.culoare,"ro")));
-    setDesign(""); setCuloare(""); setPretEur(""); setSursa(""); setFurnizor("");
+    if(!pretEur.trim() && !pretLeiManual.trim()){ alert("Completează fie prețul EUR, fie prețul în lei direct."); return; }
+    if(pretEur.trim() && isNaN(Number(pretEur))){ alert("Prețul EUR trebuie să fie un număr."); return; }
+    if(pretLeiManual.trim() && isNaN(Number(pretLeiManual))){ alert("Prețul în lei trebuie să fie un număr."); return; }
+    const pretLeiFinal = pretLeiManual.trim() ? Number(pretLeiManual) : calcLei(pretEur);
+    const nou={id:gid(), design:design.trim(), culoare:culoare.trim(), pretEur:pretEur.trim()?Number(pretEur):0, pretLei:pretLeiFinal, sursa:sursa.trim()||"manual", furnizor:furnizor.trim()||"—", link:""};
+    setCatalogMateriale(p=>[...p, nou].sort((a,b)=>a.design.localeCompare(b.design,"ro")||(a.culoare||"").localeCompare(b.culoare||"","ro")));
+    setDesign(""); setCuloare(""); setPretEur(""); setPretLeiManual(""); setSursa(""); setFurnizor("");
   };
   const sterge=(id)=>{
     if(window.confirm("Ștergi acest material din catalog?")) setCatalogMateriale(p=>p.filter(m=>m.id!==id));
@@ -3655,7 +3659,7 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
         }
         const nrActualizari=Object.keys(actualizariMap).length;
         if(nrActualizari) setCatalogMateriale(p=>p.map(m=>actualizariMap[m.id]?{...m,furnizor:actualizariMap[m.id].furnizor||m.furnizor,link:actualizariMap[m.id].link||m.link,pretEur:actualizariMap[m.id].pretEur,pretLei:actualizariMap[m.id].pretLei}:m));
-        if(noi.length) setCatalogMateriale(p=>[...p, ...noi].sort((a,b)=>a.design.localeCompare(b.design,"ro")||a.culoare.localeCompare(b.culoare,"ro")));
+        if(noi.length) setCatalogMateriale(p=>[...p, ...noi].sort((a,b)=>a.design.localeCompare(b.design,"ro")||(a.culoare||"").localeCompare(b.culoare||"","ro")));
         const mesaje=[];
         if(noi.length) mesaje.push(`${noi.length} poziții noi importate`);
         if(nrActualizari) mesaje.push(`${nrActualizari} poziții existente actualizate`);
@@ -3690,10 +3694,12 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:10}}>
         <div><label style={lblStyle}>Design (Articol)</label><input value={design} onChange={e=>setDesign(e.target.value)} placeholder="ex: Bassilk" style={selStyle}/></div>
         <div><label style={lblStyle}>Cod culoare</label><input value={culoare} onChange={e=>setCuloare(e.target.value)} placeholder="ex: 01-Fossil" style={selStyle}/></div>
-        <div><label style={lblStyle}>Preț EUR</label><input value={pretEur} onChange={e=>setPretEur(e.target.value)} placeholder="ex: 10.39" style={selStyle}/></div>
+        <div><label style={lblStyle}>Preț EUR</label><input value={pretEur} onChange={e=>setPretEur(e.target.value)} placeholder="ex: 10.39" style={selStyle} disabled={!!pretLeiManual.trim()}/></div>
+        <div><label style={lblStyle}>SAU preț lei (direct)</label><input value={pretLeiManual} onChange={e=>setPretLeiManual(e.target.value)} placeholder="ex: 250" style={selStyle} disabled={!!pretEur.trim()}/></div>
         <div><label style={lblStyle}>Sursă (colecție)</label><input value={sursa} onChange={e=>setSursa(e.target.value)} placeholder="ex: Grandland" style={selStyle}/></div>
         <div><label style={lblStyle}>Furnizor</label><input value={furnizor} onChange={e=>setFurnizor(e.target.value)} placeholder="ex: Bru" style={selStyle}/></div>
       </div>
+      <div style={{fontSize:11,color:C.textMuted,marginBottom:10}}>Completează fie Preț EUR (se calculează automat în lei), fie Preț lei direct — nu ambele.</div>
       <button onClick={adauga} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>+ Adaugă</button>
     </div>
 
@@ -3722,7 +3728,9 @@ function TabCatalogMateriale({C,catalogMateriale,setCatalogMateriale}){
             <td style={{padding:"6px 10px"}}>
               <input value={m.pretEur} onChange={e=>editeaza(m.id,"pretEur",e.target.value)} style={{width:70,border:"none",background:"transparent",fontSize:13,color:"#2255AA",outline:"none"}}/>
             </td>
-            <td style={{padding:"6px 10px",fontWeight:600,color:C.text}}>{m.pretLei} lei</td>
+            <td style={{padding:"6px 10px"}}>
+              <input value={m.pretLei} onChange={e=>editeaza(m.id,"pretLei",Number(e.target.value)||0)} style={{width:70,border:"none",background:"transparent",fontSize:13,fontWeight:600,color:C.text,outline:"none"}}/>
+            </td>
             <td style={{padding:"6px 10px"}}>
               <input value={m.sursa} onChange={e=>editeaza(m.id,"sursa",e.target.value)} style={{width:90,border:"none",background:"transparent",fontSize:12,color:C.textMuted,outline:"none"}}/>
             </td>
@@ -4885,7 +4893,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     if(!furnizori.length) return "";
     const fmtCant=(n)=>{ const r=Math.round(n*100)/100; return (r%1===0)?String(r):r.toFixed(2).replace(/0$/,""); };
     const blocuri=furnizori.map(furn=>{
-      const pozitii=Object.values(grupe[furn]).sort((a,b)=>a.material.localeCompare(b.material,"ro")||a.culoare.localeCompare(b.culoare,"ro"));
+      const pozitii=Object.values(grupe[furn]).sort((a,b)=>a.material.localeCompare(b.material,"ro")||(a.culoare||"").localeCompare(b.culoare||"","ro"));
       const rows=pozitii.map(p=>
         `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #D8CDBA">${p.material}</td><td style="padding:5px 8px;border-bottom:1px solid #D8CDBA">${p.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #D8CDBA">${fmtCant(p.cantitate)} m</td></tr>`
       ).join("");
