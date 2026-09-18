@@ -1288,7 +1288,7 @@ function buildOferta(data){
 <html lang="ro">
 <head>
 <meta charset="utf-8">
-<title>Ofertă ${data.numar}</title>
+<title>Ofertă - ${data.numeClient||"client"} - ${String(data.numar).replace(/\//g,"-")}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
@@ -1794,7 +1794,7 @@ const tday=()=>{const f=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Buchar
 const dateToKey=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
 function golProdusDefault(){
-  return {id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149"};
+  return {id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:""};
 }
 function normalizeazaCamereOferta(camereRaw){
   if(!Array.isArray(camereRaw)||!camereRaw.length) return null;
@@ -2178,7 +2178,7 @@ function construiesteLiniiExecutie(oferta){
         linii.push({
           id:gid(), tip:pr.tip, material:pr.material, culoare:pr.culoare,
           geamNr:i+1, h, l,
-          nrBucati:"", banda:"", obs:""
+          nrBucati:"", banda:pr.tipBanda||"", obs:""
         });
       }
     });
@@ -4626,7 +4626,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149"});
+  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:""});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
@@ -5198,6 +5198,16 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <input value={pr.pretManopera} onChange={e=>updProdus(c.id,pr.id,"pretManopera",e.target.value)} style={selStyle}/>
             <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareManopera(pr).toFixed(0)} lei</span>
             <span></span>
+          </div>}
+          {esteTextil(pr)&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Tip bandă (doar intern, nu apare pe ofertă):</span>
+            <select value={pr.tipBanda||""} onChange={e=>updProdus(c.id,pr.id,"tipBanda",e.target.value)} style={{...selStyle,width:160}}>
+              <option value="">— neales —</option>
+              <option value="Wave mic">Wave mic</option>
+              <option value="Wave mare">Wave mare</option>
+              <option value="Wave normal">Wave normal</option>
+              <option value="Creață">Creață</option>
+            </select>
           </div>}
           {pr.tip==="șină"&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,flexWrap:"wrap"}}>
             <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
