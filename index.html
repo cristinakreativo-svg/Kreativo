@@ -4628,6 +4628,21 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
   const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:""});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+  const duplicaCamera=(camId)=>{
+    const cam=camere.find(c=>c.id===camId);
+    if(!cam) return;
+    const numeNou=window.prompt("Nume pentru camera duplicată:", cam.numeCamera?cam.numeCamera+" (copie)":"");
+    if(numeNou===null) return;
+    const clona={...cam, id:gid(), numeCamera:numeNou.trim(),
+      geamuri:cam.geamuri.map(g=>({...g,id:gid()})),
+      produse:cam.produse.map(pr=>({...pr,id:gid()}))};
+    setCamere(p=>{
+      const idx=p.findIndex(c=>c.id===camId);
+      const copy=p.slice();
+      copy.splice(idx+1,0,clona);
+      return copy;
+    });
+  };
   const delCamera=(camId)=>setCamere(p=>p.length<=1?p:p.filter(c=>c.id!==camId));
   const updCameraName=(camId,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,numeCamera:val}));
   const setNrGeamuri=(camId,n)=>setCamere(p=>p.map(c=>{
@@ -5130,6 +5145,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       <div key={c.id} style={{border:`2px solid ${C.accent}`,marginBottom:20,background:C.surface}}>
         <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:C.accent}}>
           <input list="oferta-camere-dl" value={c.numeCamera} onChange={e=>updCameraName(c.id,e.target.value)} placeholder="Cameră (ex: Living)" style={{...selStyle,fontWeight:700,flex:1,border:"none"}}/>
+          <button onClick={()=>duplicaCamera(c.id)} title="Duplică această cameră (păstrează materiale/produse, cere nume nou)" style={{fontSize:12,fontWeight:600,color:"#fff",border:"1px solid rgba(255,255,255,0.5)",background:"transparent",cursor:"pointer",padding:"3px 8px",whiteSpace:"nowrap"}}>⧉ Duplică</button>
           {camere.length>1&&<button onClick={()=>delCamera(c.id)} style={{fontSize:18,color:"#fff",border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
         </div>
         <div style={{padding:12}}>
