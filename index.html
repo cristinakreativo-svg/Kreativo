@@ -2186,9 +2186,27 @@ function construiesteLiniiExecutie(oferta){
   }).filter(cam=>cam.linii.length>0);
 }
 
-function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,oferteClient}){
+function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,oferteClient,catalogMateriale}){
   const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
   const [open,setOpen]=React.useState(false);
+  const [pickerFor,setPickerFor]=React.useState(null); // {camId, liniaId} sau null — picker Articol
+  const [pickerCuloareFor,setPickerCuloareFor]=React.useState(null); // {camId, liniaId} sau null — picker Cod culoare
+  const catalogDesignuriUnice=React.useMemo(()=>{
+    const seen={}; const out=[];
+    (catalogMateriale||[]).forEach(x=>{
+      const k=x.design.toLowerCase();
+      if(!seen[k]){ seen[k]=true; out.push(x); }
+    });
+    return out;
+  },[catalogMateriale]);
+  const alegeMaterialLinie=(camId,liniaId,m)=>{
+    updLinie(camId,liniaId,"material",m.design);
+    setPickerFor(null);
+  };
+  const alegeCuloareLinie=(camId,liniaId,m)=>{
+    updLinie(camId,liniaId,"culoare",m.culoare);
+    setPickerCuloareFor(null);
+  };
   const updLinie=(camId,liniaId,field,val)=>{
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.map(cam=>cam.id!==camId?cam:{...cam,linii:cam.linii.map(l=>l.id!==liniaId?l:{...l,[field]:val})})})}));
   };
@@ -2378,10 +2396,51 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
                   <option value="stor roman transparent">Stor roman transparent</option>
                   <option value="stor roman opac">Stor roman opac</option>
                 </select>
-                <input value={l.material} onChange={e=>updLinie(cam.id,l.id,"material",e.target.value)} placeholder="Material" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
-                <input value={l.culoare} onChange={e=>updLinie(cam.id,l.id,"culoare",e.target.value)} placeholder="Cod culoare" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
+                <input value={l.material} onFocus={()=>setPickerFor({camId:cam.id,liniaId:l.id})} onChange={e=>updLinie(cam.id,l.id,"material",e.target.value)} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===cam.id&&p.liniaId===l.id)?null:p),200)} placeholder="Material — scrie ca să cauți în catalog" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}} autoComplete="off"/>
+                <input value={l.culoare} onFocus={()=>setPickerCuloareFor({camId:cam.id,liniaId:l.id})} onChange={e=>updLinie(cam.id,l.id,"culoare",e.target.value)} onBlur={()=>setTimeout(()=>setPickerCuloareFor(p=>(p&&p.camId===cam.id&&p.liniaId===l.id)?null:p),200)} placeholder="Cod culoare" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}} autoComplete="off"/>
                 <button onClick={()=>delLinie(cam.id,l.id)} style={{fontSize:14,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
               </div>
+              {pickerFor&&pickerFor.camId===cam.id&&pickerFor.liniaId===l.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginBottom:6}}>
+                <div style={{maxHeight:200,overflowY:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
+                      <th style={{padding:"6px 10px",textAlign:"left"}}>Articol (Design)</th>
+                      <th style={{padding:"6px 10px",textAlign:"left"}}>Colecție</th>
+                    </tr></thead>
+                    <tbody>
+                      {catalogDesignuriUnice.filter(m=>!l.material.trim()||m.design.toLowerCase().includes(l.material.toLowerCase())||m.sursa.toLowerCase().includes(l.material.toLowerCase())).slice(0,200).map(m=>
+                        <tr key={m.design} onMouseDown={e=>{e.preventDefault();alegeMaterialLinie(cam.id,l.id,m);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.design}</td>
+                          <td style={{padding:"7px 10px",color:C.textMuted}}>{m.sursa}</td>
+                        </tr>
+                      )}
+                      {(catalogMateriale||[]).length===0&&<tr><td colSpan={2} style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Catalogul de materiale e gol — adaugă întâi materiale în tab-ul „Catalog materiale".</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+                <button onMouseDown={e=>{e.preventDefault();setPickerFor(null);}} style={{width:"100%",fontSize:12,fontWeight:600,padding:"9px 10px",background:C.bg,color:C.textSub,border:"none",borderTop:`1px solid ${C.border}`,cursor:"pointer"}}>✕ Nu e în catalog — păstrează „{l.material||"..."}"</button>
+              </div>}
+              {pickerCuloareFor&&pickerCuloareFor.camId===cam.id&&pickerCuloareFor.liniaId===l.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:0,marginBottom:6}}>
+                <div style={{maxHeight:200,overflowY:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead><tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",position:"sticky",top:0,background:C.bg}}>
+                      <th style={{padding:"6px 10px",textAlign:"left"}}>Cod culoare</th>
+                      <th style={{padding:"6px 10px",textAlign:"right"}}>Preț</th>
+                    </tr></thead>
+                    <tbody>
+                      {(catalogMateriale||[]).filter(m=>m.design.toLowerCase()===l.material.trim().toLowerCase() && (!l.culoare.trim()||(m.culoare||"").toLowerCase().includes(l.culoare.toLowerCase()))).slice(0,200).map(m=>
+                        <tr key={m.id} onMouseDown={e=>{e.preventDefault();alegeCuloareLinie(cam.id,l.id,m);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.culoare}</td>
+                          <td style={{padding:"7px 10px",textAlign:"right",color:C.text}}>{m.pretLei} lei</td>
+                        </tr>
+                      )}
+                      {!l.material.trim()&&<tr><td colSpan={2} style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Alege întâi un articol (Material).</td></tr>}
+                      {l.material.trim()&&(catalogMateriale||[]).filter(m=>m.design.toLowerCase()===l.material.trim().toLowerCase()).length===0&&<tr><td colSpan={2} style={{padding:"14px 10px",textAlign:"center",color:C.textMuted}}>Nu găsesc „{l.material}" în catalog.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+                <button onMouseDown={e=>{e.preventDefault();setPickerCuloareFor(null);}} style={{width:"100%",fontSize:12,fontWeight:600,padding:"9px 10px",background:C.bg,color:C.textSub,border:"none",borderTop:`1px solid ${C.border}`,cursor:"pointer"}}>✕ Nu e în listă — păstrează „{l.culoare||"..."}"</button>
+              </div>}
               <div style={{display:"grid",gridTemplateColumns:(l.tip==="perdea"||l.tip==="draperie")?"70px 70px 70px 140px 1fr":"70px 70px 70px 1fr",gap:8,alignItems:"center"}}>
                 <div style={{display:"flex",alignItems:"center",border:`1px solid ${C.border}`,background:C.surface}}>
                   <span style={{fontSize:11,fontWeight:700,color:C.textSub,padding:"0 0 0 8px"}}>H</span>
@@ -2533,7 +2592,7 @@ function BlocareZi({blocate,onAdd,onDel,C,fmtD}){
   </div>;
 }
 
-function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,comandaExecutieCounter,setComandaExecutieCounter}){
+function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,comandaExecutieCounter,setComandaExecutieCounter,catalogMateriale}){
   const [openId,setOpenId]=React.useState(null);
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
@@ -2668,7 +2727,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
             <button onClick={creeazaComandaManuala} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>+ Comandă manuală (fără ofertă)</button>
           </div>
           {(client.comenziExecutieNico||[]).slice().reverse().map(cx=>
-            <ComandaExecutieCard key={cx.id} comanda={cx} clientId={client.id} setClients={setClients} C={C} clientNume={client.name} fmtD={fmtD} oferteClient={client.oferte}/>
+            <ComandaExecutieCard key={cx.id} comanda={cx} clientId={client.id} setClients={setClients} C={C} clientNume={client.name} fmtD={fmtD} oferteClient={client.oferte} catalogMateriale={catalogMateriale}/>
           )}
         </div>
 
@@ -8302,7 +8361,7 @@ function App() {
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Nico</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Croitorie · Kreativo Studio</div>
       </div>
-      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter}/>
+      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale}/>
     </div>;
   }
 
@@ -8938,7 +8997,7 @@ function App() {
 
 
     {tab==="nico"&&<div>
-      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter}/>
+      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale}/>
     </div>}
 
     {tab==="dan"&&<div>
