@@ -2206,6 +2206,25 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
     const nouaCamera={id:gid(), numeCamera:"", geamuri:[], linii:[{id:gid(), tip:"perdea", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""}]};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:[...cx.camere,nouaCamera]})}));
   };
+  const setNrGeamuriExec=(camId,n)=>{
+    const nr=Math.max(0,Math.min(30,Number(n)||0));
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.map(cam=>{
+      if(cam.id!==camId) return cam;
+      let geamuri=(cam.geamuri||[]).slice();
+      if(nr>geamuri.length){
+        for(let i=geamuri.length;i<nr;i++) geamuri.push({id:gid(), nr:i+1, lungime:"", inaltime:""});
+      } else if(nr<geamuri.length){
+        const trailing=geamuri.slice(nr);
+        const areData=trailing.some(g=>g.lungime||g.inaltime);
+        if(areData && !window.confirm(`Reduci la ${nr} geamuri — se șterg dimensiunile deja completate la geamurile ${nr+1}-${geamuri.length}. Continui?`)) return cam;
+        geamuri=geamuri.slice(0,nr);
+      }
+      return {...cam, geamuri};
+    })})}));
+  };
+  const updGeamExec=(camId,geamId,field,val)=>{
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.map(cam=>cam.id!==camId?cam:{...cam,geamuri:(cam.geamuri||[]).map(g=>g.id!==geamId?g:{...g,[field]:val})})})}));
+  };
   const delCamera=(camId)=>{
     if(!window.confirm("Ștergi această cameră din comandă, cu tot ce conține?")) return;
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.filter(cam=>cam.id!==camId)})}));
@@ -2334,9 +2353,22 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
             <input value={cam.numeCamera} onChange={e=>updCamera(cam.id,"numeCamera",e.target.value)} placeholder="Nume cameră" style={{flex:1,fontSize:11,fontWeight:700,color:C.text,textTransform:"uppercase",letterSpacing:"0.04em",border:"none",background:"transparent",outline:"none"}}/>
             <button onClick={()=>delCamera(cam.id)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>🗑 cameră</button>
           </div>
-          {(cam.geamuri||[]).length>0&&<div style={{display:"flex",gap:14,flexWrap:"wrap",fontSize:11,color:C.textMuted,marginBottom:8,padding:"6px 8px",background:C.bg}}>
-            {(cam.geamuri||[]).map((g,gi)=><span key={gi}><b style={{color:C.textSub}}>Geam {gi+1}:</b> H={g.inaltime?cmToM(g.inaltime):"—"} · L={g.lungime?cmToM(g.lungime):"—"}</span>)}
-          </div>}
+          <div style={{background:C.bg,padding:8,marginBottom:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <span style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em",fontWeight:600}}>Geamuri</span>
+              <span style={{fontSize:11,color:C.textMuted,whiteSpace:"nowrap",marginLeft:"auto"}}>Nr. geamuri:</span>
+              <input type="number" min="0" max="30" value={(cam.geamuri||[]).length} onChange={e=>setNrGeamuriExec(cam.id,e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",width:56,background:C.surface,outline:"none"}}/>
+            </div>
+            {(cam.geamuri||[]).map((g,gi)=>
+              <div key={g.id||gi} style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                <span style={{fontSize:11,fontWeight:600,color:C.textSub,minWidth:52}}>Geam {gi+1}</span>
+                <input value={g.lungime} onChange={e=>updGeamExec(cam.id,g.id,"lungime",e.target.value)} placeholder="Lățime (cm)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",width:100,background:C.surface,outline:"none"}}/>
+                <span style={{fontSize:12,color:C.textMuted}}>×</span>
+                <input value={g.inaltime} onChange={e=>updGeamExec(cam.id,g.id,"inaltime",e.target.value)} placeholder="Înălțime (cm)" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",width:100,background:C.surface,outline:"none"}}/>
+              </div>
+            )}
+            {(cam.geamuri||[]).length===0&&<div style={{fontSize:11,color:C.textMuted,fontStyle:"italic"}}>Niciun geam adăugat — pune un număr mai sus.</div>}
+          </div>
           {cam.linii.map(l=>
             <div key={l.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:6,background:C.bg}}>
               <div style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 50px",gap:8,alignItems:"center",marginBottom:6}}>
