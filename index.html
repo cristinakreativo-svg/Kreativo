@@ -2720,7 +2720,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
             {(client.oferte||[]).length>0&&<>
               <select value={ofertaSelectataId} onChange={e=>setOfertaSelectataId(e.target.value)} style={{flex:1,minWidth:160,fontSize:12,border:`1px solid ${C.border}`,padding:"7px 8px",background:C.surface,outline:"none"}}>
                 <option value="">— alege oferta, ca să preiei liniile din ea —</option>
-                {(client.oferte||[]).slice().reverse().map(o=><option key={o.id} value={o.id}>Ofertă {o.numar} · {o.total} lei{o.acceptata?" · acceptată":""}</option>)}
+                {(client.oferte||[]).slice().reverse().map(o=><option key={o.id} value={o.id}>Ofertă {o.numar}{o.denumire?` · ${o.denumire}`:""} · {o.total} lei{o.acceptata?" · acceptată":""}</option>)}
               </select>
               <button onClick={creeazaComandaDinOferta} disabled={!ofertaSelectataId} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:ofertaSelectataId?"#5C6B65":C.border,color:"#fff",border:"none",cursor:ofertaSelectataId?"pointer":"default",whiteSpace:"nowrap"}}>+ Din ofertă</button>
             </>}
@@ -5073,6 +5073,18 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     setFormOpen(true);
     if(formTopRef.current) formTopRef.current.scrollIntoView({behavior:"smooth",block:"start"});
   };
+  const duplicaOfertaCompleta=(oferta)=>{
+    setNumeClient(oferta.numeClient);
+    setCamere(normalizeazaCamereOferta(oferta.camere).map(c=>({
+      ...c,
+      id:gid(),
+      geamuri:c.geamuri.map(g=>({...g,id:gid()})),
+      produse:c.produse.map(pr=>({...pr,id:gid()}))
+    })));
+    setEditingId(null);
+    setFormOpen(true);
+    if(formTopRef.current) formTopRef.current.scrollIntoView({behavior:"smooth",block:"start"});
+  };
   const anuleazaEditare=()=>{
     setEditingId(null);
     setFormOpen(false);
@@ -5685,8 +5697,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:11,color:C.textMuted}}>Acceptată</span>
           </label>
           <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:80}}>{oferta.numar}</span>
+          <input value={oferta.denumire||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).map(o=>o.id!==oferta.id?o:{...o,denumire:e.target.value})}))} placeholder="+ denumire (ex: Varianta Perdele)" style={{fontSize:12,fontWeight:600,color:C.text,border:"none",borderBottom:`1px dashed ${C.border}`,background:"transparent",outline:"none",minWidth:150,padding:"2px 0"}}/>
           <span style={{fontSize:12,color:C.textSub,flex:1}}>{oferta.numeClient} · {oferta.total} lei · {fmtD(oferta.data)}{oferta.editedHtml?" · editat manual":""}</span>
           <button onClick={()=>editeazaOferta(oferta)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>
+          <button onClick={()=>duplicaOfertaCompleta(oferta)} title="Deschide o copie a acestei oferte ca ofertă nouă, cu toate camerele/geamurile completate — modifici doar ce diferă" style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#6E7C74",color:"#fff",border:"none",cursor:"pointer"}}>⧉ Duplică ofertă</button>
           <button onClick={()=>vizualizeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Vizualizează</button>
           <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
           <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă PDF</button>
