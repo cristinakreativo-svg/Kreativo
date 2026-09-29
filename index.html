@@ -9352,10 +9352,10 @@ function App() {
       </div>
       <div style={{marginTop:12}}>
         {addingCli?<div style={row}>
-          <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder={tab==="oferte"?"Nume client / ofertă nouă...":"Nume client nou..."} style={{...inp,flex:1}}/>
+          <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder={tab==="oferte"?"Nume client nou (prospect)...":"Nume client nou..."} style={{...inp,flex:1}}/>
           <button onClick={addCli} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingCli(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>{tab==="oferte"?"+ ofertă nouă":"+ client nou"}</button>}
+        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>{tab==="oferte"?"+ client nou (prospect fără ofertă încă)":"+ client nou"}</button>}
       </div>
       </div>}
     </div>}
