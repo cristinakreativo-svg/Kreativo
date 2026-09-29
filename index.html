@@ -8215,6 +8215,11 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [energie, setEnergie] = useState({});
   const saveTimer=useRef({});
+  const [savingKeys,setSavingKeys]=useState(()=>new Set()); // chei cu modificări netrimise încă în Supabase (programate sau în curs de trimitere)
+  const savingKeysRef=useRef(savingKeys);
+  useEffect(()=>{savingKeysRef.current=savingKeys;},[savingKeys]);
+  const marcheazaOcupat=(key)=>setSavingKeys(p=>{if(p.has(key))return p;const n=new Set(p);n.add(key);return n;});
+  const marcheazaGata=(key)=>setSavingKeys(p=>{if(!p.has(key))return p;const n=new Set(p);n.delete(key);return n;});
 
   const lsGet=(key)=>{try{const v=localStorage.getItem("kr_"+key);return v?JSON.parse(v):null;}catch{return null;}};
   const lsSet=(key,value)=>{try{localStorage.setItem("kr_"+key,JSON.stringify(value));}catch{}};
@@ -8226,14 +8231,47 @@ function App() {
     }catch{return lsGet(key);}
   };
   const sbSet=async(key,value)=>{
-    lsSet(key,value);
     try{await sb.from("kreativo_data").upsert({key,value:JSON.stringify(value)},{onConflict:"key"});}catch(e){console.log("Supabase save error (date salvate local):",e);}
+    finally{ marcheazaGata(key); }
   };
+  // sbSave scrie ÎN LOCALSTORAGE IMEDIAT, sincron — nu așteaptă cele 800ms de debounce.
+  // Debounce-ul rămâne doar pentru trimiterea către Supabase (ca să nu spamăm rețeaua la fiecare tastă).
+  // Cheia rămâne "ocupată" (nesalvată în cloud) din clipa în care e programată, până se termină trimiterea —
+  // asta alimentează indicatorul "Se salvează..." și blocajul de mai jos la închiderea paginii.
   const sbSave=(key,value)=>{
     if(protectRef.current){console.warn("Salvare blocată (mod protejat):",key);return;}
-    if(saveTimer.current[key]) clearTimeout(saveTimer.current[key]);
-    saveTimer.current[key]=setTimeout(()=>sbSet(key,value),800);
+    lsSet(key,value);
+    marcheazaOcupat(key);
+    if(saveTimer.current[key]) clearTimeout(saveTimer.current[key].timer);
+    saveTimer.current[key]={value,timer:setTimeout(()=>{delete saveTimer.current[key];sbSet(key,value);},800)};
   };
+  // PROTECȚIE LA ÎNCHIDERE: dacă mai există ceva netrimis în Supabase, trimitem imediat
+  // (fără să mai așteptăm cele 800ms) ȘI arătăm dialogul nativ al browserului "sigur vrei să
+  // părăsești pagina?" — asta oprește efectiv închiderea suficient cât să apuce să plece cererea.
+  // Fără acest blocaj, o închidere chiar în fereastra de trimitere putea pierde ultima modificare.
+  useEffect(()=>{
+    const flush=()=>{
+      Object.keys(saveTimer.current).forEach(key=>{
+        const pending=saveTimer.current[key];
+        if(!pending) return;
+        clearTimeout(pending.timer);
+        delete saveTimer.current[key];
+        sbSet(key,pending.value);
+      });
+    };
+    const onBeforeUnload=(e)=>{
+      if(savingKeysRef.current.size>0){
+        flush();
+        e.preventDefault();
+        e.returnValue="Mai sunt modificări netrimise — așteaptă câteva secunde înainte să închizi.";
+        return e.returnValue;
+      }
+    };
+    const onVisibility=()=>{ if(document.visibilityState==="hidden") flush(); };
+    window.addEventListener("beforeunload",onBeforeUnload);
+    document.addEventListener("visibilitychange",onVisibility);
+    return ()=>{ window.removeEventListener("beforeunload",onBeforeUnload); document.removeEventListener("visibilitychange",onVisibility); };
+  },[]);
 
   const [supabaseOk,setSupabaseOk]=useState(true);
   const [protectMode,setProtectMode]=useState(false);
@@ -8242,44 +8280,49 @@ function App() {
     async function load(){
       let gotAnyData=false;
       try{
-        const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),6000));
+        const timeout = new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),15000)); // toate cererile pornesc în paralel acum, deci 15s acoperă și o conexiune lentă, nu suma a ~35 cereri secvențiale
         const loadData = async()=>{
-          const d=await sbGet(SK); if(d){setData(d);gotAnyData=true;}
-          const cl=await sbGet(CLK);
-          if(cl){setClients(cl.map(c=>({...c,open:false})));gotAnyData=true;}
-          const ad=await sbGet(AK); if(ad){setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...ad});gotAnyData=true;}
-          const pe=await sbGet(PK); if(pe){setPerdele(pe);gotAnyData=true;}
-          const m=await sbGet(MIK); if(m){setMit(m);gotAnyData=true;}
-          const j=await sbGet(JK); if(j){setJurnal(j);gotAnyData=true;}
-          const pl=await sbGet(PLK); if(pl){setPlanMaine(pl);gotAnyData=true;}
-          const r=await sbGet(RK); if(r){setRecurente(r);gotAnyData=true;}
-          const mo=await sbGet(MOK); if(mo){setMotoare(mo);gotAnyData=true;}
-          const ie=await sbGet(IEK); if(ie){setIesiri(ie);gotAnyData=true;}
-          const intr=await sbGet(INK); if(intr){setIntrari(intr);gotAnyData=true;}
-          const bl=await sbGet(BLK); if(bl){setBilete(bl);gotAnyData=true;}
-          const lg=await sbGet(LGK); if(lg){setLog(lg);gotAnyData=true;}
-          const tr=await sbGet(TRK); if(tr){setTrezorerie(tr);gotAnyData=true;}
-          const en=await sbGet(ENK); if(en){setEnergie(en);gotAnyData=true;}
-          const pr=await sbGet(PRK); if(pr){setProiecte(pr);gotAnyData=true;}
-          const fl=await sbGet(FLK); if(fl){setFurnizoriLista(fl);gotAnyData=true;}
-          const td=await sbGet(TDK); if(td){setTudor(td.map(t=>({...t,open:false})));gotAnyData=true;}
-          const ob=await sbGet(OBK); if(ob){setObiective(ob);gotAnyData=true;}
-          const tc=await sbGet(TCK); if(tc){setTudorContacte(tc);gotAnyData=true;}
-          const zb=await sbGet(ZBK); if(zb){setZileBlocate({nico:[],dan:[],tudor:[],...zb});gotAnyData=true;}
-          const om=await sbGet(OMK); if(om){setObiectiveMari(om.map(o=>({...o,open:false})));gotAnyData=true;}
-          const rm=await sbGet(RMK); if(rm){setRulouMateriale(rm);gotAnyData=true;}
-          const cm=await sbGet(CMK); if(cm){setCamereLista(cm);gotAnyData=true;}
-          const ctc=await sbGet(CTK); if(ctc){setContractCounter(ctc);gotAnyData=true;}
-          const pvc=await sbGet(PVK); if(pvc){setPvCounter(pvc);gotAnyData=true;}
-          const mtc=await sbGet(MTK); if(mtc){setCatalogMateriale(mtc);gotAnyData=true;}
-          const ofc=await sbGet(OFK2); if(ofc){setOfertaCounter(ofc);gotAnyData=true;}
-          const cexc=await sbGet(CEXK); if(cexc){setComandaExecutieCounter(cexc);gotAnyData=true;}
-          const csv=await sbGet(CSK); if(csv){setCatalogSine(csv);gotAnyData=true;}
-          const cpv=await sbGet(CPK); if(cpv){setCatalogPlisse(Array.isArray(cpv)?cpv.filter(m=>m&&m.sistem&&m.grupaPret):[]);gotAnyData=true;}
-          const cjv=await sbGet(CJK); if(cjv){setCatalogJaluzele(Array.isArray(cjv)?cjv.filter(m=>m&&m.grupaPret&&m.lamela):[]);gotAnyData=true;}
-          const ccv=await sbGet(CCK); if(ccv){setCatalogCostComponente(Array.isArray(ccv)?ccv:[]);gotAnyData=true;}
-          const cssv=await sbGet(CSSK); if(cssv){setCatalogSinaSimpla(Array.isArray(cssv)?cssv:[]);gotAnyData=true;}
-          const csrev=await sbGet(CSRE); if(csrev){setCatalogStorRomanElectric(Array.isArray(csrev)?csrev:[]);gotAnyData=true;}
+          const jobs=[
+            [SK,(d)=>{setData(d);}],
+            [CLK,(d)=>{setClients(d.map(c=>({...c,open:false})));}],
+            [AK,(d)=>{setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...d});}],
+            [PK,(d)=>{setPerdele(d);}],
+            [MIK,(d)=>{setMit(d);}],
+            [JK,(d)=>{setJurnal(d);}],
+            [PLK,(d)=>{setPlanMaine(d);}],
+            [RK,(d)=>{setRecurente(d);}],
+            [MOK,(d)=>{setMotoare(d);}],
+            [IEK,(d)=>{setIesiri(d);}],
+            [INK,(d)=>{setIntrari(d);}],
+            [BLK,(d)=>{setBilete(d);}],
+            [LGK,(d)=>{setLog(d);}],
+            [TRK,(d)=>{setTrezorerie(d);}],
+            [ENK,(d)=>{setEnergie(d);}],
+            [PRK,(d)=>{setProiecte(d);}],
+            [FLK,(d)=>{setFurnizoriLista(d);}],
+            [TDK,(d)=>{setTudor(d.map(t=>({...t,open:false})));}],
+            [OBK,(d)=>{setObiective(d);}],
+            [TCK,(d)=>{setTudorContacte(d);}],
+            [ZBK,(d)=>{setZileBlocate({nico:[],dan:[],tudor:[],...d});}],
+            [OMK,(d)=>{setObiectiveMari(d.map(o=>({...o,open:false})));}],
+            [RMK,(d)=>{setRulouMateriale(d);}],
+            [CMK,(d)=>{setCamereLista(d);}],
+            [CTK,(d)=>{setContractCounter(d);}],
+            [PVK,(d)=>{setPvCounter(d);}],
+            [MTK,(d)=>{setCatalogMateriale(d);}],
+            [OFK2,(d)=>{setOfertaCounter(d);}],
+            [CEXK,(d)=>{setComandaExecutieCounter(d);}],
+            [CSK,(d)=>{setCatalogSine(d);}],
+            [CPK,(d)=>{setCatalogPlisse(Array.isArray(d)?d.filter(m=>m&&m.sistem&&m.grupaPret):[]);}],
+            [CJK,(d)=>{setCatalogJaluzele(Array.isArray(d)?d.filter(m=>m&&m.grupaPret&&m.lamela):[]);}],
+            [CCK,(d)=>{setCatalogCostComponente(Array.isArray(d)?d:[]);}],
+            [CSSK,(d)=>{setCatalogSinaSimpla(Array.isArray(d)?d:[]);}],
+            [CSRE,(d)=>{setCatalogStorRomanElectric(Array.isArray(d)?d:[]);}],
+          ];
+          // Toate cheile în paralel — nu una câte una — ca o singură cerere lentă (sau multe cereri, chiar dacă fiecare e rapidă)
+          // să nu epuizeze singură bugetul de timp și să arunce toată aplicația fals în modul „offline · date locale".
+          const results=await Promise.all(jobs.map(([key])=>sbGet(key)));
+          results.forEach((d,i)=>{ if(d){ jobs[i][1](d); gotAnyData=true; } });
         };
         await Promise.race([loadData(), timeout]);
       }catch(e){
@@ -8731,6 +8774,9 @@ function App() {
         <div style={{fontSize:9,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.12em",marginTop:12,fontWeight:500}}>Panou de control · 3P Design</div>
         {protectMode?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● mod protejat · salvare blocată</div>:
         !supabaseOk&&<div style={{fontSize:9,color:C.textSub,marginTop:8,letterSpacing:"0.08em"}}>● offline · date locale</div>}
+        {!protectMode&&supabaseOk&&(savingKeys.size>0?
+          <div style={{fontSize:9,color:"#A0845C",marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● se salvează…</div>:
+          <div style={{fontSize:9,color:C.textMuted,marginTop:8,letterSpacing:"0.08em"}}>✓ salvat</div>)}
       </div>
       <div style={{flex:1,padding:"14px 0"}}>
         {GRUPURI.flatMap(g=>g.items).map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:"9px 20px",cursor:"pointer",border:"none",borderLeft:tab===t.id?`3px solid ${C.text}`:"3px solid transparent",background:tab===t.id?"#C4A882":"transparent",color:C.text,fontWeight:tab===t.id?600:500,fontSize:13,letterSpacing:"0.02em"}}>
