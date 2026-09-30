@@ -1806,7 +1806,7 @@ const dateToKey=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0"
 const TIPURI_RULOU=[["rulou acționare lanț","Rulou acționare lanț"],["rulou electric","Rulou electric"],["rulou acționare lanț casetat","Rulou acționare lanț casetat"],["rulou electric casetat","Rulou electric casetat"]];
 const esteTipRulou=(t)=>TIPURI_RULOU.some(x=>x[0]===t);
 function golProdusDefault(){
-  return {id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:""};
+  return {id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:""};
 }
 function normalizeazaCamereOferta(camereRaw){
   if(!Array.isArray(camereRaw)||!camereRaw.length) return null;
@@ -2226,14 +2226,14 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.map(cam=>cam.id!==camId?cam:{...cam,[field]:val})})}));
   };
   const adaugaLinie=(camId)=>{
-    const nouaLinie={id:gid(), tip:"perdea", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""};
+    const nouaLinie={id:gid(), tip:"", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.map(cam=>cam.id!==camId?cam:{...cam,linii:[...cam.linii,nouaLinie]})})}));
   };
   const delLinie=(camId,liniaId)=>{
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:cx.camere.map(cam=>cam.id!==camId?cam:{...cam,linii:cam.linii.filter(l=>l.id!==liniaId)})})}));
   };
   const adaugaCamera=()=>{
-    const nouaCamera={id:gid(), numeCamera:"", geamuri:[], linii:[{id:gid(), tip:"perdea", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""}]};
+    const nouaCamera={id:gid(), numeCamera:"", geamuri:[], linii:[{id:gid(), tip:"", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""}]};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==comanda.id?cx:{...cx,camere:[...cx.camere,nouaCamera]})}));
   };
   const setNrGeamuriExec=(camId,n)=>{
@@ -2403,7 +2403,8 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
             <div key={l.id} style={{border:`1px solid ${C.border}`,padding:8,marginBottom:6,background:C.bg}}>
               <div style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 50px",gap:8,alignItems:"center",marginBottom:6}}>
                 <select value={l.tip} onChange={e=>updLinie(cam.id,l.id,"tip",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}>
-                  <option value="perdea">Perdea</option>
+                  <option value="">— alege tip —</option>
+              <option value="perdea">Perdea</option>
                   <option value="draperie">Draperie</option>
                   <option value="stor roman transparent">Stor roman transparent</option>
                   <option value="stor roman opac">Stor roman opac</option>
@@ -2662,7 +2663,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   const creeazaComandaManuala=()=>{
     if(!client) return;
     const comanda={id:gid(), numar:comandaExecutieCounter, ofertaId:null, ofertaNumar:null, dataCreat:tday(),
-      camere:[{id:gid(), numeCamera:"", geamuri:[], linii:[{id:gid(), tip:"perdea", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""}]}],
+      camere:[{id:gid(), numeCamera:"", geamuri:[], linii:[{id:gid(), tip:"", material:"", culoare:"", geamNr:1, h:"", l:"", nrBucati:"", banda:"", obs:""}]}],
       consumMateriale:{materiale:[], banda:[], liniiManuale:[], verificatNico:false}};
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,comenziExecutieNico:[...(c.comenziExecutieNico||[]),comanda]}));
     setComandaExecutieCounter(p=>p+1);
@@ -4902,7 +4903,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"perdea", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:""});
+  const golProdus=()=>({id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:""});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const duplicaCamera=(camId)=>{
     const cam=camere.find(c=>c.id===camId);
@@ -5108,58 +5109,62 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
 
   const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
+  // Pe oferta tipărită, "Altele" arată urât ca etichetă de tip — o ascundem (rândul rămâne descris
+  // clar de coloana Material), dar păstrăm "—" doar pentru un tip nesetat.
+  const tipCol=(t)=>{ const c=cap(t); return c==="Altele"?"":(c||"—"); };
+  const tipTotal=(t)=>{ const c=cap(t); return c==="Altele"?"Produse":(c||"Produse"); };
   const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
       if(esteRulou(pr)){
         const dimR=(pr.latimeRulouCm&&pr.inaltimeRulouCm)?` (${pr.latimeRulouCm}×${pr.inaltimeRulouCm} cm)`:"";
-        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}${dimR}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${(Number(pr.pretUnitar)||0).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}${dimR}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${(Number(pr.pretUnitar)||0).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
       }
       if(esteSina(pr)){
         const lungimeAfisata=lungimeExactaSina(pr)?`${lungimeExactaSina(pr)} m`:"—";
-        const rSina=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} (${lungimeAfisata})</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarSinaEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rSina=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} (${lungimeAfisata})</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarSinaEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
         const rMontaj=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
-        const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rSina+rMontaj+rTotalSina;
       }
       if(estePliseu(pr)){
         const {h:hAfisat,w:wAfisat}=dimensiuniSteppedPliseu(pr);
         const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm${pr.grupaPretPliseu?", Grupa "+pr.grupaPretPliseu:""})`:"";
-        const rPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarPliseuEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarPliseuEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
         const rMontajPliseu=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
-        const rTotalPliseu=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        const rTotalPliseu=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rPliseu+rMontajPliseu+rTotalPliseu;
       }
       if(esteJaluzea(pr)){
         const {h:hAfisat,w:wAfisat}=dimensiuniSteppedJaluzea(pr);
         const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm, Lamelă ${pr.lamelaJaluzea}cm${pr.grupaPretJaluzea?", Grupa "+pr.grupaPretJaluzea:""})`:"";
-        const rJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarJaluzeaEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretUnitarJaluzeaEfectiv(pr).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
         const rMontajJaluzea=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
-        const rTotalJaluzea=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        const rTotalJaluzea=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rJaluzea+rMontajJaluzea+rTotalJaluzea;
       }
       if(esteStorRoman(pr)){
         const mp=mpStor(pr);
         const dimensiuniAfisate=(pr.latimeStorCm&&pr.inaltimeStorCm)?`(${pr.latimeStorCm}×${pr.inaltimeStorCm} cm)`:"";
-        const rMaterialStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitateMaterialStor||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+        const rMaterialStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitateMaterialStor||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
         const rBenziManoperaStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Benzi+Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${(mp*(Number(pr.cantitate)||1)).toFixed(2)} mp</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBenziManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBenziManopera(pr).toFixed(0)} lei</td></tr>`;
         const rLining=esteStorRomanOpac(pr)?`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Lining</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitateLining||0} ml</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretLining||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareLining(pr).toFixed(0)} lei</td></tr>`:"";
         const rMecanism=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Mecanism stor roman</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${((Number(pr.latimeStorCm)||0)/100).toFixed(2)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMecanism||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMecanism(pr).toFixed(0)} lei</td></tr>`;
         const rMontajStor=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
-        const rTotalStor=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+        const rTotalStor=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rMaterialStor+rBenziManoperaStor+rLining+rMecanism+rMontajStor+rTotalStor;
       }
-      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${cap(pr.tip)||"—"}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
       if(!esteTextil(pr)){
         if(pr.tip==="șină"){
           const rMontajSina=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
-          const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+          const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
           return rMaterial+rMontajSina+rTotalSina;
         }
         return rMaterial;
       }
       const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateBandaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
       const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateManoperaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
-      const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${cap(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
+      const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
       return rMaterial+rBanda+rManopera+rTotal;
     }).join("");
     const numar=String(idx+1).padStart(2,"0");
@@ -5436,7 +5441,16 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       {(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}
     </datalist>
 
-    <button onClick={()=>setFormOpen(p=>!p)} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:formOpen?14:16,padding:"10px 14px",background:formOpen?C.bg:"#5C6B65",border:formOpen?`1px solid ${C.border}`:"none",cursor:"pointer",textAlign:"left"}}>
+    <button onClick={()=>{
+      if(!formOpen && !editingId){
+        // Deschidere manuală, fără o ofertă în curs de editare/duplicare — pornim mereu de la un formular gol,
+        // ca să nu rămână agățat conținutul unei încercări anterioare neterminate.
+        setNumeClient(client.name||"");
+        setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+        setObservatii("");
+      }
+      setFormOpen(p=>!p);
+    }} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:formOpen?14:16,padding:"10px 14px",background:formOpen?C.bg:"#5C6B65",border:formOpen?`1px solid ${C.border}`:"none",cursor:"pointer",textAlign:"left"}}>
       <span style={{fontSize:13,fontWeight:700,color:formOpen?C.textSub:"#fff",flex:1}}>{formOpen?"Ascunde formularul":"+ Adaugă ofertă"}</span>
       <span style={{fontSize:12,color:formOpen?C.textMuted:"#fff"}}>{formOpen?"▾":"▸"}</span>
     </button>
@@ -5494,6 +5508,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&!esteStorRoman(pr)&&!esteRulou(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="">— alege tip —</option>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
               <option value="stor">Stor</option>
@@ -5625,6 +5640,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           {esteSina(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"120px 1fr 90px 80px 90px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="">— alege tip —</option>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
               <option value="stor">Stor</option>
@@ -5683,6 +5699,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           {esteRulou(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"200px 1fr 85px 85px 70px 95px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="">— alege tip —</option>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
               <option value="stor">Stor</option>
@@ -5730,6 +5747,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           {estePliseu(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"90px 1fr 90px 90px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="">— alege tip —</option>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
               <option value="stor">Stor</option>
@@ -5783,6 +5801,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           {esteJaluzea(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 90px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="">— alege tip —</option>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
               <option value="stor">Stor</option>
@@ -5835,6 +5854,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           {esteStorRoman(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"150px 1fr 110px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="">— alege tip —</option>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
               <option value="stor">Stor</option>
@@ -8566,6 +8586,37 @@ function App() {
   const autoBackupHandleRef=React.useRef(null);
   const [autoBackupStatus,setAutoBackupStatus]=useState(""); // "" | "nume_fisier.json"
   const [autoBackupLast,setAutoBackupLast]=useState("");
+  const [autoBackupNeedsClick,setAutoBackupNeedsClick]=useState(false); // true = fișier reținut, dar browserul cere un click ca să confirme permisiunea
+  // Ținem minte fișierul de backup ales (FileSystemFileHandle) într-un IndexedDB minimal, ca la
+  // următoarea deschidere a aplicației backup-ul automat să-și reia scrierea singur, fără să mai
+  // fie nevoie să alegi din nou fișierul de fiecare dată.
+  const idbHandle=(mode,handle)=>new Promise((resolve)=>{
+    try{
+      const req=indexedDB.open("kreativo_backup_db",1);
+      req.onupgradeneeded=()=>{ req.result.createObjectStore("h"); };
+      req.onerror=()=>resolve(null);
+      req.onsuccess=()=>{
+        const db=req.result;
+        const tx=db.transaction("h","readwrite");
+        const store=tx.objectStore("h");
+        if(mode==="get"){ const g=store.get("autoBackupHandle"); g.onsuccess=()=>resolve(g.result||null); g.onerror=()=>resolve(null); }
+        else { store.put(handle,"autoBackupHandle"); tx.oncomplete=()=>resolve(true); tx.onerror=()=>resolve(false); }
+      };
+    }catch{ resolve(null); }
+  });
+  React.useEffect(()=>{
+    (async()=>{
+      const handle=await idbHandle("get");
+      if(!handle) return;
+      try{
+        const perm=await handle.queryPermission({mode:"readwrite"});
+        autoBackupHandleRef.current=handle;
+        setAutoBackupStatus(handle.name);
+        if(perm==="granted") scrieAutoBackup();
+        else setAutoBackupNeedsClick(true); // browserul cere o confirmare (un click) înainte să poată scrie din nou
+      }catch{ /* fișierul poate fi șters/mutat între timp — las status gol, ea reconfigurează dacă e cazul */ }
+    })();
+  },[]);
   const scrieAutoBackup=async()=>{
     const handle=autoBackupHandleRef.current;
     if(!handle) return;
@@ -8594,8 +8645,20 @@ function App() {
       const handle=await window.showSaveFilePicker({suggestedName:"kreativo_backup.json",types:[{description:"JSON",accept:{"application/json":[".json"]}}]});
       autoBackupHandleRef.current=handle;
       setAutoBackupStatus(handle.name);
+      setAutoBackupNeedsClick(false);
+      await idbHandle("set",handle);
       await scrieAutoBackup();
     }catch(e){ /* utilizatorul a anulat selecția — nu facem nimic */ }
+  };
+  // Când browserul cere o reconfirmare a permisiunii (nu mai apare des, dar se poate întâmpla la
+  // repornirea browserului) — un singur click, fără să mai alegi din nou fișierul.
+  const reactiveazaAutoBackup=async()=>{
+    const handle=autoBackupHandleRef.current;
+    if(!handle) return;
+    try{
+      const perm=await handle.requestPermission({mode:"readwrite"});
+      if(perm==="granted"){ setAutoBackupNeedsClick(false); await scrieAutoBackup(); }
+    }catch{}
   };
   React.useEffect(()=>{
     if(!autoBackupStatus) return;
@@ -8801,6 +8864,7 @@ function App() {
         </div>
         <button onClick={configureazaAutoBackup} style={{width:"100%",padding:"7px 0",border:"1px solid #A89878",background:autoBackupStatus?"#5C6B65":"transparent",color:autoBackupStatus?"#fff":C.text,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{autoBackupStatus?"Backup automat activ":"Configurează backup automat"}</button>
         {autoBackupStatus&&<div style={{fontSize:9,color:C.textSub,marginTop:6,letterSpacing:"0.04em"}}>→ {autoBackupStatus}{autoBackupLast?` · ultima salvare: ${autoBackupLast}`:""}</div>}
+        {autoBackupNeedsClick&&<button onClick={reactiveazaAutoBackup} style={{width:"100%",marginTop:6,padding:"6px 0",border:"1px solid #B5504A",background:"transparent",color:"#B5504A",cursor:"pointer",fontSize:9,letterSpacing:"0.05em",fontWeight:600}}>⚠ Reactivează backup automat (un click)</button>}
       </div>
     </div>
     {/* CONȚINUT */}
