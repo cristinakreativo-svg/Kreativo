@@ -8618,10 +8618,10 @@ function App() {
     })();
   },[]);
   const scrieAutoBackup=async()=>{
-    const handle=autoBackupHandleRef.current;
-    if(!handle) return;
+    const dirHandle=autoBackupHandleRef.current;
+    if(!dirHandle) return;
     try{
-      const perm=await handle.requestPermission({mode:"readwrite"});
+      const perm=await dirHandle.requestPermission({mode:"readwrite"});
       if(perm!=="granted") return;
       const payload={
         version:2, exportedAt:new Date().toISOString(),
@@ -8633,20 +8633,24 @@ function App() {
           [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric
         }
       };
-      const writable=await handle.createWritable();
+      // Un fișier nou pe zi (kreativo_backup_2026-09-30.json) — nu se mai suprascrie fișierul de ieri.
+      // Așa rămâne mereu o variantă curată din urmă cu o zi, chiar dacă azi ajunge să se salveze o greșeală.
+      const numeFisier=`kreativo_backup_${tday()}.json`;
+      const fileHandle=await dirHandle.getFileHandle(numeFisier,{create:true});
+      const writable=await fileHandle.createWritable();
       await writable.write(JSON.stringify(payload,null,2));
       await writable.close();
       setAutoBackupLast(new Date().toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"}));
     }catch(e){ console.warn("Auto-backup a eșuat:",e); }
   };
   const configureazaAutoBackup=async()=>{
-    if(!("showSaveFilePicker" in window)){ alert("Browserul tău nu suportă salvarea automată directă în fișier — funcționează doar în Chrome sau Edge."); return; }
+    if(!("showDirectoryPicker" in window)){ alert("Browserul tău nu suportă salvarea automată directă în folder — funcționează doar în Chrome sau Edge."); return; }
     try{
-      const handle=await window.showSaveFilePicker({suggestedName:"kreativo_backup.json",types:[{description:"JSON",accept:{"application/json":[".json"]}}]});
-      autoBackupHandleRef.current=handle;
-      setAutoBackupStatus(handle.name);
+      const dirHandle=await window.showDirectoryPicker({mode:"readwrite"});
+      autoBackupHandleRef.current=dirHandle;
+      setAutoBackupStatus(dirHandle.name+" (câte un fișier pe zi)");
       setAutoBackupNeedsClick(false);
-      await idbHandle("set",handle);
+      await idbHandle("set",dirHandle);
       await scrieAutoBackup();
     }catch(e){ /* utilizatorul a anulat selecția — nu facem nimic */ }
   };
