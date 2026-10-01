@@ -4899,6 +4899,26 @@ function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCat
   </div>;
 }
 
+// Echivalența tip produs din ofertă → cod/denumire articol din contabilitate (Transart), dată de Cristina.
+// "Altele" și orice tip nou, necunoscut, nu au echivalență fixă — se cere codul manual la export.
+const TIP_COD_FACTURA={
+  "perdea":{cod:20,denumire:"PERDEA *"},
+  "draperie":{cod:10,denumire:"DRAPERIE *"},
+  "stor":{cod:"STOR",denumire:"STOR ROMAN -MECANISM+MATERIAL"},
+  "șină":{cod:30,denumire:"SISTEM DE PRINDERE*"},
+  "sina electrica":{cod:"SE",denumire:"SINA CU ACTIONARE ELECTRICA  *"},
+  "pliseu":{cod:40,denumire:"PLISEU*"},
+  "jaluzea":{cod:"JV",denumire:"JALUZEA VENETIANA"},
+  "stor roman transparent":{cod:"STOR",denumire:"STOR ROMAN -MECANISM+MATERIAL"},
+  "stor roman opac":{cod:"STOR",denumire:"STOR ROMAN -MECANISM+MATERIAL"},
+  "stor roman electric":{cod:"STORE",denumire:"STOR ROMAN ELECTRIC - MECANISM+MATERIAL"},
+  "rulou acționare lanț":{cod:90,denumire:"RULOU - MECANISM+MATERIAL"},
+  "rulou electric":{cod:"RE",denumire:"RULOU ELECTRIC"},
+  "rulou acționare lanț casetat":{cod:"RC",denumire:"RULOU CASETAT"},
+  "rulou electric casetat":{cod:"RULELCA",denumire:"RULOU ELECTRIC CASETAT"},
+};
+const TVA_FACTOR=1.21; // cota de TVA folosită de Cristina la scoaterea prețului fără TVA (preț/1.21)
+
 function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,catalogSinaSimpla,catalogStorRomanElectric,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
   const [numeClient,setNumeClient]=React.useState(client.ciornaOferta?client.ciornaOferta.numeClient:(client.name||""));
   const [camere,setCamere]=React.useState(()=>normalizeazaCamereOferta(client.ciornaOferta&&client.ciornaOferta.camere)||[{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[golProdusDefault()]}]);
@@ -5276,6 +5296,46 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     a.href=url; a.download=`Oferta_${numar.replace("/","-")}_${(numeClient||client.name).replace(/[^a-zA-Z0-9]+/g,"_")}.html`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url),30000);
+  };
+  const exportaFacturaExcel=(oferta)=>{
+    if(typeof XLSX==="undefined"){ alert("Modulul Excel nu s-a încărcat (verifică conexiunea la internet) — încearcă din nou."); return; }
+    // Adună fiecare produs cu tipul, materialul (pentru identificare) și valoarea lui (cu TVA inclus, ca în ofertă).
+    const linii=[];
+    oferta.camere.forEach(c=>c.produse.filter(pr=>pr.material.trim()).forEach(pr=>{
+      linii.push({tip:pr.tip||"", material:pr.material, valoare:valoareLinie(pr)});
+    }));
+    if(!linii.length){ alert("Oferta asta nu are nicio linie de produs."); return; }
+    // Pentru orice tip fără echivalență fixă (ex. „Altele”), cere codul o singură dată per tip întâlnit, nu per linie.
+    const codCache={};
+    const tipuriLipsa=[...new Set(linii.filter(l=>!TIP_COD_FACTURA[l.tip]).map(l=>l.tip))];
+    for(const tip of tipuriLipsa){
+      const eticheta=tip?`tipul „${tip}”`:"produsele fără tip ales";
+      const cod=window.prompt(`Cod de contabilitate pentru ${eticheta}:`);
+      if(cod===null||!cod.trim()){ alert(`Lipsește codul pentru ${eticheta} — exportul se oprește.`); return; }
+      const denumire=window.prompt(`Denumire articol (contabilitate) pentru ${eticheta}:`,tip?tip.toUpperCase():"ALTELE")||"";
+      codCache[tip]={cod:cod.trim(),denumire:denumire.trim()};
+    }
+    // Grupează pe cod — mai multe linii cu același cod (ex. 2 perdele) intră într-o singură poziție de factură.
+    const grupe={};
+    linii.forEach(l=>{
+      const echiv=TIP_COD_FACTURA[l.tip]||codCache[l.tip];
+      const key=String(echiv.cod);
+      if(!grupe[key]) grupe[key]={cod:echiv.cod, denumire:echiv.denumire, total:0};
+      grupe[key].total+=l.valoare;
+    });
+    const rows=Object.values(grupe).map(g=>({cod:g.cod, denumire:g.denumire, pretFaraTva:Math.round((g.total/TVA_FACTOR)*100)/100}));
+    const totalFaraTva=rows.reduce((s,r)=>s+r.pretFaraTva,0);
+    const totalCuTva=Math.round(totalFaraTva*TVA_FACTOR*100)/100;
+    const diferenta=Math.round((oferta.total-totalCuTva)*100)/100;
+    const data=[["Cod","Denumire","Preț fără TVA (lei)"], ...rows.map(r=>[r.cod, r.denumire, r.pretFaraTva])];
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws["!cols"]=[{wch:12},{wch:40},{wch:18}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Factură");
+    XLSX.writeFile(wb, `Factura_${(oferta.numeClient||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_${oferta.numar.replace("/","-")}.xlsx`);
+    if(Math.abs(diferenta)>1){
+      alert(`Atenție: totalul ofertei (${oferta.total} lei) nu se potrivește cu suma din Excel + TVA (${totalCuTva.toFixed(2)} lei) — diferență ${diferenta.toFixed(2)} lei. Verifică dacă lipsește vreun cod sau e o rotunjire mai mare.`);
+    }
   };
   const htmlFor=(oferta)=>{
     if(oferta.editedHtml) return oferta.editedHtml;
@@ -6018,6 +6078,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           <button onClick={()=>vizualizeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Vizualizează</button>
           <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
           <button onClick={()=>printeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.border,color:C.text,border:"none",cursor:"pointer"}}>⬇ Descarcă PDF</button>
+          <button onClick={()=>exportaFacturaExcel(oferta)} title="Cod, denumire și preț fără TVA pe articol, gata pentru contabilitate" style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#2E7D32",color:"#fff",border:"none",cursor:"pointer"}}>📊 Export factură (Excel)</button>
           <button onClick={()=>{if(window.confirm(`Ștergi oferta ${oferta.numar}? Nu poate fi recuperată.`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).filter(x=>x.id!==oferta.id)}));}} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"5px 6px"}}>🗑</button>
         </div>
       )}
