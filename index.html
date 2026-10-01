@@ -5304,7 +5304,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     // Adună fiecare produs cu tipul, materialul (pentru identificare) și valoarea lui (cu TVA inclus, ca în ofertă).
     const linii=[];
     oferta.camere.forEach(c=>c.produse.filter(pr=>pr.material.trim()).forEach(pr=>{
-      linii.push({tip:pr.tip||"", material:pr.material, valoare:valoareLinie(pr), cantitate:Number(pr.cantitate)||1});
+      linii.push({tip:pr.tip||"", material:pr.material, valoare:valoareLinie(pr)});
     }));
     if(!linii.length){ alert("Oferta asta nu are nicio linie de produs."); return; }
     // Pentru orice tip fără echivalență fixă (ex. „Altele”), cere codul o singură dată per tip întâlnit, nu per linie.
@@ -5317,21 +5317,12 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       const denumire=window.prompt(`Denumire articol (contabilitate) pentru ${eticheta}:`,tip?tip.toUpperCase():"ALTELE")||"";
       codCache[tip]={cod:cod.trim(),denumire:denumire.trim()};
     }
-    // Grupează pe cod — mai multe linii cu același cod (ex. 2 perdele) intră într-o singură poziție de factură.
-    const grupe={};
-    linii.forEach(l=>{
+    // Fiecare produs rămâne o poziție separată în factură — 1 buc fiecare — chiar dacă apare
+    // de mai multe ori același tip (ex. 2 perdele): nu se adună, fiecare cu prețul ei.
+    const rows=linii.map(l=>{
       const echiv=TIP_COD_FACTURA[l.tip]||codCache[l.tip];
-      const key=String(echiv.cod);
-      if(!grupe[key]) grupe[key]={cod:echiv.cod, denumire:echiv.denumire, total:0, cantitate:0};
-      grupe[key].total+=l.valoare;
-      grupe[key].cantitate+=l.cantitate;
-    });
-    // Preț = preț unitar fără TVA (valoarea grupului fără TVA, împărțită la cantitatea totală) —
-    // așa încât în contabilitate Cantitate × Preț să dea valoarea fără TVA a liniei.
-    const rows=Object.values(grupe).map(g=>{
-      const cantitate=Math.round(g.cantitate*100)/100;
-      const valoareFaraTva=g.total/TVA_FACTOR;
-      return {cod:g.cod, denumire:g.denumire, cantitate, pret:Math.round((valoareFaraTva/(cantitate||1))*100)/100, valoareFaraTva};
+      const valoareFaraTva=l.valoare/TVA_FACTOR;
+      return {cod:echiv.cod, denumire:echiv.denumire, cantitate:1, pret:Math.round(valoareFaraTva*100)/100, valoareFaraTva};
     });
     const totalFaraTva=rows.reduce((s,r)=>s+r.valoareFaraTva,0);
     const totalCuTva=Math.round(totalFaraTva*TVA_FACTOR*100)/100;
