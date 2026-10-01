@@ -5302,7 +5302,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     // Adună fiecare produs cu tipul, materialul (pentru identificare) și valoarea lui (cu TVA inclus, ca în ofertă).
     const linii=[];
     oferta.camere.forEach(c=>c.produse.filter(pr=>pr.material.trim()).forEach(pr=>{
-      linii.push({tip:pr.tip||"", material:pr.material, valoare:valoareLinie(pr)});
+      linii.push({tip:pr.tip||"", material:pr.material, valoare:valoareLinie(pr), cantitate:Number(pr.cantitate)||1});
     }));
     if(!linii.length){ alert("Oferta asta nu are nicio linie de produs."); return; }
     // Pentru orice tip fără echivalență fixă (ex. „Altele”), cere codul o singură dată per tip întâlnit, nu per linie.
@@ -5320,16 +5320,23 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     linii.forEach(l=>{
       const echiv=TIP_COD_FACTURA[l.tip]||codCache[l.tip];
       const key=String(echiv.cod);
-      if(!grupe[key]) grupe[key]={cod:echiv.cod, denumire:echiv.denumire, total:0};
+      if(!grupe[key]) grupe[key]={cod:echiv.cod, denumire:echiv.denumire, total:0, cantitate:0};
       grupe[key].total+=l.valoare;
+      grupe[key].cantitate+=l.cantitate;
     });
-    const rows=Object.values(grupe).map(g=>({cod:g.cod, denumire:g.denumire, pretFaraTva:Math.round((g.total/TVA_FACTOR)*100)/100}));
-    const totalFaraTva=rows.reduce((s,r)=>s+r.pretFaraTva,0);
+    // Preț = preț unitar fără TVA (valoarea grupului fără TVA, împărțită la cantitatea totală) —
+    // așa încât în contabilitate Cantitate × Preț să dea valoarea fără TVA a liniei.
+    const rows=Object.values(grupe).map(g=>{
+      const cantitate=Math.round(g.cantitate*100)/100;
+      const valoareFaraTva=g.total/TVA_FACTOR;
+      return {cod:g.cod, denumire:g.denumire, cantitate, pret:Math.round((valoareFaraTva/(cantitate||1))*100)/100, valoareFaraTva};
+    });
+    const totalFaraTva=rows.reduce((s,r)=>s+r.valoareFaraTva,0);
     const totalCuTva=Math.round(totalFaraTva*TVA_FACTOR*100)/100;
     const diferenta=Math.round((oferta.total-totalCuTva)*100)/100;
-    const data=[["Cod","Denumire","Preț fără TVA (lei)"], ...rows.map(r=>[r.cod, r.denumire, r.pretFaraTva])];
+    const data=[["Cod","Denumire","Cantitate","Preț fără TVA (lei)"], ...rows.map(r=>[r.cod, r.denumire, r.cantitate, r.pret])];
     const ws=XLSX.utils.aoa_to_sheet(data);
-    ws["!cols"]=[{wch:12},{wch:40},{wch:18}];
+    ws["!cols"]=[{wch:12},{wch:40},{wch:12},{wch:18}];
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Factură");
     XLSX.writeFile(wb, `Factura_${(oferta.numeClient||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_${oferta.numar.replace("/","-")}.xlsx`);
