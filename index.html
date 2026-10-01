@@ -4923,7 +4923,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const [numeClient,setNumeClient]=React.useState(client.ciornaOferta?client.ciornaOferta.numeClient:(client.name||""));
   const [camere,setCamere]=React.useState(()=>normalizeazaCamereOferta(client.ciornaOferta&&client.ciornaOferta.camere)||[{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[{id:gid(), nr:1, lungime:"", inaltime:""}], produse:[golProdusDefault()]}]);
   const [editingId,setEditingId]=React.useState(client.ciornaOferta?client.ciornaOferta.editingId||null:null);
-  const [formOpen,setFormOpen]=React.useState(client.ciornaOferta?!!client.ciornaOferta.formOpen:false);
+  // Formularul pornește mereu închis când intri la client — nu se mai redeschide singur din ce ai
+  // lăsat deschis data trecută. Ciorna (camere/produse) rămâne salvată, doar nu se mai afișează automat.
+  const [formOpen,setFormOpen]=React.useState(false);
   const [observatii,setObservatii]=React.useState(client.ciornaOferta?client.ciornaOferta.observatii||"":"");
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null — picker de Articol (Material)
   const [pickerRulouFor,setPickerRulouFor]=React.useState(null); // {camId, prodId} — listă materiale rulou (doar denumire, fără preț)
