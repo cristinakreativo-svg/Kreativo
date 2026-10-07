@@ -169,6 +169,8 @@ const MOTORS = {
   "CM-36-E":   {prefix:"CC-B1", railOffset:98,  beltOffset:20,  firstBracket:100, endcapW:60, codeAdd:"EVE-"},
   "CM-51-E":   {prefix:"CC-B1", railOffset:98,  beltOffset:20,  firstBracket:100, endcapW:60, codeAdd:"WIR-"},
   "CM-57":     {prefix:"CC-B3", railOffset:110, beltOffset:0,   firstBracket:105, endcapW:81, codeAdd:"0"},
+  // CM-57-MC = motor mecanic, aceeași configurație și aceleași componente ca CM-57; se schimbă doar motorul din lista de piese.
+  "CM-57-MC":  {prefix:"CC-B3", railOffset:110, beltOffset:0,   firstBracket:105, endcapW:81, codeAdd:"0"},
   "Manual":    {prefix:"CC-F0", railOffset:11,  beltOffset:0,   firstBracket:50,  endcapW:12, codeAdd:""},
 };
 
@@ -330,7 +332,7 @@ function costProductieConfig(cfg, catalogCostComponente){
   });
   return {total, lipsa:[...new Set(lipsa)]};
 }
-function getPartsList(articleCode, calcResult, numberOfSystems){
+function getPartsList(articleCode, calcResult, numberOfSystems, motorKey){
   const mult = numberOfSystems||1;
   return PARTS.map(p=>{
     const used = p.used.some(pat=>wildcardMatch(pat, articleCode));
@@ -341,6 +343,8 @@ function getPartsList(articleCode, calcResult, numberOfSystems){
     if(!colourOk) return null;
     const qty = p.qty(calcResult)*mult;
     if(!qty || qty<=0) return null;
+    // Același cod de articol ca la CM-57 → aceeași listă de piese; doar motorul se înlocuiește cu varianta mecanică.
+    if(motorKey==="CM-57-MC" && p.code==="CM-57") return {code:"CM-57-MC", desc:"Mechanical curtain motor", colour:p.colour, qty: Math.round(qty*100)/100};
     return {code:p.code, desc:p.desc, colour:p.colour, qty: Math.round(qty*100)/100};
   }).filter(Boolean);
 }
@@ -2796,7 +2800,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
   try{
     if(!colourKey) throw new Error("Alege o culoare.");
     result=coulisseCalc({width:Number(width),height:Number(height),motorKey,gliderKey,packKey,colourKey,railSegments:Number(railSegments),options});
-    parts=getPartsList(result.articleCode,result,Number(quantity)||1);
+    parts=getPartsList(result.articleCode,result,Number(quantity)||1,motorKey);
   }catch(e){ error=colourKey?"Verifică valorile introduse.":null; }
   const {errors:validErrors,warnings:validWarnings}=validateCoulisseInput({width:Number(width),height:Number(height),railSegments:Number(railSegments),packKey,colourKey});
 
