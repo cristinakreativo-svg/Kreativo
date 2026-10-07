@@ -332,6 +332,17 @@ function costProductieConfig(cfg, catalogCostComponente){
   });
   return {total, lipsa:[...new Set(lipsa)]};
 }
+// La închidere centrală, numărul de călărei calculat e pentru o singură parte — Coulisse îl afișează „14 (x2)".
+// Șina din mai multe segmente se taie în bucăți egale: „1445 mm (x2)", ca în configuratorul Coulisse, nu totalul 2890.
+function railCutLabel(rail, segments){
+  const n=Number(segments)||1;
+  if(n<=1) return `${rail} mm`;
+  return `${+(rail/n).toFixed(1)} mm (x${n})`;
+}
+function gliderCountLabel(gliders, packKey){
+  const pk=PACK_SIDES[packKey];
+  return pk&&pk.center ? `${gliders} (x2)` : `${gliders}`;
+}
 function getPartsList(articleCode, calcResult, numberOfSystems, motorKey){
   const mult = numberOfSystems||1;
   return PARTS.map(p=>{
@@ -1788,7 +1799,7 @@ function coulisseCalc(input){
 
   const articleCode = configCode+"-"+motor.codeAdd+widthCode+heightCode+glider.code+"-"+colourCode+"-"+railSegCode+pack.code+"-"+optCodes+glidersCode+bracketsCode;
 
-  return {articleCode, rail, belt, gliders, hooks, brackets, stackwidth, motorized, center};
+  return {articleCode, rail, belt, gliders, hooks, brackets, stackwidth, motorized, center, railSegments};
 }
 
 
@@ -2818,10 +2829,10 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
         <div style="line-height:1.9;">
-          Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Motor: ${cfg.input.motorKey}<br/>Glisor: ${cfg.input.gliderKey}<br/>Împachetare: ${cfg.input.packKey}<br/>Culoare: ${cfg.input.colourKey}<br/>Segmente șină: ${cfg.input.railSegments}<br/>Cantitate: ${cfg.input.quantity}
+          Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Motor: ${cfg.input.motorKey}<br/>Călăreț: ${cfg.input.gliderKey}<br/>Împachetare: ${cfg.input.packKey}<br/>Culoare: ${cfg.input.colourKey}<br/>Segmente șină: ${cfg.input.railSegments}<br/>Cantitate: ${cfg.input.quantity}
         </div>
       </div>
-      <p><b>Rezultat calcul:</b> Șină de tăiat: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets} · Stackwidth: ${Math.round(cfg.result.stackwidth)}mm</p>
+      <p><b>Rezultat calcul:</b> Șină de tăiat: ${railCutLabel(cfg.result.rail,cfg.input.railSegments)} · Curea: ${cfg.result.belt}mm · Călărei/buc: ${gliderCountLabel(cfg.result.gliders,cfg.input.packKey)} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets} · Stackwidth: ${Math.round(cfg.result.stackwidth)}mm</p>
       <table style="border-collapse:collapse;width:100%;margin-top:14px;">
         <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
         ${rows}
@@ -2924,7 +2935,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
           {Object.keys(MOTORS).map(m=><option key={m} value={m}>{m}</option>)}
         </select>
       </div>
-      <div><label style={lblStyle}>Tip glisor</label>
+      <div><label style={lblStyle}>Tip călăreț</label>
         <select value={gliderKey} onChange={e=>setGliderKey(e.target.value)} style={selStyle}>
           {Object.keys(GLIDER_TYPES).map(g=><option key={g} value={g}>{g}</option>)}
         </select>
@@ -2979,7 +2990,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
         <div style={{fontSize:14,fontWeight:600,color:C.text,wordBreak:"break-all"}}>{result.articleCode}</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:0,padding:"14px 16px"}}>
-        {[["Șină de tăiat",result.rail+" mm"],["Curea",result.belt+" mm"],["Glisoare / buc.",result.gliders],["Cârlige / buc.",result.hooks],["Console / buc.",result.brackets],["Stackwidth",Math.round(result.stackwidth)+" mm"]].map(([l,v])=>
+        {[["Șină de tăiat",railCutLabel(result.rail,railSegments)],["Curea",result.belt+" mm"],["Călărei / buc.",gliderCountLabel(result.gliders,packKey)],["Cârlige / buc.",result.hooks],["Console / buc.",result.brackets],["Stackwidth",Math.round(result.stackwidth)+" mm"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l}</div>
             <div style={{fontSize:15,fontWeight:600,color:C.text}}>{v}</div>
@@ -3190,7 +3201,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Date introduse</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14}}>
-        {[["Lățime",cfg.input.width+" mm"],["Înălțime",cfg.input.height+" mm"],["Motor",cfg.input.motorKey],["Tip glisor",cfg.input.gliderKey],["Împachetare",cfg.input.packKey],["Culoare",cfg.input.colourKey],["Segmente șină",cfg.input.railSegments],["Cantitate",cfg.input.quantity+" buc."]].map(([l,v])=>
+        {[["Lățime",cfg.input.width+" mm"],["Înălțime",cfg.input.height+" mm"],["Motor",cfg.input.motorKey],["Tip călăreț",cfg.input.gliderKey],["Împachetare",cfg.input.packKey],["Culoare",cfg.input.colourKey],["Segmente șină",cfg.input.railSegments],["Cantitate",cfg.input.quantity+" buc."]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>{v}</div>
@@ -3200,7 +3211,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Rezultat calcul</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14,background:C.bg,padding:"10px"}}>
-        {[["Șină de tăiat",cfg.result.rail+" mm"],["Curea",cfg.result.belt+" mm"],["Glisoare / buc.",cfg.result.gliders],["Cârlige / buc.",cfg.result.hooks],["Console / buc.",cfg.result.brackets],["Stackwidth",Math.round(cfg.result.stackwidth)+" mm"]].map(([l,v])=>
+        {[["Șină de tăiat",railCutLabel(cfg.result.rail,cfg.input.railSegments)],["Curea",cfg.result.belt+" mm"],["Călărei / buc.",gliderCountLabel(cfg.result.gliders,cfg.input.packKey)],["Cârlige / buc.",cfg.result.hooks],["Console / buc.",cfg.result.brackets],["Stackwidth",Math.round(cfg.result.stackwidth)+" mm"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
             <div style={{fontSize:15,fontWeight:700,color:C.text}}>{v}</div>
@@ -6626,7 +6637,7 @@ function ListaTaiereProfile({clients,setClients,C}){
     (client.configuratiiSina||[]).forEach(cfg=>{
       if(cfg.produs) return;
       rows.push({categorie:"Șină Coulisse", tip:`Șină Coulisse ${cfg.input.colourKey||"?"}`, lungime:cfg.result.rail, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
-        detalii:`${cfg.input.railSegments||1} segment(e)`, cantitate:cfg.input.quantity||1,
+        detalii:`${(Number(cfg.input.railSegments)||1)>1 ? "taie "+railCutLabel(cfg.result.rail,cfg.input.railSegments)+" (total "+cfg.result.rail+" mm)" : "1 segment"}`, cantitate:cfg.input.quantity||1,
         client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-r", cfgIdRaw:cfg.id, arrKey:"configuratiiSina"});
     });
     (client.configuratiiSinaAlta||[]).forEach(cfg=>{
@@ -7453,7 +7464,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           {(client.configuratiiSina||[]).map(cfg=>
             <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"sina",cfg,clientId:client.id});setDanView("cfg");}} catalogCostComponente={catalogCostComponente} onPrint={()=>{
               const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-              const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Glisor: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină: ${cfg.result.rail}mm · Curea: ${cfg.result.belt}mm · Glisoare/buc: ${cfg.result.gliders} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
+              const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Călăreț: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină de tăiat: ${railCutLabel(cfg.result.rail,cfg.input.railSegments)} · Curea: ${cfg.result.belt}mm · Călărei/buc: ${gliderCountLabel(cfg.result.gliders,cfg.input.packKey)} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
               printHtmlDoc(html);
             }}/>
           )}
