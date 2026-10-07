@@ -2852,6 +2852,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
   const [railSegments,setRailSegments]=React.useState(1);
   const [quantity,setQuantity]=React.useState(1);
   const [options,setOptions]=React.useState([]);
+  const toggleOption=(opt)=>setOptions(p=>p.includes(opt)?p.filter(o=>o!==opt):[...p,opt]);
   const [clientId,setClientId]=React.useState(clientIdFixat||"");
   const [camera,setCamera]=React.useState("");
   const [observatii,setObservatii]=React.useState("");
@@ -7469,7 +7470,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente,catalogSinaSimpla}){
+function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente,catalogSinaSimpla,catalogStorRomanElectric}){
   const [openId,setOpenId]=React.useState(null);
   const [danShowFin,setDanShowFin]=React.useState(false);
   const [contactOpen,setContactOpen]=React.useState({});
@@ -8921,9 +8922,9 @@ function App() {
       try {
         const p=JSON.parse(ev.target.result);
         if(!p.data) throw new Error("Format invalid");
+        if(!window.confirm(`Importul din „${file.name}" ÎNLOCUIEȘTE toate datele din aplicație (clienți, oferte, cataloage) cu cele din fișier.\n\nCe ai lucrat după data acelui fișier se pierde. Continui?`)){ if(e.target) e.target.value=""; return; }
         const d=p.data;
         if(d[SK]) setData(d[SK]);
-        if(d[CK]) setChat(d[CK]);
         if(d[CLK]) setClients(d[CLK]);
         if(d[AK]) setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...d[AK]});
         if(d[PK]) setPerdele(d[PK]);
@@ -9063,7 +9064,7 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla}/>:
+      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
@@ -9701,7 +9702,7 @@ function App() {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} setClients={setClients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} setClients={setClients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla}/>}
+      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>}
     </div>}
 
     {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} setCatalogSinaSimpla={setCatalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} setCatalogStorRomanElectric={setCatalogStorRomanElectric}/>}
