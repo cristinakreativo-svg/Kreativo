@@ -1379,6 +1379,7 @@ function kreativoSalveazaEditare(){
 </div>
 
 ${data.camereHtml}
+${data.discountHtml||""}
 
 <div style="display:flex;justify-content:flex-end;margin:18px 0 0;padding-top:10px;border-top:2px solid #A0845C">
 <div style="text-align:right">
@@ -4989,7 +4990,28 @@ const SINA_MANUALA_PRET_ML=65;         // lei/ml, șină Coulisse manuală
 const SINA_MANUALA_PRET_ML_CONSOLA=85;  // lei/ml când e aleasă consola de perete
 const SINA_WAVE_EXTRA_ML=40;           // lei/ml în plus pentru călăreți wave — același adaos ca la șinele electrice
 const ETICHETE_TIP_OFERTA={"sina manuala":"Șină Coulisse manuală"};
+// Articolul de discount din contabilitate (apare ca linie negativă în factură).
+const COD_DISCOUNT_FACTURA={cod:1455993,denumire:"DISCOUNT"};
 const TVA_FACTOR=1.21; // cota de TVA folosită de Cristina la scoaterea prețului fără TVA (preț/1.21)
+
+// Discount pe ofertă: sumă fixă (lei) sau procent din valoarea produselor. Nu poate depăși valoarea ofertei.
+function calculeazaDiscountLei(subtotal,tip,val){
+  const v=Math.abs(Number(String(val==null?"":val).replace(",","."))||0);
+  if(!v) return 0;
+  const d=tip==="%"?Math.round(subtotal*Math.min(v,100)/100):Math.round(v);
+  return Math.max(0,Math.min(d,Math.round(subtotal)));
+}
+function discountHtmlBuild(subtotal,discountLei,tip,val,nr){
+  if(!(discountLei>0)) return "";
+  const v=Math.abs(Number(String(val==null?"":val).replace(",","."))||0);
+  const eticheta=tip==="%"?`Discount ${v}%`:"Discount";
+  const bara="display:flex;justify-content:space-between;align-items:baseline;font-size:1.05em;font-weight:700;color:#2A2118;background:#EDE4D3;padding:8px 10px;margin-top:4px;border-top:2px solid #A0845C";
+  return `<div style="border:2px solid #A0845C;padding:12px 16px;margin:14px 0;break-inside:avoid;page-break-inside:avoid">
+    <h2 style="margin:0 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">${String(nr).padStart(2,"0")}</span>Discount</h2>
+    <div style="${bara}"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.82em">Total înainte de discount</span><span>${Math.round(subtotal)} lei</span></div>
+    <div style="${bara}"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.82em">${eticheta}</span><span>-${discountLei} lei</span></div>
+  </div>`;
+}
 
 function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,catalogSinaSimpla,catalogStorRomanElectric,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
   const [numeClient,setNumeClient]=React.useState(client.ciornaOferta?client.ciornaOferta.numeClient:(client.name||""));
@@ -4999,14 +5021,16 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   // lăsat deschis data trecută. Ciorna (camere/produse) rămâne salvată, doar nu se mai afișează automat.
   const [formOpen,setFormOpen]=React.useState(false);
   const [observatii,setObservatii]=React.useState(client.ciornaOferta?client.ciornaOferta.observatii||"":"");
+  const [discountTip,setDiscountTip]=React.useState(client.ciornaOferta?client.ciornaOferta.discountTip||"lei":"lei");
+  const [discountVal,setDiscountVal]=React.useState(client.ciornaOferta?client.ciornaOferta.discountVal||"":"");
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null — picker de Articol (Material)
   const [pickerRulouFor,setPickerRulouFor]=React.useState(null); // {camId, prodId} — listă materiale rulou (doar denumire, fără preț)
   const [pickerCuloareFor,setPickerCuloareFor]=React.useState(null); // {camId, prodId} sau null — picker de Cod culoare, filtrat după articolul ales
   const formTopRef=React.useRef(null);
 
   React.useEffect(()=>{
-    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,ciornaOferta:{numeClient,camere,editingId,formOpen,observatii}}));
-  },[numeClient,camere,editingId,formOpen,observatii]);
+    setClients(p=>p.map((c,i)=>i!==ci?c:{...c,ciornaOferta:{numeClient,camere,editingId,formOpen,observatii,discountTip,discountVal}}));
+  },[numeClient,camere,editingId,formOpen,observatii,discountTip,discountVal]);
   const golesteCiorna=()=>{
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,ciornaOferta:undefined}));
   };
@@ -5243,7 +5267,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const valoareLinie=(pr)=>esteSinaManuala(pr)?valoareSinaManuala(pr):Math.round(valoareMaterial(pr))+Math.round(valoareBanda(pr))+Math.round(valoareManopera(pr))+Math.round(valoareBenziManopera(pr))+Math.round(valoareMecanism(pr))+Math.round(valoareLining(pr))+Math.round(valoareMontaj(pr));
   const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
-  const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
+  const subtotalProduse=camere.reduce((s,c)=>s+subtotalCamera(c),0);
+  const discountLei=calculeazaDiscountLei(subtotalProduse,discountTip,discountVal);
+  const totalGeneral=subtotalProduse-discountLei;
 
   const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
   // Pe oferta tipărită, "Altele" arată urât ca etichetă de tip — o ascundem (rândul rămâne descris
@@ -5415,6 +5441,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       const valoareFaraTva=l.valoare/TVA_FACTOR;
       return {cod:echiv.cod, denumire:echiv.denumire, cantitate:1, pret:Math.round(valoareFaraTva*100)/100, valoareFaraTva};
     });
+    if((oferta.discountLei||0)>0){
+      const vD=-(oferta.discountLei)/TVA_FACTOR;
+      rows.push({cod:COD_DISCOUNT_FACTURA.cod, denumire:COD_DISCOUNT_FACTURA.denumire, cantitate:1, pret:Math.round(vD*100)/100, valoareFaraTva:vD});
+    }
     const totalFaraTva=rows.reduce((s,r)=>s+r.valoareFaraTva,0);
     const totalCuTva=Math.round(totalFaraTva*TVA_FACTOR*100)/100;
     const diferenta=Math.round((oferta.total-totalCuTva)*100)/100;
@@ -5432,7 +5462,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     if(oferta.editedHtml) return oferta.editedHtml;
     return buildOferta({
       numar:oferta.numar, dataFmt:fmtD(oferta.data), numeClient:oferta.numeClient,
-      camereHtml: camereHtmlBuild(oferta.camere), necesarHtml: necesarHtmlBuild(oferta.camere), totalGeneral: oferta.camere.reduce((s,c)=>s+subtotalCamera(c),0).toFixed(0),
+      camereHtml: camereHtmlBuild(oferta.camere), necesarHtml: necesarHtmlBuild(oferta.camere), totalGeneral: (oferta.camere.reduce((s,c)=>s+subtotalCamera(c),0)-(oferta.discountLei||0)).toFixed(0), discountHtml: discountHtmlBuild(oferta.camere.reduce((s,c)=>s+subtotalCamera(c),0),oferta.discountLei||0,oferta.discountTip,oferta.discountVal,oferta.camere.length+1),
       clientId: client.id, ofertaId: oferta.id, observatii: oferta.observatii||"",
     });
   };
@@ -5457,6 +5487,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     })})));
     setEditingId(oferta.id);
     setObservatii(oferta.observatii||"");
+    setDiscountTip(oferta.discountTip||"lei"); setDiscountVal(oferta.discountVal||"");
     setFormOpen(true);
     if(formTopRef.current) formTopRef.current.scrollIntoView({behavior:"smooth",block:"start"});
   };
@@ -5470,6 +5501,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     })));
     setEditingId(null);
     setObservatii(oferta.observatii||"");
+    setDiscountTip(oferta.discountTip||"lei"); setDiscountVal(oferta.discountVal||"");
     setFormOpen(true);
     if(formTopRef.current) formTopRef.current.scrollIntoView({behavior:"smooth",block:"start"});
   };
@@ -5478,6 +5510,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     setFormOpen(false);
     setNumeClient(client.name||"");
     setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+    setDiscountTip("lei"); setDiscountVal("");
     golesteCiorna();
   };
   const genereaza=()=>{
@@ -5588,13 +5621,16 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         }
       }
     }
+    const dv=Math.abs(Number(String(discountVal).replace(",","."))||0);
+    if(dv>0 && discountTip==="%" && dv>100){ alert("Discountul în procente nu poate depăși 100%."); return; }
+    if(dv>0 && discountTip==="lei" && dv>Math.round(subtotalProduse)){ alert(`Discountul (${dv} lei) depășește valoarea ofertei (${Math.round(subtotalProduse)} lei).`); return; }
     const camereClean=camereValide.map(c=>({...c, produse:c.produse.filter(pr=>pr.material.trim())}));
 
     if(editingId){
       const existent=(client.oferte||[]).find(o=>o.id===editingId);
       if(!existent){ alert("Oferta editată nu mai există — a fost cumva ștearsă între timp."); setEditingId(null); return; }
-      const html=buildOferta({numar:existent.numar, dataFmt:fmtD(existent.data), numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId:existent.id, observatii:observatii.trim()});
-      const ofertaActualizata={...existent, numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, editedHtml:undefined, observatii:observatii.trim()};
+      const html=buildOferta({numar:existent.numar, dataFmt:fmtD(existent.data), numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), discountHtml:discountHtmlBuild(subtotalProduse,discountLei,discountTip,discountVal,camereClean.length+1), clientId:client.id, ofertaId:existent.id, observatii:observatii.trim()});
+      const ofertaActualizata={...existent, numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, subtotalProduse, discountTip, discountVal:String(discountVal||"").trim(), discountLei, editedHtml:undefined, observatii:observatii.trim()};
       setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).map(o=>o.id!==editingId?o:ofertaActualizata)}));
       vizualizeaza(html);
       anuleazaEditare();
@@ -5604,24 +5640,26 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     const ofertaId=gid();
     const numar=`${ofertaCounter}/${new Date().getFullYear()}`;
     const dataFmt=fmtD(tday());
-    const html=buildOferta({numar, dataFmt, numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), clientId:client.id, ofertaId, observatii:observatii.trim()});
-    const oferta={id:ofertaId, numar, data:tday(), numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, dataCreat:tday(), observatii:observatii.trim()};
+    const html=buildOferta({numar, dataFmt, numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:totalGeneral.toFixed(0), discountHtml:discountHtmlBuild(subtotalProduse,discountLei,discountTip,discountVal,camereClean.length+1), clientId:client.id, ofertaId, observatii:observatii.trim()});
+    const oferta={id:ofertaId, numar, data:tday(), numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, subtotalProduse, discountTip, discountVal:String(discountVal||"").trim(), discountLei, dataCreat:tday(), observatii:observatii.trim()};
     setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:[...(c.oferte||[]),oferta]}));
     setOfertaCounter(p=>p+1);
     vizualizeaza(html);
     setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
     setObservatii("");
+    setDiscountTip("lei"); setDiscountVal("");
     setFormOpen(false);
     golesteCiorna();
   };
 
   const nrProduseCiorna=camere.reduce((n,c)=>n+c.produse.filter(pr=>(pr.material||"").trim()||(pr.tip||"").trim()).length,0);
-  const ciornaAreContinut=nrProduseCiorna>0||camere.some(c=>(c.numeCamera||"").trim())||observatii.trim().length>0;
+  const ciornaAreContinut=nrProduseCiorna>0||camere.some(c=>(c.numeCamera||"").trim())||observatii.trim().length>0||String(discountVal||"").trim().length>0;
   const stergeCiorna=()=>{
     if(!window.confirm(`Ștergi ciorna neterminată (${nrProduseCiorna} ${nrProduseCiorna===1?"produs":"produse"})? Nu se poate anula.`)) return;
     setNumeClient(client.name||"");
     setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
     setObservatii("");
+    setDiscountTip("lei"); setDiscountVal("");
   };
 
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
@@ -6232,7 +6270,19 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     )}
     <button onClick={addCamera} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:16}}>+ adaugă cameră</button>
 
-    <div style={{display:"flex",justifyContent:"flex-end",padding:"10px 14px",background:C.accentLight,border:`1px solid ${C.accent}`,marginBottom:14}}>
+    <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:"10px 14px",marginBottom:12}}>
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Discount (opțional) — apare ca ultimă rubrică pe ofertă, înainte de total</div>
+      <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+        {[["lei","Sumă (lei)"],["%","Procent (%)"]].map(([v,l])=>
+          <button key={v} onClick={()=>setDiscountTip(v)} style={{fontSize:11,fontWeight:600,padding:"5px 11px",background:discountTip===v?C.accent:C.surface,color:discountTip===v?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{l}</button>
+        )}
+        <input value={discountVal} onChange={e=>setDiscountVal(e.target.value)} placeholder={discountTip==="%"?"ex: 10":"ex: 1976"} style={{...selStyle,width:110}}/>
+        <span style={{fontSize:12,color:C.textMuted}}>{discountLei>0?`= −${discountLei} lei din ${Math.round(subtotalProduse)} lei`:"niciun discount"}</span>
+        {String(discountVal||"").trim()!==""&&<button onClick={()=>setDiscountVal("")} style={{fontSize:11,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",textDecoration:"underline"}}>șterge discountul</button>}
+      </div>
+    </div>
+    <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:16,padding:"10px 14px",background:C.accentLight,border:`1px solid ${C.accent}`,marginBottom:14}}>
+      {discountLei>0&&<span style={{fontSize:12,color:C.textMuted}}>Produse: {Math.round(subtotalProduse)} lei · Discount: <b style={{color:"#B5504A"}}>−{discountLei} lei</b></span>}
       <span style={{fontSize:14,fontWeight:700,color:C.text}}>Total ofertă: {totalGeneral.toFixed(0)} lei</span>
     </div>
     <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. ofertă următoare: <b>{ofertaCounter}/{new Date().getFullYear()}</b></div>
