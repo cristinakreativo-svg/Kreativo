@@ -1821,7 +1821,7 @@ const dateToKey=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0"
 const TIPURI_RULOU=[["rulou acționare lanț","Rulou acționare lanț"],["rulou electric","Rulou electric"],["rulou acționare lanț casetat","Rulou acționare lanț casetat"],["rulou electric casetat","Rulou electric casetat"]];
 const esteTipRulou=(t)=>TIPURI_RULOU.some(x=>x[0]===t);
 function golProdusDefault(){
-  return {id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:""};
+  return {id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:"", lungimeSinaManCm:"", calaretiWave:false, consolaPerete:false};
 }
 function normalizeazaCamereOferta(camereRaw){
   if(!Array.isArray(camereRaw)||!camereRaw.length) return null;
@@ -4972,6 +4972,7 @@ const TIP_COD_FACTURA={
   "draperie":{cod:10,denumire:"DRAPERIE *"},
   "stor":{cod:"STOR",denumire:"STOR ROMAN -MECANISM+MATERIAL"},
   "șină":{cod:30,denumire:"SISTEM DE PRINDERE*"},
+  "sina manuala":{cod:30,denumire:"SISTEM DE PRINDERE*"},
   "sina electrica":{cod:"SE",denumire:"SINA CU ACTIONARE ELECTRICA  *"},
   "pliseu":{cod:40,denumire:"PLISEU*"},
   "jaluzea":{cod:"JV",denumire:"JALUZEA VENETIANA"},
@@ -4983,6 +4984,10 @@ const TIP_COD_FACTURA={
   "rulou acționare lanț casetat":{cod:"RC",denumire:"RULOU CASETAT"},
   "rulou electric casetat":{cod:"RULELCA",denumire:"RULOU ELECTRIC CASETAT"},
 };
+const SINA_MANUALA_PRET_ML=65;         // lei/ml, șină Coulisse manuală
+const SINA_MANUALA_PRET_ML_CONSOLA=85;  // lei/ml când e aleasă consola de perete
+const SINA_WAVE_EXTRA_ML=40;           // lei/ml în plus pentru călăreți wave — același adaos ca la șinele electrice
+const ETICHETE_TIP_OFERTA={"sina manuala":"Șină Coulisse manuală"};
 const TVA_FACTOR=1.21; // cota de TVA folosită de Cristina la scoaterea prețului fără TVA (preț/1.21)
 
 function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,catalogSinaSimpla,catalogStorRomanElectric,ofertaCounter,setOfertaCounter,camereLista,setCamereLista}){
@@ -5020,7 +5025,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   },[catalogMateriale]);
 
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
-  const golProdus=()=>({id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:""});
+  const golProdus=()=>({id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:"", lungimeSinaManCm:"", calaretiWave:false, consolaPerete:false});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
   const duplicaCamera=(camId)=>{
     const cam=camere.find(c=>c.id===camId);
@@ -5073,6 +5078,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       if(field==="cantitateManopera"){ upd.cantitateManoperaCustom=true; }
       if(field==="tip" && val==="sina electrica"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="150"; }
       if(field==="tip" && val==="șină"){ upd.pretMontaj="150"; }
+      if(field==="tip" && val==="sina manuala"){ upd.material="Șină Coulisse manuală"; if(!String(pr.cantitate||"").trim()) upd.cantitate="1"; }
       if(field==="tip" && esteTipRulou(val)){ if(!String(pr.cantitate||"").trim()) upd.cantitate="1"; }
       if(field==="tip" && val==="pliseu"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; }
       if(field==="tip" && val==="jaluzea"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; if(!pr.lamelaJaluzea) upd.lamelaJaluzea="5"; }
@@ -5220,7 +5226,11 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     if(pr.tip==="șină") return pr.montajInclus!==false?(Number(pr.pretMontaj)||0):0;
     return (esteSina(pr)||estePliseu(pr)||esteJaluzea(pr)||esteStorRoman(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||1)*(Number(pr.pretMontaj)||0):0;
   };
-  const valoareLinie=(pr)=>Math.round(valoareMaterial(pr))+Math.round(valoareBanda(pr))+Math.round(valoareManopera(pr))+Math.round(valoareBenziManopera(pr))+Math.round(valoareMecanism(pr))+Math.round(valoareLining(pr))+Math.round(valoareMontaj(pr));
+  const esteSinaManuala=(pr)=>pr.tip==="sina manuala";
+  const pretMlSinaManuala=(pr)=>(pr.consolaPerete?SINA_MANUALA_PRET_ML_CONSOLA:SINA_MANUALA_PRET_ML)+(pr.calaretiWave?SINA_WAVE_EXTRA_ML:0);
+  const pretBucSinaManuala=(pr)=>Math.round(((Number(pr.lungimeSinaManCm)||0)/100)*pretMlSinaManuala(pr));
+  const valoareSinaManuala=(pr)=>pretBucSinaManuala(pr)*(Number(pr.cantitate)||1);
+  const valoareLinie=(pr)=>esteSinaManuala(pr)?valoareSinaManuala(pr):Math.round(valoareMaterial(pr))+Math.round(valoareBanda(pr))+Math.round(valoareManopera(pr))+Math.round(valoareBenziManopera(pr))+Math.round(valoareMecanism(pr))+Math.round(valoareLining(pr))+Math.round(valoareMontaj(pr));
   const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
   const totalGeneral=camere.reduce((s,c)=>s+subtotalCamera(c),0);
@@ -5232,6 +5242,11 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const tipTotal=(t)=>{ const c=cap(t); return c==="Altele"?"Produse":(c||"Produse"); };
   const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
+      if(esteSinaManuala(pr)){
+        const mSina=(Number(pr.lungimeSinaManCm)||0)/100;
+        const detaliiSina=[pr.calaretiWave?"călăreți wave":"călăreți normali", pr.consolaPerete?"consolă perete":""].filter(Boolean).join(", ");
+        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">Șină manuală</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Șină Coulisse manuală (${fmtM(mSina)} m) · ${detaliiSina}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pretBucSinaManuala(pr)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareSinaManuala(pr)} lei</td></tr>`;
+      }
       if(esteRulou(pr)){
         const dimR=(pr.latimeRulouCm&&pr.inaltimeRulouCm)?` (${pr.latimeRulouCm}×${pr.inaltimeRulouCm} cm)`:"";
         return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}${dimR}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${(Number(pr.pretUnitar)||0).toFixed(0)} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
@@ -5307,7 +5322,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const necesarHtmlBuild=(camereList)=>{
     const grupe={};
     camereList.forEach(c=>{
-      c.produse.filter(pr=>pr.material.trim() && !esteSina(pr) && !estePliseu(pr) && !esteJaluzea(pr) && !esteRulou(pr)).forEach(pr=>{
+      c.produse.filter(pr=>pr.material.trim() && !esteSina(pr) && !estePliseu(pr) && !esteJaluzea(pr) && !esteRulou(pr) && !esteSinaManuala(pr)).forEach(pr=>{
         const furn=pr.furnizor&&pr.furnizor.trim()?pr.furnizor.trim():"Furnizor nespecificat";
         if(!grupe[furn]) grupe[furn]={};
         const materialTxt=pr.material.trim();
@@ -5377,7 +5392,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     const codCache={};
     const tipuriLipsa=[...new Set(linii.filter(l=>!TIP_COD_FACTURA[l.tip]).map(l=>l.tip))];
     for(const tip of tipuriLipsa){
-      const eticheta=tip?`tipul „${tip}”`:"produsele fără tip ales";
+      const eticheta=tip?`tipul „${ETICHETE_TIP_OFERTA[tip]||tip}”`:"produsele fără tip ales";
       const cod=window.prompt(`Cod de contabilitate pentru ${eticheta}:`);
       if(cod===null||!cod.trim()){ alert(`Lipsește codul pentru ${eticheta} — exportul se oprește.`); return; }
       const denumire=window.prompt(`Denumire articol (contabilitate) pentru ${eticheta}:`,tip?tip.toUpperCase():"ALTELE")||"";
@@ -5463,7 +5478,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       for(const pr of c.produse){
         const pliseuActiv=estePliseu(pr)&&(pr.material.trim()||pr.latimePliseuCm||pr.inaltimePliseuCm||pr.grupaPretPliseu||pr.culoare.trim());
         const jaluzeaActiva=esteJaluzea(pr)&&(pr.material.trim()||pr.latimeJaluzeaCm||pr.inaltimeJaluzeaCm||pr.grupaPretJaluzea);
-        if(pr.material.trim() && !estePliseu(pr) && !esteJaluzea(pr) && !esteRulou(pr) && !pr.culoare.trim()){
+        if(pr.material.trim() && !estePliseu(pr) && !esteJaluzea(pr) && !esteRulou(pr) && !esteSinaManuala(pr) && !pr.culoare.trim()){
           alert(`Lipsește codul de culoare la „${pr.material}" din camera „${c.numeCamera}". Completează-l înainte să generezi oferta — fără el nu vei ști exact ce nuanță ai comandat.`);
           return;
         }
@@ -5499,12 +5514,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           alert(`Nu găsesc un preț de catalog pentru jaluzeaua „${pr.material||"fără cod"}" din camera „${c.numeCamera}" — fie lățimea/înălțimea depășesc ce există în catalog pentru grupa/lamela alese, fie combinația respectivă lipsește complet din catalog. Verifică dimensiunile/grupa/lamela, sau completează manual un preț dacă e o comandă specială.`);
           return;
         }
+        if(esteSinaManuala(pr) && !pr.culoare){ alert(`Alege culoarea șinei Coulisse manuale (Alb sau Negru) din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`); return; }
+        if(esteSinaManuala(pr) && !(Number(pr.lungimeSinaManCm)>0)){ alert(`Lipsește lungimea la șina Coulisse manuală din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`); return; }
         if(esteRulou(pr) && (pr.material.trim()||pr.latimeRulouCm||pr.inaltimeRulouCm||pr.pretUnitar)){
           if(!pr.material.trim()){ alert(`Lipsește materialul la rulou din camera „${c.numeCamera}". Alege-l din listă sau scrie-l.`); return; }
           if(!(Number(pr.latimeRulouCm)>0) || !(Number(pr.inaltimeRulouCm)>0)){ alert(`Lipsește lățimea sau înălțimea la rulou „${pr.material}" din camera „${c.numeCamera}". Completeaz-le înainte să generezi oferta.`); return; }
         }
         const areMaterial = pr.material.trim()||pliseuActiv||jaluzeaActiva;
-        const esteTipGeneric = !esteSina(pr) && !estePliseu(pr) && !esteJaluzea(pr) && !esteStorRoman(pr) && !esteTextil(pr);
+        const esteTipGeneric = !esteSina(pr) && !estePliseu(pr) && !esteJaluzea(pr) && !esteStorRoman(pr) && !esteTextil(pr) && !esteSinaManuala(pr);
         if(areMaterial && !esteTextil(pr) && !esteStorRoman(pr) && !(Number(pr.cantitate)>0)){
           alert(`Lipsește cantitatea (nr. buc.) la „${pr.material||cap(pr.tip)}" din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`);
           return;
@@ -5660,7 +5677,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span style={{fontSize:13,fontWeight:700,color:C.text,marginLeft:"auto"}}>{valoareLinie(pr).toFixed(0)} lei</span>
           </div>
           <div style={{padding:8}}>
-          {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&!esteStorRoman(pr)&&!esteRulou(pr)&&<>
+          {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&!esteStorRoman(pr)&&!esteRulou(pr)&&!esteSinaManuala(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="">— alege tip —</option>
@@ -5669,6 +5686,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
+              <option value="sina manuala">Șină Coulisse manuală</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
@@ -5801,6 +5819,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
+              <option value="sina manuala">Șină Coulisse manuală</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
@@ -5851,6 +5870,45 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             </div>
           </div>}
           </>}
+          {esteSinaManuala(pr)&&<>
+          <div style={{display:"grid",gridTemplateColumns:"200px 1fr 110px 80px 150px auto",gap:8,alignItems:"center"}}>
+            <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+              <option value="perdea">Perdea</option>
+              <option value="draperie">Draperie</option>
+              <option value="stor">Stor</option>
+              <option value="șină">Șină</option>
+              <option value="sina electrica">Șină electrică</option>
+              <option value="sina manuala">Șină Coulisse manuală</option>
+              <option value="pliseu">Pliseu</option>
+              <option value="jaluzea">Jaluzea venețiană</option>
+              <option value="stor roman transparent">Stor roman transparent</option>
+              <option value="stor roman opac">Stor roman opac</option>
+              <option value="stor roman electric">Stor roman electric</option>
+              {TIPURI_RULOU.map(([v,l])=><option key={v} value={v}>{l}</option>)}
+              <option value="altele">Altele</option>
+            </select>
+            <div style={{fontSize:13,color:C.text,padding:"7px 10px",background:C.bg}}>Șină Coulisse manuală</div>
+            <input value={pr.lungimeSinaManCm} onChange={e=>updProdus(c.id,pr.id,"lungimeSinaManCm",e.target.value)} placeholder="Lungime (cm)" style={{...selStyle,border:!(Number(pr.lungimeSinaManCm)>0)?`1px solid #B5504A`:selStyle.border}}/>
+            <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
+            <div style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{pretBucSinaManuala(pr)} lei/buc</div>
+            {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginTop:6,flexWrap:"wrap"}}>
+            <span style={{fontSize:11,color:C.textMuted}}>Culoare:</span>
+            {["Alb","Negru"].map(cul=>
+              <button key={cul} onClick={()=>updProdus(c.id,pr.id,"culoare",cul)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:pr.culoare===cul?C.accent:C.surface,color:pr.culoare===cul?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{cul}</button>
+            )}
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>Călăreți:</span>
+            {[["Normali",false],["Wave",true]].map(([lbl,val])=>
+              <button key={lbl} onClick={()=>updProdus(c.id,pr.id,"calaretiWave",val)} style={{fontSize:11,fontWeight:600,padding:"4px 9px",background:!!pr.calaretiWave===val?C.accent:C.surface,color:!!pr.calaretiWave===val?"#fff":C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"}}>{lbl}</button>
+            )}
+            <label style={{display:"flex",alignItems:"center",gap:5,marginLeft:8,cursor:"pointer"}}>
+              <input type="checkbox" checked={!!pr.consolaPerete} onChange={e=>updProdus(c.id,pr.id,"consolaPerete",e.target.checked)}/>
+              <span style={{fontSize:11,color:C.textMuted}}>Consolă perete</span>
+            </label>
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:"auto"}}>{pretMlSinaManuala(pr)} lei/ml{pr.consolaPerete?" (cu consolă perete)":""}{pr.calaretiWave?` · include +${SINA_WAVE_EXTRA_ML} lei/ml wave`:""}{Number(pr.lungimeSinaManCm)>0?` · ${fmtM(Number(pr.lungimeSinaManCm)/100)} m × ${pr.cantitate||1} buc.`:""}</span>
+          </div>
+          </>}
           {esteRulou(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"200px 1fr 85px 85px 70px 95px auto",gap:8,alignItems:"center"}}>
             <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
@@ -5860,6 +5918,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
+              <option value="sina manuala">Șină Coulisse manuală</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
@@ -5908,6 +5967,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
+              <option value="sina manuala">Șină Coulisse manuală</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
@@ -5962,6 +6022,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
+              <option value="sina manuala">Șină Coulisse manuală</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
@@ -6015,6 +6076,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
+              <option value="sina manuala">Șină Coulisse manuală</option>
               <option value="pliseu">Pliseu</option>
               <option value="jaluzea">Jaluzea venețiană</option>
               <option value="stor roman transparent">Stor roman transparent</option>
