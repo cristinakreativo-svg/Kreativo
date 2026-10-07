@@ -7343,6 +7343,14 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   const [uploadProgress,setUploadProgress]=React.useState("");
   const inputRef=React.useRef(null);
   const fisiere=client[field]||[];
+  // Selecția pozelor de printat (doar la „Poze și măsurători"): bifezi ce vrei, printezi doar acelea.
+  const [sel,setSel]=React.useState({});
+  const imagini=fisiere.filter(f=>esteImagineNume(f.nume));
+  const selectate=imagini.filter(f=>sel[f.path]);
+  const nrSel=selectate.length;
+  const comutaSel=(f)=>setSel(p=>({...p,[f.path]:!p[f.path]}));
+  const selecteazaToate=()=>setSel(Object.fromEntries(imagini.map(f=>[f.path,true])));
+  const deselecteazaToate=()=>setSel({});
   const handleUpload=async(e)=>{
     const files=Array.from(e.target.files||[]);
     if(!files.length) return;
@@ -7376,15 +7384,23 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
       const office=["xlsx","xls","doc","docx","csv"].includes(ext);
       const openUrl=office?`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(f.url)}`:f.url;
       return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.bg,marginBottom:4}}>
+        {printTitle&&isImg&&<input type="checkbox" checked={!!sel[f.path]} onChange={()=>comutaSel(f)} title="Bifează pentru printat" style={{width:16,height:16,cursor:"pointer",flexShrink:0}}/>}
         {isImg&&<img src={f.url} alt="" style={{width:36,height:36,objectFit:"cover",flexShrink:0}}/>}
         <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isImg?"":<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"-1px",marginRight:5}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}{f.nume}</a>
         <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
         <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
       </div>;
     })}
-    {printTitle&&fisiere.some(f=>esteImagineNume(f.nume))&&<div style={{display:"flex",gap:6,marginBottom:6}}>
-      <button onClick={()=>printPozeClient(client,fisiere,1,fmtD)} title="Fiecare poză pe o pagină întreagă — cel mai ușor de citit pentru cifre scrise de mână" style={{flex:1,fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#A0845C",cursor:"pointer"}}>🖨 Printează pozele · 1 pe pagină</button>
-      <button onClick={()=>printPozeClient(client,fisiere,2,fmtD)} title="Două poze pe pagină, mai puține foi" style={{fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#A0845C",cursor:"pointer"}}>🖨 2 pe pagină</button>
+    {printTitle&&imagini.length>0&&<div style={{marginBottom:6}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,fontSize:11,color:C.textMuted,marginBottom:6}}>
+        <span style={{flex:1}}>{nrSel>0?`${nrSel} din ${imagini.length} poze bifate pentru printat`:"Bifează pozele pe care vrei să le printezi"}</span>
+        <button onClick={selecteazaToate} style={{fontSize:11,color:C.accent,border:"none",background:"transparent",cursor:"pointer",textDecoration:"underline"}}>toate</button>
+        <button onClick={deselecteazaToate} style={{fontSize:11,color:C.accent,border:"none",background:"transparent",cursor:"pointer",textDecoration:"underline"}}>niciuna</button>
+      </div>
+      <div style={{display:"flex",gap:6}}>
+        <button disabled={!nrSel} onClick={()=>printPozeClient(client,selectate,1,fmtD)} title="Fiecare poză pe o pagină întreagă — cel mai ușor de citit pentru cifre scrise de mână" style={{flex:1,fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#A0845C",cursor:nrSel?"pointer":"default",opacity:nrSel?1:0.45}}>🖨 Printează ({nrSel}) · 1 pe pagină</button>
+        <button disabled={!nrSel} onClick={()=>printPozeClient(client,selectate,2,fmtD)} title="Două poze pe pagină, mai puține foi" style={{fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#A0845C",cursor:nrSel?"pointer":"default",opacity:nrSel?1:0.45}}>🖨 2 pe pagină</button>
+      </div>
     </div>}
     <input ref={inputRef} type="file" accept={accept} multiple style={{display:"none"}} onChange={handleUpload}/>
     <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?`Se încarcă...${uploadProgress?" "+uploadProgress:""}`:buttonLabel}</button>
