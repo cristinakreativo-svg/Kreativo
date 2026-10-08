@@ -1388,7 +1388,7 @@ ${data.discountHtml||""}
 </div>
 </div>
 
-<p style="margin:16px 0 4px;font-size:.92em;color:#4A3F31">Prețurile sunt exprimate în ${data.monedaNota||"lei"} și includ TVA.${data.cursTxt?` <b>Curs: ${data.cursTxt}</b>`:""}</p>
+<p style="margin:16px 0 4px;font-size:.92em;color:#4A3F31">${data.notaMoneda||"Prețurile sunt exprimate în lei și includ TVA."}</p>
 <p style="margin:0 0 4px;font-size:.92em;color:#4A3F31">La lansarea comenzii se achită un avans de 50% din valoarea ofertei; diferența se achită cu o zi înaintea livrării.</p>
 <p style="margin:0;font-size:.92em;color:#4A3F31">Pentru sistemele de acționare electrică ale căror șine necesită conectare directă la instalația electrică, Clientul va asigura prezența unui electrician autorizat.</p>
 ${data.observatii?`<p style="margin:10px 0 0;padding:9px 12px;background:#EFE6D0;font-size:.92em;color:#4A3F31;white-space:pre-wrap">${data.observatii.replace(/</g,"&lt;")}</p>`:""}
@@ -5327,7 +5327,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const valoareLinieM=(pr)=>MON.cur==="lei"?valoareLinie(pr):(esteSinaManuala(pr)?mv(valoareSinaManuala(pr)):Math.round((mv(valoareMaterial1(pr))+mv(valoareMaterial2(pr))+mv(valoareBanda(pr))+mv(valoareManopera(pr))+mv(valoareBenziManopera(pr))+mv(valoareMecanism(pr))+mv(valoareLining(pr))+mv(valoareMontaj(pr)))*100)/100);
   const subtotalCameraM=(c)=>MON.cur==="lei"?subtotalCamera(c):Math.round(c.produse.reduce((s,pr)=>s+valoareLinieM(pr),0)*100)/100;
   const totaluriOferta=(camereList,dLei)=>{ const sub=camereList.reduce((s,c)=>s+subtotalCameraM(c),0); const disc=mv(dLei||0); return {sub, disc, total:MON.cur==="lei"?sub-disc:Math.round((sub-disc)*100)/100}; };
-  const dateMoneda=(of)=>(of&&of.moneda==="EUR"&&Number(of.curs)>0)?{monedaNota:"euro (EUR)", cursTxt:`${of.cursText||"—"} · 1 € = ${Number(of.curs).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:4})} lei`}:{};
+  const dateMoneda=(of)=>(of&&of.moneda==="EUR"&&Number(of.curs)>0)?{notaMoneda:`Prețurile sunt exprimate în euro, includ TVA și se vor calcula la cursul ${(of.cursText||"BNR").replace(/</g,"&lt;")} din ziua plății.`}:{};
   const subtotalProduse=camere.reduce((s,c)=>s+subtotalCamera(c),0);
   const discountLei=calculeazaDiscountLei(subtotalProduse,discountTip,discountVal);
   const totalGeneral=subtotalProduse-discountLei;
@@ -5743,6 +5743,11 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     golesteCiorna();
   };
 
+  const ofEdit=editingId?(client.oferte||[]).find(o=>o.id===editingId):null;
+  const eurEdit=(ofEdit&&ofEdit.moneda==="EUR"&&Number(ofEdit.curs)>0)?ofEdit:null;
+  const eurDin=(leiVal)=>eurEdit?` ≈ ${fmEur(Math.round((Number(leiVal)||0)/Number(eurEdit.curs)*100)/100)}`:"";
+  let totalEurEdit="";
+  if(eurEdit){ setMoneda(eurEdit); try{ totalEurEdit=fm(totaluriOferta(camere,discountLei).total); } finally { setMoneda(null); } }
   const nrProduseCiorna=camere.reduce((n,c)=>n+c.produse.filter(pr=>(pr.material||"").trim()||(pr.tip||"").trim()).length,0);
   const ciornaAreContinut=nrProduseCiorna>0||camere.some(c=>(c.numeCamera||"").trim())||observatii.trim().length>0||String(discountVal||"").trim().length>0;
   const stergeCiorna=()=>{
@@ -5776,6 +5781,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     </button>
 
     {formOpen&&<>
+    {eurEdit&&<div style={{padding:"10px 14px",background:"#E8F0F7",color:"#1F3A52",border:"1px solid #4F6D8A",marginBottom:10,fontSize:12,lineHeight:1.5}}>
+      <b>Ofertă în EURO</b> (curs {eurEdit.cursText||"—"} · 1 € = {eurEdit.curs} lei). Prețurile din formular sunt în <b>LEI</b> — pe oferta tipărită apar convertite în €. Lângă fiecare produs vezi echivalentul în €. Total ofertă acum: <b>{totalEurEdit}</b>.
+    </div>}
     {editingId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o ofertă existentă — la salvare, se actualizează, nu se creează una nouă.</span>
       <button onClick={anuleazaEditare} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
@@ -5826,7 +5834,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           <div key={pr.id} style={{border:`1px solid ${C.border}`,marginBottom:10,background:C.bg}}>
           <div style={{display:"flex",alignItems:"center",padding:"6px 10px",background:C.surface,borderBottom:`1px solid ${C.border}`}}>
             <span style={{fontSize:11,fontWeight:700,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.04em"}}>Produs {pIdx+1} · {cap(pr.tip)||"—"}</span>
-            <span style={{fontSize:13,fontWeight:700,color:C.text,marginLeft:"auto"}}>{valoareLinie(pr).toFixed(0)} lei</span>
+            <span style={{fontSize:13,fontWeight:700,color:C.text,marginLeft:"auto"}}>{valoareLinie(pr).toFixed(0)} lei{eurDin(valoareLinie(pr))}</span>
           </div>
           <div style={{padding:8}}>
           {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&!esteStorRoman(pr)&&!esteRulou(pr)&&!esteSinaManuala(pr)&&<>
