@@ -1990,6 +1990,67 @@ function exportClientPartsXLSX(client){
   XLSX.writeFile(wb, `Consum_${(client.name||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_${tday()}.xlsx`);
 }
 
+// Consum centralizat pe client, doar pentru configurațiile BIFATE (cod + cantitate însumată, coduri Coulisse = coduri contabilitate).
+function listaConfigConsum(client){
+  const out=[];
+  const dim=(cfg)=>cfg.input&&cfg.input.width&&cfg.input.height?`${cfg.input.width}×${cfg.input.height}mm`:(cfg.lungime?`${cfg.lungime} cm`:"");
+  (client.configuratiiSina||[]).forEach(cfg=>out.push({key:"s"+cfg.id,tip:"Șină",cfg,codeKey:"code",eticheta:`${cfg.camera||"(fără cameră)"}${cfg.result&&cfg.result.articleCode?" · "+cfg.result.articleCode:""}`}));
+  (client.configuratiiRoman||[]).forEach(cfg=>out.push({key:"r"+cfg.id,tip:"Stor roman",cfg,codeKey:"code",eticheta:`${cfg.camera||"(fără cameră)"} ${dim(cfg)}`.trim()}));
+  (client.configuratiiRulou||[]).forEach(cfg=>out.push({key:"u"+cfg.id,tip:"Rulou",cfg,codeKey:"article",eticheta:`${cfg.camera||"(fără cameră)"} ${dim(cfg)}${cfg.input&&cfg.input.tube?" · "+cfg.input.tube:""}`.trim()}));
+  (client.configuratiiPanou||[]).forEach(cfg=>out.push({key:"p"+cfg.id,tip:"Panou",cfg,codeKey:"article",eticheta:`${cfg.camera||"(fără cameră)"} ${dim(cfg)}`.trim()}));
+  return out;
+}
+function consolideazaConfigs(items){
+  const map=new Map();
+  items.forEach(it=>(it.cfg.parts||[]).forEach(p=>{
+    const code=p[it.codeKey]; const q=Number(p.qty)||0;
+    if(!code||!q) return;
+    map.set(code,(map.get(code)||0)+q);
+  }));
+  return Array.from(map.entries()).map(([cod,cantitate])=>({cod,cantitate:Math.round(cantitate*10000)/10000})).sort((a,b)=>String(a.cod).localeCompare(String(b.cod)));
+}
+function ConsumContabilitate({client,C,tday}){
+  const [open,setOpen]=React.useState(false);
+  const [sel,setSel]=React.useState({});
+  const lista=listaConfigConsum(client);
+  const bifate=lista.filter(it=>sel[it.key]);
+  const rows=consolideazaConfigs(bifate);
+  const toate=()=>setSel(Object.fromEntries(lista.map(it=>[it.key,true])));
+  const niciuna=()=>setSel({});
+  const exporta=()=>{
+    if(!rows.length){ alert("Bifează cel puțin o configurație cu componente."); return; }
+    if(typeof XLSX==="undefined"){ alert("Modulul Excel nu s-a încărcat (verifică conexiunea la internet) — încearcă din nou."); return; }
+    const ws=XLSX.utils.aoa_to_sheet([["Cod","Cantitate"],...rows.map(r=>[r.cod,r.cantitate])]);
+    ws["!cols"]=[{wch:22},{wch:12}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"Consum");
+    XLSX.writeFile(wb,`Consum_${(client.name||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_${tday()}.xlsx`);
+  };
+  if(!lista.length) return null;
+  return <div style={{marginTop:16,border:`1px solid ${C.border}`,background:C.bg}}>
+    <button onClick={()=>setOpen(!open)} style={{width:"100%",display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer",fontSize:12,fontWeight:600,textAlign:"left"}}>
+      <span style={{flex:1}}>Consum centralizat pentru contabilitate (Excel) — bifezi ce intră în consum</span><span>{open?"▾":"▸"}</span>
+    </button>
+    {open&&<div style={{padding:"12px 14px"}}>
+      <div style={{display:"flex",gap:12,alignItems:"center",fontSize:11,color:C.textMuted,marginBottom:8}}>
+        <span style={{flex:1}}>{bifate.length?`${bifate.length} din ${lista.length} produse bifate`:"Bifează produsele pentru care faci consumul."}</span>
+        <button onClick={toate} style={{fontSize:11,color:C.accent,border:"none",background:"transparent",cursor:"pointer",textDecoration:"underline"}}>toate</button>
+        <button onClick={niciuna} style={{fontSize:11,color:C.accent,border:"none",background:"transparent",cursor:"pointer",textDecoration:"underline"}}>niciuna</button>
+      </div>
+      {lista.map(it=><label key={it.key} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:sel[it.key]?C.accentLight:C.surface,marginBottom:3,cursor:"pointer",fontSize:12,color:C.text}}>
+        <input type="checkbox" checked={!!sel[it.key]} onChange={()=>setSel(p=>({...p,[it.key]:!p[it.key]}))} style={{width:16,height:16,cursor:"pointer",flexShrink:0}}/>
+        <span style={{fontWeight:600,minWidth:78}}>{it.tip}</span><span style={{flex:1}}>{it.eticheta}</span>
+        {!(it.cfg.parts||[]).length&&<span style={{fontSize:10,color:"#B5504A"}}>fără componente</span>}
+      </label>)}
+      {rows.length>0&&<table style={{width:"100%",borderCollapse:"collapse",marginTop:10,fontSize:12}}>
+        <thead><tr style={{background:C.surface}}><th style={{textAlign:"left",padding:"5px 8px",fontSize:10,textTransform:"uppercase",color:C.textMuted}}>Cod</th><th style={{textAlign:"right",padding:"5px 8px",fontSize:10,textTransform:"uppercase",color:C.textMuted}}>Cantitate</th></tr></thead>
+        <tbody>{rows.map(r=><tr key={r.cod} style={{borderTop:`1px solid ${C.border}`}}><td style={{padding:"5px 8px",fontWeight:600}}>{r.cod}</td><td style={{padding:"5px 8px",textAlign:"right"}}>{r.cantitate}</td></tr>)}</tbody>
+      </table>}
+      <button onClick={exporta} disabled={!rows.length} style={{marginTop:10,fontSize:12,fontWeight:600,padding:"8px 16px",background:"#2E7D32",color:"#fff",border:"none",cursor:rows.length?"pointer":"default",opacity:rows.length?1:0.45}}>📊 Descarcă Excel (Cod, Cantitate){rows.length?` · ${rows.length} coduri`:""}</button>
+    </div>}
+  </div>;
+}
+
 function nxtRecur(r) {
   const now=new Date();
   const lastDone=r.lastDone||"";
@@ -7837,9 +7898,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi șină / sisteme de produs</div>
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>
-        {((client.configuratiiSina||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length+(client.configuratiiPanou||[]).length)>0&&<div style={{marginTop:16}}>
-          <button onClick={()=>exportClientPartsXLSX(client)} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Consum centralizat componente (Excel, pentru contabilitate)</button>
-        </div>}
+        <ConsumContabilitate client={client} C={C} tday={tday}/>
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
           {(client.configuratiiSina||[]).map(cfg=>
