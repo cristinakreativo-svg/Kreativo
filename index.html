@@ -2229,6 +2229,12 @@ function construiesteConsumMaterialeInitial(oferta){
       const cheie=(pr.material.trim()+"|"+culoareTxt).toLowerCase();
       if(!grupe[cheie]) grupe[cheie]={id:gid(), material:pr.material.trim(), culoare:culoareTxt, cantitate:0, sursa:"auto"};
       grupe[cheie].cantitate+=Number(pr.cantitate)||0;
+      if(pr.dublata && (pr.material2||"").trim()){
+        const c2=(pr.culoare2||"").trim();
+        const ch2=(pr.material2.trim()+"|"+c2).toLowerCase();
+        if(!grupe[ch2]) grupe[ch2]={id:gid(), material:pr.material2.trim(), culoare:c2, cantitate:0, sursa:"auto"};
+        grupe[ch2].cantitate+=Number(pr.cantitate2)||0;
+      }
     });
   });
   return Object.values(grupe).map(g=>({...g, cantitate:Math.round(g.cantitate*100)/100}));
@@ -5041,6 +5047,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, prodId} sau null — picker de Articol (Material)
   const [pickerRulouFor,setPickerRulouFor]=React.useState(null); // {camId, prodId} — listă materiale rulou (doar denumire, fără preț)
   const [pickerCuloareFor,setPickerCuloareFor]=React.useState(null); // {camId, prodId} sau null — picker de Cod culoare, filtrat după articolul ales
+  const [picker2,setPicker2]=React.useState(null); // {prodId, stage:"mat"|"col"} — picker material 2 (draperie dublată)
   const formTopRef=React.useRef(null);
 
   React.useEffect(()=>{
@@ -5106,6 +5113,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     return {...c,produse:c.produse.map(pr=>{
       if(pr.id!==prodId) return pr;
       const upd={...pr,[field]:val};
+      if(field==="tip"){ upd.dublata=(val==="draperie dublata"); if(val==="draperie dublata") upd.tip="draperie"; }
+      if(field==="cantitate" && pr.dublata && !pr.cantitate2Custom) upd.cantitate2=val;
+      if(field==="cantitate2") upd.cantitate2Custom=true;
       if(field==="material" && !esteTipRulou(pr.tip)){
         const match=catalogMap[val.trim().toLowerCase()];
         if(match) upd.pretUnitar=String(match.pretLei);
@@ -5260,7 +5270,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const pretUnitarSinaEfectiv=(pr)=>(pr.pretUnitarSina!==undefined && pr.pretUnitarSina!=="")?Number(pr.pretUnitarSina)||0:calculeazaPretSina(pr);
   const pretUnitarPliseuEfectiv=(pr)=>(pr.pretUnitarPliseu!==undefined && pr.pretUnitarPliseu!=="")?Number(pr.pretUnitarPliseu)||0:calculeazaPretPliseu(pr);
   const pretUnitarJaluzeaEfectiv=(pr)=>(pr.pretUnitarJaluzea!==undefined && pr.pretUnitarJaluzea!=="")?Number(pr.pretUnitarJaluzea)||0:calculeazaPretJaluzea(pr);
-  const valoareMaterial=(pr)=>esteSina(pr)?pretUnitarSinaEfectiv(pr)*(Number(pr.cantitate)||1):estePliseu(pr)?pretUnitarPliseuEfectiv(pr)*(Number(pr.cantitate)||1):esteJaluzea(pr)?pretUnitarJaluzeaEfectiv(pr)*(Number(pr.cantitate)||1):esteStorRoman(pr)?(Number(pr.cantitateMaterialStor)||0)*(Number(pr.pretUnitar)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const valoareMaterial1=(pr)=>esteSina(pr)?pretUnitarSinaEfectiv(pr)*(Number(pr.cantitate)||1):estePliseu(pr)?pretUnitarPliseuEfectiv(pr)*(Number(pr.cantitate)||1):esteJaluzea(pr)?pretUnitarJaluzeaEfectiv(pr)*(Number(pr.cantitate)||1):esteStorRoman(pr)?(Number(pr.cantitateMaterialStor)||0)*(Number(pr.pretUnitar)||0):(Number(pr.cantitate)||0)*(Number(pr.pretUnitar)||0);
+  const valoareMaterial2=(pr)=>(esteTextil(pr)&&pr.dublata)?(Number(pr.cantitate2)||0)*(Number(pr.pretUnitar2)||0):0;
+  const valoareMaterial=(pr)=>valoareMaterial1(pr)+valoareMaterial2(pr);
   const cantitateBandaEfectiva=(pr)=>(pr.cantitateBanda!==undefined && pr.cantitateBanda!=="")?Number(pr.cantitateBanda)||0:(Number(pr.cantitate)||0);
   const cantitateManoperaEfectiva=(pr)=>(pr.cantitateManopera!==undefined && pr.cantitateManopera!=="")?Number(pr.cantitateManopera)||0:(Number(pr.cantitate)||0);
   const valoareBanda=(pr)=>esteTextil(pr)?cantitateBandaEfectiva(pr)*(Number(pr.pretBanda)||0):0;
@@ -5336,7 +5348,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         const rTotalStor=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
         return rMaterialStor+rBenziManoperaStor+rLining+rMecanism+rMontajStor+rTotalStor;
       }
-      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial(pr).toFixed(0)} lei</td></tr>`;
+      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial1(pr).toFixed(0)} lei</td></tr>`;
+      const rMaterial2=(esteTextil(pr)&&pr.dublata&&(pr.material2||"").trim())?`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material2} <span style="color:#8A7A64">(dublură)</span></td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare2||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate2||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretUnitar2||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMaterial2(pr).toFixed(0)} lei</td></tr>`:"";
       if(!esteTextil(pr)){
         if(pr.tip==="șină"){
           const rMontajSina=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretMontaj||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareMontaj(pr).toFixed(0)} lei</td></tr>`;
@@ -5348,7 +5361,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateBandaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretBanda||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareBanda(pr).toFixed(0)} lei</td></tr>`;
       const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateManoperaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.pretManopera||0} lei</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${valoareManopera(pr).toFixed(0)} lei</td></tr>`;
       const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${valoareLinie(pr).toFixed(0)} lei</td></tr>`;
-      return rMaterial+rBanda+rManopera+rTotal;
+      return rMaterial+rMaterial2+rBanda+rManopera+rTotal;
     }).join("");
     const numar=String(idx+1).padStart(2,"0");
     return `<div style="border:2px solid #A0845C;padding:12px 16px;margin:14px 0;break-inside:avoid;page-break-inside:avoid">
@@ -5436,7 +5449,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     // Adună fiecare produs cu tipul, materialul (pentru identificare) și valoarea lui (cu TVA inclus, ca în ofertă).
     const linii=[];
     oferta.camere.forEach(c=>c.produse.filter(pr=>pr.material.trim()).forEach(pr=>{
-      linii.push({tip:pr.tip||"", material:pr.material, valoare:valoareLinie(pr)});
+      linii.push({tip:pr.tip||"", material:pr.material+((pr.dublata&&(pr.material2||"").trim())?" + "+pr.material2:""), valoare:valoareLinie(pr)});
     }));
     if(!linii.length){ alert("Oferta asta nu are nicio linie de produs."); return; }
     // Pentru orice tip fără echivalență fixă (ex. „Altele”), cere codul o singură dată per tip întâlnit, nu per linie.
@@ -5595,6 +5608,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         if(esteTextil(pr) && pr.material.trim() && !(Number(pr.pretUnitar)>0)){
           alert(`Lipsește prețul unitar la „${pr.material}" din camera „${c.numeCamera}". Completeaz-l înainte să generezi oferta.`);
           return;
+        }
+        if(esteTextil(pr) && pr.dublata){
+          if(!(pr.material2||"").trim()){ alert(`Draperia dublată din camera „${c.numeCamera}" nu are al doilea material. Alege-l sau schimbă tipul în „Draperie".`); return; }
+          if(!(Number(pr.cantitate2)>0)||!(Number(pr.pretUnitar2)>0)){ alert(`Lipsește cantitatea sau prețul la materialul 2 („${pr.material2}") din camera „${c.numeCamera}".`); return; }
         }
         if(esteSina(pr) && pr.material.trim() && !pr.lungimeSinaCm.trim()){
           alert(`Lipsește lungimea la șina „${pr.material}" din camera „${c.numeCamera}". Completeaz-o înainte să generezi oferta.`);
@@ -5755,10 +5772,11 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           <div style={{padding:8}}>
           {!esteSina(pr)&&!estePliseu(pr)&&!esteJaluzea(pr)&&!esteStorRoman(pr)&&!esteRulou(pr)&&!esteSinaManuala(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
-            <select value={pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
+            <select value={pr.tip==="draperie"&&pr.dublata?"draperie dublata":pr.tip} onChange={e=>updProdus(c.id,pr.id,"tip",e.target.value)} style={selStyle}>
               <option value="">— alege tip —</option>
               <option value="perdea">Perdea</option>
               <option value="draperie">Draperie</option>
+              <option value="draperie dublata">Draperie dublată</option>
               <option value="stor">Stor</option>
               <option value="șină">Șină</option>
               <option value="sina electrica">Șină electrică</option>
@@ -5774,9 +5792,36 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <input value={pr.culoare} onFocus={()=>setPickerCuloareFor({camId:c.id,prodId:pr.id})} onChange={e=>updProdus(c.id,pr.id,"culoare",e.target.value)} onBlur={()=>setTimeout(()=>setPickerCuloareFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} placeholder="Cod culoare *" style={{...selStyle,border:pr.material.trim()&&!pr.culoare.trim()?`1px solid #B5504A`:selStyle.border}} autoComplete="off"/>
             <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="m" style={selStyle}/>
             <input value={pr.pretUnitar} onChange={e=>updProdus(c.id,pr.id,"pretUnitar",e.target.value)} placeholder="lei/m" style={selStyle}/>
-            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareMaterial(pr).toFixed(0)} lei</span>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareMaterial1(pr).toFixed(0)} lei</span>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
+          {esteTextil(pr)&&pr.dublata&&<div style={{marginTop:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
+            <span style={{fontSize:11,color:C.textMuted,fontWeight:600}}>Material 2 (dublură)</span>
+            <input value={pr.material2||""} onFocus={()=>setPicker2({prodId:pr.id,stage:"mat"})} onChange={e=>{updProdus(c.id,pr.id,"material2",e.target.value);setPicker2({prodId:pr.id,stage:"mat"});}} onBlur={()=>setTimeout(()=>setPicker2(p=>(p&&p.prodId===pr.id)?null:p),200)} placeholder="Articol 2 — caută în catalog sau scrie liber (ex: Dim out)" style={selStyle} autoComplete="off"/>
+            <input value={pr.culoare2||""} onFocus={()=>setPicker2({prodId:pr.id,stage:"col"})} onChange={e=>{updProdus(c.id,pr.id,"culoare2",e.target.value);setPicker2({prodId:pr.id,stage:"col"});}} onBlur={()=>setTimeout(()=>setPicker2(p=>(p&&p.prodId===pr.id)?null:p),200)} placeholder="Cod culoare" style={selStyle} autoComplete="off"/>
+            <input value={pr.cantitate2||""} onChange={e=>updProdus(c.id,pr.id,"cantitate2",e.target.value)} placeholder="m" style={selStyle}/>
+            <input value={pr.pretUnitar2||""} onChange={e=>updProdus(c.id,pr.id,"pretUnitar2",e.target.value)} placeholder="lei/m" style={selStyle}/>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareMaterial2(pr).toFixed(0)} lei</span>
+            <span></span>
+          </div>
+          {picker2&&picker2.prodId===pr.id&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,marginTop:6}}>
+            <div style={{maxHeight:200,overflowY:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}><tbody>
+              {picker2.stage==="mat"
+                ?catalogDesignuriUnice.filter(m=>!(pr.material2||"").trim()||m.design.toLowerCase().includes(pr.material2.toLowerCase())||m.sursa.toLowerCase().includes(pr.material2.toLowerCase())).slice(0,100).map(m=>
+                  <tr key={m.design} onMouseDown={e=>{e.preventDefault();setCamere(p=>p.map(cc=>cc.id!==c.id?cc:{...cc,produse:cc.produse.map(x=>x.id!==pr.id?x:{...x,material2:m.design,culoare2:"",pretUnitar2:""})}));setPicker2({prodId:pr.id,stage:"col"});}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.design}</td><td style={{padding:"7px 10px",color:C.textMuted}}>{m.sursa}</td>
+                  </tr>)
+                :catalogMateriale.filter(m=>m.design.toLowerCase()===(pr.material2||"").trim().toLowerCase()&&(!(pr.culoare2||"").trim()||(m.culoare||"").toLowerCase().includes(pr.culoare2.toLowerCase()))).slice(0,100).map(m=>
+                  <tr key={m.id} onMouseDown={e=>{e.preventDefault();setCamere(p=>p.map(cc=>cc.id!==c.id?cc:{...cc,produse:cc.produse.map(x=>x.id!==pr.id?x:{...x,culoare2:m.culoare,pretUnitar2:String(m.pretLei)})}));setPicker2(null);}} style={{cursor:"pointer",fontSize:13,borderTop:`1px solid ${C.border}`}} onMouseEnter={e=>e.currentTarget.style.background=C.accentLight} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{padding:"7px 10px",fontWeight:600,color:C.text}}>{m.culoare}</td><td style={{padding:"7px 10px",textAlign:"right",color:C.text}}>{m.pretLei} lei</td>
+                  </tr>)}
+              </tbody></table>
+            </div>
+            <button onMouseDown={e=>{e.preventDefault();setPicker2(null);}} style={{width:"100%",fontSize:12,fontWeight:600,padding:"8px 10px",background:C.bg,color:C.textSub,border:"none",borderTop:`1px solid ${C.border}`,cursor:"pointer"}}>✕ Nu e în catalog — păstrează ce ai scris și introdu preț/cantitate manual</button>
+          </div>}
+          </div>}
           {esteTextil(pr)&&<div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center",marginTop:8}}>
             <span></span>
             <input value="Bandă fronsare" disabled style={{...selStyle,color:C.text,background:C.surface,border:"none"}}/>
