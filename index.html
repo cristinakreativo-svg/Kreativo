@@ -7570,7 +7570,8 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
 
 function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente,catalogSinaSimpla,catalogStorRomanElectric}){
   const [openId,setOpenId]=React.useState(null);
-  const [danShowFin,setDanShowFin]=React.useState(false);
+  const [dView,setDView]=React.useState("activ");
+  const danShowFin=dView==="fin";
   const [contactOpen,setContactOpen]=React.useState({});
   const [clientDetailTab,setClientDetailTab]=React.useState({});
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
@@ -7579,7 +7580,7 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
   const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
   const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
   const todayKey=tday();
-  const danClients=clients.filter(c=>c.alocatDan && (danShowFin ? c.stadiu==="finalizat" : c.stadiu!=="finalizat")).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
+  const danClients=clients.filter(c=>c.alocatDan && (dView==="fin" ? c.stadiu==="finalizat" : dView==="livrat" ? (c.livrat&&c.stadiu!=="finalizat") : (c.stadiu!=="finalizat"&&!c.livrat))).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
   const client=clients.find(c=>c.id===openId);
   const ci=client?clients.indexOf(client):-1;
 
@@ -7626,14 +7627,15 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
     <BlocareZi blocate={blocate} onAdd={onAddBlocat} onDel={onDelBlocat} C={C} fmtD={fmtD}/>
 
     <div style={{display:"flex",gap:6,marginTop:20,marginBottom:10}}>
-      <button onClick={()=>{setDanShowFin(false);setOpenId(null);}} style={{padding:"7px 14px",border:`1px solid ${!danShowFin?C.accent:C.border}`,background:!danShowFin?C.accentLight:"transparent",color:!danShowFin?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:!danShowFin?500:400}}>Clienți activi</button>
-      <button onClick={()=>{setDanShowFin(true);setOpenId(null);}} style={{padding:"7px 14px",border:`1px solid ${danShowFin?C.accent:C.border}`,background:danShowFin?C.accentLight:"transparent",color:danShowFin?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danShowFin?500:400}}>Clienți finalizați</button>
+      <button onClick={()=>{setDView("activ");setOpenId(null);}} style={{padding:"7px 14px",border:`1px solid ${dView==="activ"?C.accent:C.border}`,background:dView==="activ"?C.accentLight:"transparent",color:dView==="activ"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:dView==="activ"?500:400}}>Clienți activi</button>
+      <button onClick={()=>{setDView("livrat");setOpenId(null);}} style={{padding:"7px 14px",border:`1px solid ${dView==="livrat"?C.accent:C.border}`,background:dView==="livrat"?C.accentLight:"transparent",color:dView==="livrat"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:dView==="livrat"?500:400}}>Clienți livrați</button>
+      <button onClick={()=>{setDView("fin");setOpenId(null);}} style={{padding:"7px 14px",border:`1px solid ${danShowFin?C.accent:C.border}`,background:danShowFin?C.accentLight:"transparent",color:danShowFin?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danShowFin?500:400}}>Clienți finalizați</button>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
       {danClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
       </div>)}
-      {danClients.length===0&&<div style={{fontSize:13,color:C.textMuted,gridColumn:"1/-1",padding:"20px 0"}}>{danShowFin?"Niciun client finalizat încă.":"Niciun client alocat încă. Bifează \"Alocă la Dan\" din fișa clientului, în tab-ul Clienți."}</div>}
+      {danClients.length===0&&<div style={{fontSize:13,color:C.textMuted,gridColumn:"1/-1",padding:"20px 0"}}>{danShowFin?"Niciun client finalizat încă.":dView==="livrat"?"Niciun client livrat.":"Niciun client alocat încă. Bifează \"Alocă la Dan\" din fișa clientului, în tab-ul Clienți."}</div>}
     </div>
     {client&&<div style={{border:`1px solid ${C.border}`,background:C.surface}}>
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
@@ -7641,10 +7643,16 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
         <button onClick={()=>setOpenId(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.textSub,fontSize:15}}>×</button>
       </div>
       <div style={{padding:"12px 16px"}}>
-        <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:14,padding:"10px 14px",background:C.bg}}>
-          <input type="checkbox" checked={client.stadiu==="finalizat"} onChange={e=>{setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:e.target.checked?"finalizat":undefined}));setOpenId(null);}}/>
-          <span style={{fontSize:12,color:C.textSub}}>Proiect terminat {danShowFin?"(debifează pt. redeschidere)":"— informațiile rămân, doar dispare din lista activă"}</span>
-        </label>
+        <div style={{display:"flex",gap:18,flexWrap:"wrap",marginBottom:14,padding:"10px 14px",background:C.bg}}>
+          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+            <input type="checkbox" checked={!!client.livrat&&client.stadiu!=="finalizat"} onChange={e=>{setClients(p=>p.map((c,i)=>i!==ci?c:{...c,livrat:e.target.checked?true:undefined,stadiu:c.stadiu==="finalizat"?undefined:c.stadiu}));setOpenId(null);}}/>
+            <span style={{fontSize:12,color:C.textSub}}>Client livrat {dView==="livrat"?"(debifează pt. reactivare)":"— trece în Clienți livrați, se pot face în continuare configurări"}</span>
+          </label>
+          <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+            <input type="checkbox" checked={client.stadiu==="finalizat"} onChange={e=>{setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:e.target.checked?"finalizat":undefined,livrat:undefined}));setOpenId(null);}}/>
+            <span style={{fontSize:12,color:C.textSub}}>Client finalizat {danShowFin?"(debifează pt. redeschidere)":""}</span>
+          </label>
+        </div>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,padding:"10px 14px",background:C.bg}}>
           <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Data montaj:</span>
           <input type="date" value={client.dataMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,dataMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
@@ -9076,6 +9084,8 @@ function App() {
     if(c.stadiu==="oferta") return false;
     if(cliFilter==="finalizate") return c.stadiu==="finalizat"&&m;
     if(c.stadiu==="finalizat") return false;
+    if(cliFilter==="livrate") return !!c.livrat&&m;
+    if(c.livrat) return false;
     if(cliFilter==="pending") return m&&c.tasks.some((_,i)=>!c.done[i]);
     if(cliFilter==="done") return m&&c.tasks.length>0&&c.done.every(Boolean);
     return m;
@@ -9535,9 +9545,9 @@ function App() {
     {(tab==="clients"||tab==="oferte")&&<div>
       {/* Subtaburi */}
       {tab==="clients"&&<div style={{display:"flex",gap:6,marginBottom:14}}>
-        {[["lista","Clienți"],["valori","Valori comenzi"],["calendar","Calendar"],["finalizate","Proiecte finalizate"]].map(([id,l])=>{
-          const activeCliTab=["valori","calendar","finalizate"].includes(cliFilter)?cliFilter:"lista";
-          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":id==="calendar"?"calendar":id==="finalizate"?"finalizate":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
+        {[["lista","Clienți"],["valori","Valori comenzi"],["calendar","Calendar"],["livrate","Clienți livrați"],["finalizate","Clienți finalizați"]].map(([id,l])=>{
+          const activeCliTab=["valori","calendar","livrate","finalizate"].includes(cliFilter)?cliFilter:"lista";
+          return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":id==="calendar"?"calendar":id==="finalizate"?"finalizate":id==="livrate"?"livrate":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
         })}
       </div>}
       {tab==="oferte"&&<div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:14}}>Oferte — potențiali clienți, măsurători și poze</div>}
@@ -9708,12 +9718,16 @@ function App() {
                 <span style={{fontSize:12,color:"#fff",fontWeight:600}}>Mută în clienți</span>
               </label>}
               {tab==="clients"&&cliFilter!=="finalizate"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
-                <input type="checkbox" checked={client.stadiu==="finalizat"} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:e.target.checked?"finalizat":undefined,open:e.target.checked?false:c.open}))}/>
-                <span style={{fontSize:12,color:C.textSub}}>Proiect terminat</span>
+                <input type="checkbox" checked={!!client.livrat} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,livrat:e.target.checked?true:undefined,open:e.target.checked?false:c.open}))}/>
+                <span style={{fontSize:12,color:C.textSub}}>Client livrat{cliFilter==="livrate"?" (debifează pt. reactivare)":""}</span>
+              </label>}
+              {tab==="clients"&&cliFilter!=="finalizate"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+                <input type="checkbox" checked={false} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:"finalizat",livrat:undefined,open:false}))}/>
+                <span style={{fontSize:12,color:C.textSub}}>Client finalizat</span>
               </label>}
               {tab==="clients"&&cliFilter==="finalizate"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
                 <input type="checkbox" checked={true} onChange={()=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:undefined,open:false}))}/>
-                <span style={{fontSize:12,color:C.textSub}}>Proiect terminat (debifează pt. redeschidere)</span>
+                <span style={{fontSize:12,color:C.textSub}}>Client finalizat (debifează pt. redeschidere)</span>
               </label>}
             </div>
             <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:12,padding:"9px 14px",background:C.bg,border:`1px solid ${C.border}`,cursor:"pointer",textAlign:"left"}}>
