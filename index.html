@@ -2007,8 +2007,8 @@ function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,fu
       <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
         style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
-      <input type="time" lang="ro" value={o} onChange={e=>{const v=e.target.value;setO(v);onOraChange&&onOraChange(v);}} title="Ora (dacă e o programare/întâlnire)"
-        style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 5px",background:C.surface,color:C.textSub,outline:"none",flexShrink:0,width:72}}/>
+      <Ora24 value={o} onChange={v=>{setO(v);onOraChange&&onOraChange(v);}} title="Ora (dacă e o programare/întâlnire)"
+        style={{fontSize:12,border:`1px solid ${C.border}`,background:C.surface,color:C.textSub,outline:"none"}}/>
       {onAchizChange&&<button title={achiz?"Marcat pt. achiziție":"Necesită achiziție material"} onClick={()=>onAchizChange(!achiz)} style={{background:"none",border:`1px solid ${achiz?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:achiz?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>achiz</button>}
       <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
@@ -2112,8 +2112,8 @@ function CalItem({item,onComplete,onReschedule}) {
       <div style={{display:"flex",gap:4,alignItems:"center"}}>
         <input type="date" autoFocus defaultValue={item.date} onChange={e=>setNd(e.target.value)}
           style={{fontSize:12,border:`1px solid ${C.accent}`,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>
-        {item.source==="Program"&&<input type="time" lang="ro" defaultValue={item.time||""} onChange={e=>setNt(e.target.value)}
-          style={{fontSize:12,border:`1px solid ${C.accent}`,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>}
+        {item.source==="Program"&&<Ora24 value={item.time||""} onChange={v=>setNt(v)}
+          style={{fontSize:12,border:`1px solid ${C.accent}`,background:C.surface,color:C.accent,outline:"none"}}/>}
         <button onClick={()=>{onReschedule(nd||item.date,item.source==="Program"?(nt!==null?nt:item.time):undefined);setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",cursor:"pointer"}}>✓</button>
         <button onClick={()=>{setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 8px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",color:C.textSub}}>✕</button>
       </div>:
@@ -2648,6 +2648,21 @@ function ComenziNico({client,ci,setClients,C,sb,tday,fmtD}){
   </div>;
 }
 
+function Ora24({value,onChange,style,title}){
+  const [v,setV]=React.useState(value||"");
+  React.useEffect(()=>{setV(value||"");},[value]);
+  const [h,m]=v.split(":");
+  const set=(hh,mm)=>{const nv=(!hh&&!mm)?"":((hh||"00")+":"+(mm||"00"));setV(nv);onChange&&onChange(nv);};
+  const st={...(style||{}),width:"auto",padding:"4px 4px",minWidth:0};
+  const hs=Array.from({length:24},(_,i)=>String(i).padStart(2,"0"));
+  const ms=Array.from({length:12},(_,i)=>String(i*5).padStart(2,"0"));
+  if(m&&!ms.includes(m)) ms.push(m),ms.sort();
+  return <span title={title} style={{display:"inline-flex",alignItems:"center",gap:2,flexShrink:0}}>
+    <select value={h||""} onChange={e=>set(e.target.value,m)} style={st}><option value="">--</option>{hs.map(x=><option key={x} value={x}>{x}</option>)}</select>
+    <span>:</span>
+    <select value={m||""} onChange={e=>set(h,e.target.value)} style={st}><option value="">--</option>{ms.map(x=><option key={x} value={x}>{x}</option>)}</select>
+  </span>;
+}
 function BlocareZi({blocate,onAdd,onDel,C,fmtD}){
   const [start,setStart]=React.useState("");
   const [end,setEnd]=React.useState("");
@@ -7657,13 +7672,15 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <span style={{fontSize:12,color:C.textMuted,minWidth:100}}>Data montaj:</span>
           <input type="date" value={client.dataMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,dataMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
           <span style={{fontSize:12,color:C.textMuted,marginLeft:8}}>Ora:</span>
-          <input type="time" lang="ro" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
+          <Ora24 value={client.oraMontaj||""} onChange={v=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:v}))} style={{fontSize:13,border:`1px solid ${C.border}`,outline:"none",background:C.surface}}/>
           {client.dataMontaj&&<button onClick={()=>{
             let tel="";try{tel=localStorage.getItem("kreativo_dan_tel")||"";}catch(e){}
             if(!tel){const v=window.prompt("Numărul de WhatsApp al lui Dan (ex: 0722123456):","");if(!v) return;tel=v;try{localStorage.setItem("kreativo_dan_tel",tel);}catch(e){}}
             let n=tel.replace(/[^0-9]/g,"");if(n.startsWith("00")) n=n.slice(2);else if(n.startsWith("0")) n="40"+n.slice(1);
-            const dt=client.dataMontaj.split("-").reverse().join(".");
-            const msg=`Salut Dan! Montaj programat:\n\nClient: ${client.name}\nData: ${dt}${client.oraMontaj?"\nOra: "+client.oraMontaj:""}${client.adresa?"\nAdresa: "+client.adresa:""}${client.telefon?"\nTelefon client: "+client.telefon:""}\n\nKreativo Studio`;
+            const zn=["duminică","luni","marți","miercuri","joi","vineri","sâmbătă"][new Date(client.dataMontaj+"T12:00:00").getDay()];
+            const dt=(zn||"")+" - "+client.dataMontaj.split("-").reverse().join(".");
+            if(!client.oraMontaj&&!window.confirm("Nu ai pus ORA montajului. Trimiți mesajul fără oră?")) return;
+            const msg=`Salut Dan! Montaj programat:\n\nClient: ${client.name}\nData: ${dt}${client.oraMontaj?"\nOra: "+client.oraMontaj:"\nOra: se stabilește"}${client.adresa?"\nAdresa: "+client.adresa:""}${client.telefon?"\nTelefon client: "+client.telefon:""}\n\nKreativo Studio`;
             window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`,"_blank");
           }} title="Deschide WhatsApp cu mesajul gata scris" style={{marginLeft:"auto",padding:"6px 12px",border:"1px solid #25D366",background:"transparent",color:"#1a9c4a",cursor:"pointer",fontSize:12,fontWeight:500}}>Trimite pe WhatsApp</button>}
           {client.dataMontaj&&<button onClick={()=>{let t="";try{t=localStorage.getItem("kreativo_dan_tel")||"";}catch(e){}const v=window.prompt("Număr WhatsApp Dan:",t);if(v!==null){try{localStorage.setItem("kreativo_dan_tel",v);}catch(e){}}}} title="Schimbă numărul lui Dan" style={{padding:"6px 8px",border:`1px solid ${C.border}`,background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:11}}>nr.</button>}
@@ -9527,7 +9544,7 @@ function App() {
           <div><label style={lbl}>Titlu *</label><input style={inp} value={evForm.title} onChange={e=>setEvForm(f=>({...f,title:e.target.value}))} placeholder="Programare, întâlnire..."/></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
             <div><label style={lbl}>Data</label><input type="date" style={inp} value={evForm.date} onChange={e=>setEvForm(f=>({...f,date:e.target.value}))}/></div>
-            <div><label style={lbl}>Ora</label><input type="time" lang="ro" style={inp} value={evForm.time} onChange={e=>setEvForm(f=>({...f,time:e.target.value}))}/></div>
+            <div><label style={lbl}>Ora</label><Ora24 style={{...inp,width:"auto"}} value={evForm.time} onChange={v=>setEvForm(f=>({...f,time:v}))}/></div>
             <div><label style={lbl}>Locație</label><input style={inp} value={evForm.loc} onChange={e=>setEvForm(f=>({...f,loc:e.target.value}))} placeholder="Showroom..."/></div>
           </div>
           <div style={row}><button style={btnP()} onClick={saveEv}>Salvează</button><button style={btnS} onClick={()=>setShowEvForm(false)}>Anulează</button></div>
