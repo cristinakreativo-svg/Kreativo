@@ -1868,6 +1868,58 @@ function printHtmlDocCuImagini(html){
     setTimeout(()=>{ if(iframe.parentNode) document.body.removeChild(iframe); },1000);
   });
 }
+// Printare directă pentru documente (Word / Excel / CSV / PDF): fișierul e citit în browser și trimis la imprimantă,
+// fără să depindă de vizualizatorul Office online (unde nu există buton de printare).
+const incarcaScript=(src)=>new Promise((res,rej)=>{
+  const ex=document.querySelector(`script[data-lib="${src}"]`);
+  if(ex&&ex.dataset.ok){ res(); return; }
+  const sc=ex||document.createElement("script");
+  sc.src=src; sc.dataset.lib=src;
+  sc.onload=()=>{sc.dataset.ok="1";res();};
+  sc.onerror=()=>rej(new Error("Nu s-a putut încărca modulul de citire a documentului (verifică internetul)."));
+  if(!ex) document.head.appendChild(sc);
+});
+async function printeazaDocument(f,client){
+  const ext=(String(f.nume||"").split(".").pop()||"").toLowerCase();
+  const esc=(t)=>String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const office=["xlsx","xls","doc","docx","csv"].includes(ext);
+  const deschide=()=>window.open(office?`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(f.url)}`:f.url,"_blank");
+  const pagina=(corp)=>`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(f.nume)}</title><style>
+    @page{size:A4;margin:14mm} body{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:13px;line-height:1.45;margin:0}
+    h1,h2,h3{margin:.8em 0 .3em} p{margin:.35em 0} table{border-collapse:collapse;margin:8px 0} td,th{border:1px solid #999;padding:3px 7px;vertical-align:top} img{max-width:100%}
+    .titlu{font-size:11px;color:#777;margin-bottom:8px}
+  </style></head><body><div class="titlu">${esc(f.nume)}${client?" · "+esc(client.name):""}</div>${corp}</body></html>`;
+  try{
+    if(ext==="pdf"){
+      const r=await fetch(f.url); if(!r.ok) throw new Error("Fișierul nu a putut fi descărcat.");
+      const blob=await r.blob();
+      window.open(URL.createObjectURL(blob),"_blank");
+      alert("PDF-ul s-a deschis într-o filă nouă — apasă pictograma de imprimantă din bara lui (sau Ctrl+P).");
+      return;
+    }
+    if(ext==="docx"){
+      await incarcaScript("https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js");
+      const r=await fetch(f.url); if(!r.ok) throw new Error("Fișierul nu a putut fi descărcat.");
+      const buf=await r.arrayBuffer();
+      const rez=await window.mammoth.convertToHtml({arrayBuffer:buf});
+      printHtmlDocCuImagini(pagina(rez.value||"<p>(document gol)</p>"));
+      return;
+    }
+    if(["xlsx","xls","csv"].includes(ext)){
+      if(typeof XLSX==="undefined") throw new Error("Modulul Excel nu s-a încărcat.");
+      const r=await fetch(f.url); if(!r.ok) throw new Error("Fișierul nu a putut fi descărcat.");
+      const wb=XLSX.read(await r.arrayBuffer(),{type:"array"});
+      const corp=wb.SheetNames.map(n=>`<h3>${esc(n)}</h3>`+XLSX.utils.sheet_to_html(wb.Sheets[n],{header:"",footer:""}).replace(/<\/?(html|head|body|meta)[^>]*>/gi,"")).join("");
+      printHtmlDocCuImagini(pagina(corp));
+      return;
+    }
+    alert("Acest tip de fișier nu poate fi printat direct din aplicație — se deschide, printează-l de acolo.");
+    deschide();
+  }catch(err){
+    alert((err&&err.message?err.message:"Eroare")+"\nSe deschide fișierul ca să-l poți printa de acolo.");
+    deschide();
+  }
+}
 const EXT_IMAGINE=["jpg","jpeg","png","gif","webp","heic"];
 const esteImagineNume=(n)=>EXT_IMAGINE.includes((String(n||"").split(".").pop()||"").toLowerCase());
 // Printează pozele/măsurătorile unui client: perPage = 1 (cât mai mare, ca să se citească cifrele) sau 2 pe pagină A4.
@@ -7617,11 +7669,11 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
         {isImg&&<img src={f.url} alt="" style={{width:36,height:36,objectFit:"cover",flexShrink:0}}/>}
         <a href={openUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,flex:1,textDecoration:"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{isImg?"":<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"-1px",marginRight:5}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}{f.nume}</a>
         <span style={{fontSize:10,color:C.textMuted,flexShrink:0}}>{fmtD(f.data)}</span>
-        {printTitle&&!isImg&&<a href={openUrl} target="_blank" rel="noopener noreferrer" title={office?"Se deschide în vizualizatorul Office — printezi de acolo (Ctrl+P)":"Se deschide fișierul într-o filă nouă — printezi de acolo (Ctrl+P)"} style={{fontSize:11,fontWeight:600,color:"#fff",background:"#5C6B65",padding:"3px 8px",textDecoration:"none",flexShrink:0}}>🖨 deschide pt. printare</a>}
+        {printTitle&&!isImg&&<button onClick={()=>printeazaDocument(f,client)} title="Printează documentul direct" style={{fontSize:11,fontWeight:600,color:"#fff",background:"#5C6B65",padding:"4px 10px",border:"none",cursor:"pointer",flexShrink:0}}>🖨 Printează</button>}
         <button onClick={()=>handleDelete(f)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:13,flexShrink:0}}>×</button>
       </div>;
     })}
-    {printTitle&&fisiere.length>0&&imagini.length===0&&<div style={{fontSize:11,color:C.textMuted,marginBottom:6}}>Printarea în bloc (mai multe pe pagină) merge doar pentru poze. Documentele PDF/Word/Excel se deschid cu butonul „deschide pt. printare".</div>}
+    {printTitle&&fisiere.length>0&&imagini.length===0&&<div style={{fontSize:11,color:C.textMuted,marginBottom:6}}>Printarea în bloc (mai multe pe pagină) merge doar pentru poze. Documentele Word/Excel/PDF se printează cu butonul „🖨 Printează" de pe fiecare.</div>}
     {printTitle&&imagini.length>0&&<div style={{marginBottom:6}}>
       <div style={{display:"flex",alignItems:"center",gap:10,fontSize:11,color:C.textMuted,marginBottom:6}}>
         <span style={{flex:1}}>{nrSel>0?`${nrSel} din ${imagini.length} poze bifate pentru printat`:"Bifează pozele pe care vrei să le printezi"}</span>
