@@ -8669,6 +8669,7 @@ function App() {
   const [addingTo,setAddingTo]=useState(null);
   const [search,setSearch]=useState("");
   const [cliFilter,setCliFilter]=useState("all");
+  const [ofFilter,setOfFilter]=useState("active");
   const [cliCalMonth,setCliCalMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [calGridMonth,setCalGridMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [addingObMare,setAddingObMare]=useState(false);
@@ -9190,7 +9191,7 @@ function App() {
   const pct=totCl?Math.round(donCl/totCl*100):0;
   const filtCl=clients.filter(c=>{
     const m=c.name.toLowerCase().includes(search.toLowerCase());
-    if(tab==="oferte") return c.stadiu==="oferta"&&m;
+    if(tab==="oferte") return c.stadiu==="oferta"&&m&&(ofFilter==="inactive"?!!c.ofInactiv:!c.ofInactiv);
     if(c.stadiu==="oferta") return false;
     if(cliFilter==="finalizate") return c.stadiu==="finalizat"&&m;
     if(c.stadiu==="finalizat") return false;
@@ -9660,7 +9661,11 @@ function App() {
           return <button key={id} onClick={()=>setCliFilter(id==="valori"?"valori":id==="calendar"?"calendar":id==="finalizate"?"finalizate":id==="livrate"?"livrate":"all")} style={{padding:"7px 14px",border:`1px solid ${id===activeCliTab?C.accent:C.border}`,background:id===activeCliTab?C.accentLight:"transparent",color:id===activeCliTab?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:id===activeCliTab?500:400}}>{l}</button>;
         })}
       </div>}
-      {tab==="oferte"&&<div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:14}}>Oferte — potențiali clienți, măsurători și poze</div>}
+      {tab==="oferte"&&<div style={{display:"flex",gap:6,marginBottom:14}}>
+        {[["active","Oferte active",clients.filter(c=>c.stadiu==="oferta"&&!c.ofInactiv).length],["inactive","Oferte inactive",clients.filter(c=>c.stadiu==="oferta"&&c.ofInactiv).length]].map(([id,l,n])=>
+          <button key={id} onClick={()=>setOfFilter(id)} style={{padding:"7px 14px",border:`1px solid ${ofFilter===id?C.accent:C.border}`,background:ofFilter===id?C.accentLight:"transparent",color:ofFilter===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:ofFilter===id?500:400}}>{l} ({n})</button>)}
+      </div>}
+      {tab==="oferte"&&<div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:14}}>{ofFilter==="inactive"?"Oferte inactive — refuzate / în așteptare, nimic nu se șterge":"Oferte active — potențiali clienți care așteaptă răspuns, măsurători și poze"}</div>}
 
       {tab==="clients"&&cliFilter==="calendar"&&(()=>{
         const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
@@ -9823,6 +9828,10 @@ function App() {
                 <input type="checkbox" checked={!!client.alocatDan} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,alocatDan:e.target.checked}))}/>
                 <span style={{fontSize:12,color:C.textSub}}>Dan</span>
               </label>
+              {tab==="oferte"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+                <input type="checkbox" checked={!!client.ofInactiv} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,ofInactiv:e.target.checked?true:undefined,open:false}))}/>
+                <span style={{fontSize:12,color:C.textSub}}>{ofFilter==="inactive"?"Ofertă inactivă (debifează pt. reactivare)":"Ofertă refuzată → inactivă"}</span>
+              </label>}
               {tab==="oferte"&&<label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer",background:"#5C6B65",padding:"4px 10px"}}>
                 <input type="checkbox" checked={false} onChange={()=>{if(window.confirm(`Muți "${client.name}" din Oferte în Clienți?`)) setClients(p=>p.map((c,i)=>i!==ci?c:{...c,stadiu:undefined,open:false}));}}/>
                 <span style={{fontSize:12,color:"#fff",fontWeight:600}}>Mută în clienți</span>
