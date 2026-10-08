@@ -7658,6 +7658,15 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           <input type="date" value={client.dataMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,dataMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
           <span style={{fontSize:12,color:C.textMuted,marginLeft:8}}>Ora:</span>
           <input type="time" lang="ro" value={client.oraMontaj||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oraMontaj:e.target.value}))} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.surface}}/>
+          {client.dataMontaj&&<button onClick={()=>{
+            let tel="";try{tel=localStorage.getItem("kreativo_dan_tel")||"";}catch(e){}
+            if(!tel){const v=window.prompt("Numărul de WhatsApp al lui Dan (ex: 0722123456):","");if(!v) return;tel=v;try{localStorage.setItem("kreativo_dan_tel",tel);}catch(e){}}
+            let n=tel.replace(/[^0-9]/g,"");if(n.startsWith("00")) n=n.slice(2);else if(n.startsWith("0")) n="40"+n.slice(1);
+            const dt=client.dataMontaj.split("-").reverse().join(".");
+            const msg=`Salut Dan! Montaj programat:\n\nClient: ${client.name}\nData: ${dt}${client.oraMontaj?"\nOra: "+client.oraMontaj:""}${client.adresa?"\nAdresa: "+client.adresa:""}${client.telefon?"\nTelefon client: "+client.telefon:""}\n\nKreativo Studio`;
+            window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`,"_blank");
+          }} title="Deschide WhatsApp cu mesajul gata scris" style={{marginLeft:"auto",padding:"6px 12px",border:"1px solid #25D366",background:"transparent",color:"#1a9c4a",cursor:"pointer",fontSize:12,fontWeight:500}}>Trimite pe WhatsApp</button>}
+          {client.dataMontaj&&<button onClick={()=>{let t="";try{t=localStorage.getItem("kreativo_dan_tel")||"";}catch(e){}const v=window.prompt("Număr WhatsApp Dan:",t);if(v!==null){try{localStorage.setItem("kreativo_dan_tel",v);}catch(e){}}}} title="Schimbă numărul lui Dan" style={{padding:"6px 8px",border:`1px solid ${C.border}`,background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:11}}>nr.</button>}
         </div>
         <button onClick={()=>setContactOpen(p=>({...p,[client.id]:!p[client.id]}))} style={{display:"flex",alignItems:"center",gap:8,width:"100%",marginBottom:contactOpen[client.id]?0:14,padding:"9px 14px",background:C.bg,border:`1px solid ${C.border}`,cursor:"pointer",textAlign:"left"}}>
           <span style={{fontSize:11,color:C.textSub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.06em",flex:1}}>Contact</span>
