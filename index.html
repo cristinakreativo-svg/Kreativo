@@ -5168,7 +5168,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
 
   // ===== IMPORT OFERTĂ DIN EXCEL (hotel etc.) =====
   const [impOpen,setImpOpen]=React.useState(false);
-  const [impCfg,setImpCfg]=React.useState({dMat:"Diana",dCul:"10",pMat:"XO",pCul:"7"});
+  const [impCfg,setImpCfg]=React.useState({dMat:"Diana",dCul:"10",pMat:"XO",pCul:"7",doarSina:false,sinaPret:"55"});
   const [impMsg,setImpMsg]=React.useState("");
   const parseazaOfertaExcel=(wb)=>{
     const nr=(v)=>{ if(v==null||v==="") return null; const n=Number(String(v).replace(",",".")); return isNaN(n)?null:n; };
@@ -5258,6 +5258,13 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         });
         const gl=(geamMap[c.nume]&&geamMap[c.nume][c._gk])||[];
         const geamuri=gl.length?gl.map((g,k)=>({id:gid(),nr:k+1,lungime:g.lungime,inaltime:g.inaltime})):[golGeam(1)];
+        if(impCfg.doarSina){
+          // ofertă separată: DOAR șină Coulisse manuală — lungime = suma geamurilor (cm) × 2, transformată în metri; preț pe ml
+          produse.length=0;
+          const totCm=geamuri.reduce((t,g)=>t+(Number(g.lungime)||0),0)*2;
+          if(totCm>0) produse.push({...golProdus(),tip:"sina manuala",material:"Șină Coulisse manuală",cantitate:String(Math.round(totCm)/100),sinaPeMl:true,lungimeSinaManCm:String(totCm),
+            pretSinaManCustom:String(Number(String(impCfg.sinaPret).replace(",","."))||0)});
+        }
         return {id:gid(),numeCamera:nume,nrGeamuri:geamuri.length,geamuri,produse:produse.length?produse:[golProdus()]};
       });
       const goala=(camere.length===1 && !camere[0].numeCamera && camere[0].produse.every(pr=>!pr.tip&&!pr.material&&!pr.cantitate));
@@ -5324,7 +5331,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       if(field==="tip" && val==="sina electrica"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="150"; }
       if(field==="tip" && val==="șină"){ upd.pretMontaj="150"; }
       if(field==="tip" && val==="sina manuala"){ upd.material="Șină Coulisse manuală"; upd.cantitate="1"; }
-      if(esteSinaManuala(upd) && ["tip","lungimeSinaManCm","calaretiWave","consolaPerete"].includes(field)){ upd.pretSinaManCustom=""; }
+      if(esteSinaManuala(upd) && !upd.sinaPeMl && ["tip","lungimeSinaManCm","calaretiWave","consolaPerete"].includes(field)){ upd.pretSinaManCustom=""; }
       if(field==="tip" && esteTipRulou(val)){ if(!String(pr.cantitate||"").trim()) upd.cantitate="1"; }
       if(field==="tip" && val==="pliseu"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; }
       if(field==="tip" && val==="jaluzea"){ if(!pr.cantitate.trim()) upd.cantitate="1"; upd.pretMontaj="75"; if(!pr.lamelaJaluzea) upd.lamelaJaluzea="5"; }
@@ -5507,7 +5514,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       if(esteSinaManuala(pr)){
         const mSina=(Number(pr.lungimeSinaManCm)||0)/100;
         const detaliiSina=[pr.calaretiWave?"călăreți wave":"călăreți normali", pr.consolaPerete?"consolă perete":""].filter(Boolean).join(", ");
-        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">Șină</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Șină Coulisse manuală (${fmtM(mSina)} m) · ${detaliiSina}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pretBucSinaManuala(pr))}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">Șină</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Șină Coulisse manuală (${fmtM(mSina)} m) · ${detaliiSina}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} ${pr.sinaPeMl?"ml":"buc."}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pretBucSinaManuala(pr))}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
       }
       if(esteRulou(pr)){
         const dimR=(pr.latimeRulouCm&&pr.inaltimeRulouCm)?` (${pr.latimeRulouCm}×${pr.inaltimeRulouCm} cm)`:"";
@@ -6243,10 +6250,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             </select>
             <input value="Șină Coulisse manuală" readOnly title="Click ca să alegi alt model de șină (1 canal, 2 canale…)" onFocus={()=>setPickerFor({camId:c.id,prodId:pr.id})} onClick={()=>setPickerFor({camId:c.id,prodId:pr.id})} onBlur={()=>setTimeout(()=>setPickerFor(p=>(p&&p.camId===c.id&&p.prodId===pr.id)?null:p),200)} style={{...selStyle,cursor:"pointer",background:C.bg}}/>
             <input value={pr.lungimeSinaManCm} onChange={e=>updProdus(c.id,pr.id,"lungimeSinaManCm",e.target.value)} placeholder="Lungime (cm)" style={{...selStyle,border:!(Number(pr.lungimeSinaManCm)>0)?`1px solid #B5504A`:selStyle.border}}/>
-            <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder="Nr. buc." style={selStyle}/>
+            <input value={pr.cantitate} onChange={e=>updProdus(c.id,pr.id,"cantitate",e.target.value)} placeholder={pr.sinaPeMl?"Metri (ml)":"Nr. buc."} style={selStyle}/>
             <div style={{display:"flex",alignItems:"center",gap:4}}>
               <input value={areCustomSinaMan(pr)?pr.pretSinaManCustom:String(pretBucCalculatSinaMan(pr))} onChange={e=>updProdus(c.id,pr.id,"pretSinaManCustom",e.target.value)} placeholder="Preț/buc" style={{...selStyle,fontWeight:600,textAlign:"right"}}/>
-              <span style={{fontSize:11,color:C.textMuted,whiteSpace:"nowrap"}}>lei/buc</span>
+              <span style={{fontSize:11,color:C.textMuted,whiteSpace:"nowrap"}}>{pr.sinaPeMl?"lei/ml":"lei/buc"}</span>
             </div>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
@@ -6568,7 +6575,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         <span>Draperie:</span><input value={impCfg.dMat} onChange={e=>setImpCfg({...impCfg,dMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.dCul} onChange={e=>setImpCfg({...impCfg,dCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
         <span style={{marginLeft:10}}>Perdea:</span><input value={impCfg.pMat} onChange={e=>setImpCfg({...impCfg,pMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.pCul} onChange={e=>setImpCfg({...impCfg,pCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
       </div>
-      <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) importaExcelOferta(f); e.target.value="";}} style={{fontSize:12}}/>
+      <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,marginBottom:8,cursor:"pointer"}}><input type="checkbox" checked={!!impCfg.doarSina} onChange={e=>setImpCfg({...impCfg,doarSina:e.target.checked})}/> <b>Doar șină Coulisse manuală</b> (ofertă separată, fără draperie/perdea): lungime = suma geamurilor × 2, la <input value={impCfg.sinaPret} onChange={e=>setImpCfg({...impCfg,sinaPret:e.target.value})} style={{width:50,padding:4}}/> lei/ml</label>
+            <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) importaExcelOferta(f); e.target.value="";}} style={{fontSize:12}}/>
       {impMsg&&<div style={{color:"#b00020",fontSize:12,marginTop:6}}>{impMsg}</div>}
     </div>}
 
