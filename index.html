@@ -5261,7 +5261,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         return {id:gid(),numeCamera:nume,nrGeamuri:geamuri.length,geamuri,produse:produse.length?produse:[golProdus()]};
       });
       const goala=(camere.length===1 && !camere[0].numeCamera && camere[0].produse.every(pr=>!pr.tip&&!pr.material&&!pr.cantitate));
-      setCamere(p=>goala?cameraNoi:[...p,...cameraNoi]);
+      let inlocuieste=goala;
+      if(!goala) inlocuieste=window.confirm("Formularul are deja "+camere.length+" camere.\n\nOK = ȘTERG camerele existente și pun doar cele importate ("+cameraNoi.length+").\nAnulează = ADAUG camerele importate peste cele existente.");
+      setCamere(p=>inlocuieste?cameraNoi:[...p,...cameraNoi]);
       setImpOpen(false);
       setImpMsg("");
       alert("Am importat "+cameraNoi.length+" camere, cu geamuri."+(mesaje.length?"\nRedenumit: "+mesaje.join("; ")+" (după foaia cu geamuri)":"")+"\nVerifică prețurile și materialele, apoi salvează oferta.");
