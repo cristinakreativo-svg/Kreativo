@@ -5168,7 +5168,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
 
   // ===== IMPORT OFERTĂ DIN EXCEL (hotel etc.) =====
   const [impOpen,setImpOpen]=React.useState(false);
-  const [impCfg,setImpCfg]=React.useState({dMat:"Diana",dCul:"10",pMat:"XO",pCul:"7"});
+  const [impCfg,setImpCfg]=React.useState({dMat:"Diana",dCul:"10",pMat:"XO",pCul:"7",sina:false,sinaPret:"55"});
   const [impMsg,setImpMsg]=React.useState("");
   const parseazaOfertaExcel=(wb)=>{
     const nr=(v)=>{ if(v==null||v==="") return null; const n=Number(String(v).replace(",",".")); return isNaN(n)?null:n; };
@@ -5258,6 +5258,11 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         });
         const gl=(geamMap[c.nume]&&geamMap[c.nume][c._gk])||[];
         const geamuri=gl.length?gl.map((g,k)=>({id:gid(),nr:k+1,lungime:g.lungime,inaltime:g.inaltime})):[golGeam(1)];
+        if(impCfg.sina){
+          const totCm=geamuri.reduce((t,g)=>t+(Number(g.lungime)||0),0)*2;
+          if(totCm>0) produse.push({...golProdus(),tip:"sina manuala",material:"Șină Coulisse manuală",cantitate:"1",lungimeSinaManCm:String(totCm),
+            pretSinaManCustom:String(Math.round(totCm/100*(Number(String(impCfg.sinaPret).replace(",","."))||0)))});
+        }
         return {id:gid(),numeCamera:nume,nrGeamuri:geamuri.length,geamuri,produse:produse.length?produse:[golProdus()]};
       });
       const goala=(camere.length===1 && !camere[0].numeCamera && camere[0].produse.every(pr=>!pr.tip&&!pr.material&&!pr.cantitate));
@@ -6566,7 +6571,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         <span>Draperie:</span><input value={impCfg.dMat} onChange={e=>setImpCfg({...impCfg,dMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.dCul} onChange={e=>setImpCfg({...impCfg,dCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
         <span style={{marginLeft:10}}>Perdea:</span><input value={impCfg.pMat} onChange={e=>setImpCfg({...impCfg,pMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.pCul} onChange={e=>setImpCfg({...impCfg,pCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
       </div>
-      <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) importaExcelOferta(f); e.target.value="";}} style={{fontSize:12}}/>
+      <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,marginBottom:8,cursor:"pointer"}}><input type="checkbox" checked={!!impCfg.sina} onChange={e=>setImpCfg({...impCfg,sina:e.target.checked})}/> Adaugă și <b>șină Coulisse manuală</b> la fiecare cameră (lungime = suma geamurilor × 2) la <input value={impCfg.sinaPret} onChange={e=>setImpCfg({...impCfg,sinaPret:e.target.value})} style={{width:50,padding:4}}/> lei/ml</label>
+            <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) importaExcelOferta(f); e.target.value="";}} style={{fontSize:12}}/>
       {impMsg&&<div style={{color:"#b00020",fontSize:12,marginTop:6}}>{impMsg}</div>}
     </div>}
 
