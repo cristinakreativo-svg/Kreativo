@@ -5165,6 +5165,108 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const golGeam=(nr)=>({id:gid(), nr, lungime:"", inaltime:""});
   const golProdus=()=>({id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:"", lungimeSinaManCm:"", calaretiWave:false, consolaPerete:false, pretSinaManCustom:""});
   const addCamera=()=>setCamere(p=>[...p,{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+
+  // ===== IMPORT OFERTĂ DIN EXCEL (hotel etc.) =====
+  const [impOpen,setImpOpen]=React.useState(false);
+  const [impCfg,setImpCfg]=React.useState({dMat:"Diana",dCul:"10",pMat:"XO",pCul:"7"});
+  const [impMsg,setImpMsg]=React.useState("");
+  const parseazaOfertaExcel=(wb)=>{
+    const nr=(v)=>{ if(v==null||v==="") return null; const n=Number(String(v).replace(",",".")); return isNaN(n)?null:n; };
+    let best=null;
+    wb.SheetNames.forEach(sn=>{
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:true});
+      const camere=[]; let cur=null;
+      rows.forEach(r=>{
+        const cells=r.map(x=>x==null?"":String(x).trim());
+        const iU=cells.findIndex(x=>x.toLowerCase()==="u.m");
+        if(iU>0 && cells[iU-1]){ cur={nume:cells[iU-1],lin:{}}; camere.push(cur); return; }
+        const nrRon=cells.filter(x=>x.toLowerCase()==="ron").length;
+        const prim=cells.findIndex(x=>x!=="");
+        if(nrRon>=2 && prim>=0 && cells[prim].toLowerCase()!=="ron" && !/^(draperie|perdea|banda|cusut|total)/i.test(cells[prim])){ cur={nume:cells[prim],lin:{}}; camere.push(cur); return; }
+        const iD=cells.findIndex(x=>/^(draperie|perdea)/i.test(x));
+        if(cur && iD>=0){
+          const nm=cells[iD].toLowerCase();
+          const key=nm.startsWith("draperie")?"draperie":"perdea";
+          if(!cur.lin[key]) cur.lin[key]={cant:nr(r[iD+2]),pret:nr(r[iD+3]),banda:null,cusut:null,pb:null,pc:null,last:key};
+          cur.last=key; return;
+        }
+        const iB=cells.findIndex(x=>/^banda/i.test(x));
+        const iC=cells.findIndex(x=>/^cusut/i.test(x));
+        if(cur && cur.last && cur.lin[cur.last]){
+          const l=cur.lin[cur.last];
+          if(iB>=0 && l.banda==null){ l.banda=nr(r[iB+2]); l.pb=nr(r[iB+3]); }
+          if(iC>=0 && l.cusut==null){ l.cusut=nr(r[iC+2]); l.pc=nr(r[iC+3]); }
+        }
+      });
+      const bune=camere.filter(c=>Object.keys(c.lin).length);
+      if(bune.length && (!best || bune.length>best.length)) best=bune;
+    });
+    return best||[];
+  };
+  const parseazaGeamuriExcel=(wb)=>{
+    // Caută foaia cu coloanele "Lungime sina" și "H": returnează {cod:[ [ {lungime,inaltime}... ] ... ]} în ordinea apariției
+    const nr=(v)=>{ if(v==null||v==="") return null; const n=Number(String(v).replace(",",".")); return isNaN(n)?null:n; };
+    const out={};
+    for(const sn of wb.SheetNames){
+      const wsx=wb.Sheets[sn]; const rg=XLSX.utils.decode_range(wsx["!ref"]||"A1:A1"); rg.s.c=0; rg.s.r=0;
+      const rows=XLSX.utils.sheet_to_json(wsx,{header:1,defval:null,raw:true,range:rg});
+      let hr=-1,cL=-1,cH=-1;
+      rows.forEach((r,i)=>{ if(hr>=0) return; const t=r.map(x=>x==null?"":String(x).trim().toLowerCase()); const l=t.findIndex(x=>x.startsWith("lungime")); const h=t.findIndex(x=>x==="h"); if(l>=0&&h>=0){ hr=i;cL=l;cH=h; } });
+      if(hr<0) continue;
+      let cur=null;
+      rows.slice(hr+1).forEach(r=>{
+        const cod=r[2]!=null&&String(r[2]).trim()!==""?String(r[2]).trim():"";
+        const L=nr(r[cL]), H=nr(r[cH]);
+        const esteGeam=L>0&&H>0;
+        if(esteGeam){
+          if(cod){ cur=[]; (out[cod]=out[cod]||[]).push(cur); }
+          if(cur) cur.push({lungime:String(Math.round(L*100)),inaltime:String(Math.round(H*100))});
+        } else if(!cod && cur && /\?/.test(String(r[3]==null?"":r[3]))){
+          cur.push({lungime:"0",inaltime:"0"}); // geam nerezolvat în Excel ("3???") → rămâne 0 × 0 ca reminder
+        } else if(cod){ cur=null; }
+      });
+      if(Object.keys(out).length) break;
+    }
+    return out;
+  };
+  const importaExcelOferta=async(file)=>{
+    setImpMsg("");
+    try{
+      if(typeof XLSX==="undefined") throw new Error("Modulul Excel nu s-a încărcat (verifică internetul).");
+      const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
+      const lista=parseazaOfertaExcel(wb);
+      const geamMap=parseazaGeamuriExcel(wb); const geamIdx={};
+      if(!lista.length) throw new Error("Nu am găsit camere cu Draperie/Perdea în fișier.");
+      const folosite={};
+      // cameră duplicată în ofertă fără corespondent în foaia de geamuri → ia codul rămas nefolosit din foaia de geamuri
+      const cntO={}, folosCod={}; const mesaje=[];
+      lista.forEach(c=>{ const k=cntO[c.nume]=(cntO[c.nume]||0); cntO[c.nume]++; c._gk=k; c._ok=!!(geamMap[c.nume]&&geamMap[c.nume][k]); if(c._ok) folosCod[c.nume]=true; });
+      const nefolosite=Object.keys(geamMap).filter(k=>!folosCod[k]);
+      lista.forEach(c=>{ if(!c._ok && nefolosite.length){ const nou=nefolosite.shift(); mesaje.push(c.nume+" (duplicat în ofertă) → "+nou); c.nume=nou; c._gk=0; } });
+      const cameraNoi=lista.map(c=>{
+        let nume=c.nume; folosite[nume]=(folosite[nume]||0)+1; if(folosite[nume]>1) nume=nume+" ("+folosite[nume]+")";
+        const produse=[];
+        [["draperie",impCfg.dMat,impCfg.dCul],["perdea",impCfg.pMat,impCfg.pCul]].forEach(([k,mat,cul])=>{
+          const l=c.lin[k]; if(!l) return;
+          const cat=catalogMateriale.find(m=>String(m.design).toLowerCase()===String(mat).trim().toLowerCase()&&String(m.culoare).trim()===String(cul).trim());
+          const q=l.cant==null?"":String(l.cant);
+          produse.push({...golProdus(),tip:k,material:mat.trim(),culoare:String(cul).trim(),furnizor:cat?(cat.furnizor||""):"",
+            cantitate:q,pretUnitar:l.pret!=null?String(l.pret):(cat?String(cat.pretLei):""),
+            pretBanda:l.pb!=null?String(l.pb):"25",pretManopera:l.pc!=null?String(l.pc):"25",
+            cantitateBanda:l.banda!=null?String(l.banda):q,cantitateManopera:l.cusut!=null?String(l.cusut):q,
+            cantitateBandaCustom:true,cantitateManoperaCustom:true});
+        });
+        const gl=(geamMap[c.nume]&&geamMap[c.nume][c._gk])||[];
+        const geamuri=gl.length?gl.map((g,k)=>({id:gid(),nr:k+1,lungime:g.lungime,inaltime:g.inaltime})):[golGeam(1)];
+        return {id:gid(),numeCamera:nume,nrGeamuri:geamuri.length,geamuri,produse:produse.length?produse:[golProdus()]};
+      });
+      const goala=(camere.length===1 && !camere[0].numeCamera && camere[0].produse.every(pr=>!pr.tip&&!pr.material&&!pr.cantitate));
+      setCamere(p=>goala?cameraNoi:[...p,...cameraNoi]);
+      setImpOpen(false);
+      setImpMsg("");
+      alert("Am importat "+cameraNoi.length+" camere, cu geamuri."+(mesaje.length?"\nRedenumit: "+mesaje.join("; ")+" (după foaia cu geamuri)":"")+"\nVerifică prețurile și materialele, apoi salvează oferta.");
+    }catch(e){ setImpMsg("Eroare: "+(e&&e.message||e)); }
+  };
   const duplicaCamera=(camId)=>{
     const cam=camere.find(c=>c.id===camId);
     if(!cam) return;
@@ -6456,7 +6558,17 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         </div>
       </div>
     )}
-    <button onClick={addCamera} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:16}}>+ adaugă cameră</button>
+    <button onClick={addCamera} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:16,marginRight:8}}>+ adaugă cameră</button>
+    <button onClick={()=>setImpOpen(v=>!v)} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.bg,color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",marginBottom:16}}>📥 importă din Excel</button>
+    {impOpen&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:16,background:C.bg}}>
+      <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>Import ofertă din Excel (oferta din foaia cu prețuri, geamurile din foaia cu „Lungime sina" și „H")</div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:8,fontSize:12}}>
+        <span>Draperie:</span><input value={impCfg.dMat} onChange={e=>setImpCfg({...impCfg,dMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.dCul} onChange={e=>setImpCfg({...impCfg,dCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
+        <span style={{marginLeft:10}}>Perdea:</span><input value={impCfg.pMat} onChange={e=>setImpCfg({...impCfg,pMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.pCul} onChange={e=>setImpCfg({...impCfg,pCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
+      </div>
+      <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) importaExcelOferta(f); e.target.value="";}} style={{fontSize:12}}/>
+      {impMsg&&<div style={{color:"#b00020",fontSize:12,marginTop:6}}>{impMsg}</div>}
+    </div>}
 
     <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:"10px 14px",marginBottom:12}}>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:8}}>Discount (opțional) — apare ca ultimă rubrică pe ofertă, înainte de total</div>
