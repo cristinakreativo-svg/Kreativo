@@ -9401,6 +9401,17 @@ function App() {
   };
 
   const calItems=buildCal();
+  // Ordine manuală (după importanță) pentru listele din Focus — se salvează în „mit", păstrată între zile
+  const ordMap=(mit&&mit.ord)||{};
+  const ordSort=(arr,fallback)=>arr.slice().sort((x,y)=>{const rx=ordMap[x.id],ry=ordMap[y.id];if(rx!==undefined&&ry!==undefined)return rx-ry;if(rx!==undefined)return -1;if(ry!==undefined)return 1;return fallback(x,y);});
+  const ordMove=(list,i,dir)=>{const j=i+dir;if(j<0||j>=list.length)return;const ids=list.map(x=>x.id);const t=ids[i];ids[i]=ids[j];ids[j]=t;setMit(p=>{const ord={...(p.ord||{})};ids.forEach((id,k)=>{ord[id]=k;});return {...p,ord};});};
+  const rowOrd=(list,i,item)=><div key={item.id||i} style={{display:"flex",alignItems:"stretch",gap:6}}>
+    <div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:2,marginBottom:6}}>
+      <button title="Mai important (sus)" disabled={i===0} onClick={()=>ordMove(list,i,-1)} style={{fontSize:10,lineHeight:1,padding:"3px 6px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:i===0?"default":"pointer",opacity:i===0?0.3:1}}>▲</button>
+      <button title="Mai puțin important (jos)" disabled={i===list.length-1} onClick={()=>ordMove(list,i,1)} style={{fontSize:10,lineHeight:1,padding:"3px 6px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:i===list.length-1?"default":"pointer",opacity:i===list.length-1?0.3:1}}>▼</button>
+    </div>
+    <div style={{flex:1,minWidth:0}}><CalItem item={item} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/></div>
+  </div>;
   const t3=top3();const del=delegated();
   const todayItems=calItems.filter(i=>isToday(i.date));
   const ovd=data.tasks.filter(t=>isOvd(t.deadline,t.done));
@@ -9557,7 +9568,21 @@ function App() {
 
     {tab==="focus"&&<div>
 
-      {/* ALERTĂ UNIFICATĂ */}
+      {/* DEPĂȘITE — acționabile */}
+      {(()=>{
+        const azi=tday();
+        const dep=ordSort(calItems.filter(i=>i.date<azi&&!i.isRecurent&&!i.isMontaj),(x,y)=>x.date<y.date?-1:x.date>y.date?1:(x.title||"").localeCompare(y.title||"","ro"));
+        if(dep.length===0) return null;
+        return <div style={{...card,marginBottom:12,border:`1px solid ${C.danger}`}}>
+          <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Depășite ({dep.length}) — bifează sau mută</div>
+          {dep.map((item,i)=><div key={item.id||i}>
+            <div style={{fontSize:10,color:C.textMuted,margin:"2px 0 2px 34px"}}>{fmtD(item.date)}</div>
+            {rowOrd(dep,i,item)}
+          </div>)}
+        </div>;
+      })()}
+
+      {/* ALERTE (bilete / cash) */}
       {(()=>{
         const alerte=[];
         // Bilete scadente ≤ 7 zile
@@ -9568,31 +9593,9 @@ function App() {
         bilete.filter(b=>!b.achitat&&b.scadenta&&b.scadenta<tday()).forEach(b=>
           alerte.push({tip:"Bilet",text:`#${b.numar} · ${b.furnizor} · ${Number(b.valoare).toLocaleString("ro-RO")} RON`,urgenta:"rosie",info:"Depășit"})
         );
-        // Clienți cu termene depășite
-        clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{
-          const d=(c.dates||[])[ti];
-          if(d&&d<tday()&&!(c.done||[])[ti])
-            alerte.push({tip:"Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"rosie",info:"Depășit"});
-        }));
-        // Termene depășite admin
-        ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).filter(t=>!t.done&&t.deadline&&t.deadline<tday()).forEach(t=>
-          alerte.push({tip:`${s.charAt(0).toUpperCase()+s.slice(1)}`,text:t.title,urgenta:"rosie",info:"Depășit"})
-        ));
-        // Termene apropiate clienți (2 zile)
-        clients.forEach(c=>(c.tasks||[]).forEach((task,ti)=>{
-          const d=(c.dates||[])[ti];
-          const notif=(c.notifs||[])[ti];
-          if(d&&!(c.done||[])[ti]&&daysTo(d)<=2&&daysTo(d)>=0)
-            alerte.push({tip:"Client",text:`${c.name} · ${typeof task==="object"?task.title:task}`,urgenta:"galbena",info:daysTo(d)===0?"Azi":daysTo(d)===1?"Mâine":`În ${daysTo(d)} zile`});
-        }));
         // Sold negativ previzionat
         const soldAziCalc=(()=>{let s=trezorerie.soldInitial||0;const az=tday();(trezorerie.inregistrari||[]).filter(x=>x.data<=az).forEach(x=>{if(x.tip==="incasare")s+=x.suma;else s-=x.suma;});return s;})();
         if(soldAziCalc<0) alerte.push({tip:"Cash",text:`Sold negativ: ${soldAziCalc.toLocaleString("ro-RO")} RON`,urgenta:"rosie",info:"Azi"});
-        // Termene depășite tasks principale
-        data.tasks.filter(t=>isOvd(t.deadline,t.done)).forEach(t=>
-          alerte.push({tip:"Task",text:t.title,urgenta:"rosie",info:"Depășit"})
-        );
-
         if(alerte.length===0) return null;
         const rosii=alerte.filter(a=>a.urgenta==="rosie");
         const galbene=alerte.filter(a=>a.urgenta==="galbena");
@@ -9622,8 +9625,8 @@ function App() {
         {(()=>{
           const azi=tday();
           const m=mit.date===azi?mit:{tasks:["","",""],done:[false,false,false],date:azi};
-          const updTask=(i,val)=>setMit(p=>{const t=p.date===azi?p:{tasks:["","",""],done:[false,false,false],date:azi};const tasks=[...t.tasks];tasks[i]=val;return {...t,tasks,date:azi};});
-          const toggleDone=(i)=>setMit(p=>{const t=p.date===azi?p:{tasks:["","",""],done:[false,false,false],date:azi};const done=[...t.done];const wasDone=done[i];done[i]=!done[i];if(!wasDone&&t.tasks[i]&&t.tasks[i].trim())addJurnal(t.tasks[i],"Obiectiv");return {...t,done,date:azi};});
+          const updTask=(i,val)=>setMit(p=>{const t=p.date===azi?p:{tasks:["","",""],done:[false,false,false],date:azi,ord:p.ord};const tasks=[...t.tasks];tasks[i]=val;return {...t,tasks,date:azi};});
+          const toggleDone=(i)=>setMit(p=>{const t=p.date===azi?p:{tasks:["","",""],done:[false,false,false],date:azi,ord:p.ord};const done=[...t.done];const wasDone=done[i];done[i]=!done[i];if(!wasDone&&t.tasks[i]&&t.tasks[i].trim())addJurnal(t.tasks[i],"Obiectiv");return {...t,done,date:azi};});
           return <div>
             {[0,1,2].map(i=>
               <div key={i} style={{...row,marginBottom:8}}>
@@ -9639,25 +9642,25 @@ function App() {
       {/* AZI ÎN CALENDAR - toate sursele, identic cu Calendar, dar doar azi */}
       {(()=>{
         const azi=tday();
-        const azItems=calItems.filter(i=>i.date===azi).sort((a,b)=>(a.title||"").localeCompare(b.title||"","ro"));
+        const azItems=ordSort(calItems.filter(i=>i.date===azi),(a,b)=>(a.title||"").localeCompare(b.title||"","ro"));
         if(azItems.length===0) return null;
         return <div style={{...card,marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:600,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Azi · {fmtD(azi)} ({azItems.length})</div>
-          {azItems.map((item,i)=><CalItem key={item.id||i} item={item} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/>)}
+          {azItems.map((item,i)=>rowOrd(azItems,i,item))}
         </div>;
       })()}
 
-      {/* Următoarele zile (7 zile) */}
+      {/* Următoarele zile (14 zile) */}
       {(()=>{
         const azi=tday();
-        const urm=calItems.filter(i=>i.date>azi&&daysTo(i.date)!==null&&daysTo(i.date)<=7);
+        const urm=calItems.filter(i=>i.date>azi&&daysTo(i.date)!==null&&daysTo(i.date)<=14);
         if(urm.length===0) return null;
         const g={};urm.forEach(i=>{(g[i.date]=g[i.date]||[]).push(i);});
         return <div style={{...card,marginBottom:12}}>
           <div style={{fontSize:11,fontWeight:600,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Următoarele zile ({urm.length})</div>
           {Object.keys(g).sort().map(d=><div key={d} style={{marginBottom:8}}>
             <div style={{fontSize:12,fontWeight:500,color:C.text,marginBottom:6}}>{fmtD(d)}</div>
-            {g[d].slice().sort((x,y)=>{if(x.time&&!y.time)return -1;if(!x.time&&y.time)return 1;return (x.time||"")<(y.time||"")?-1:(x.title||"").localeCompare(y.title||"","ro");}).map((item,i)=><CalItem key={item.id||i} item={item} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/>)}
+            {(()=>{const lst=ordSort(g[d],(x,y)=>{if(x.time&&!y.time)return -1;if(!x.time&&y.time)return 1;return (x.time||"")<(y.time||"")?-1:(x.title||"").localeCompare(y.title||"","ro");});return lst.map((item,i)=>rowOrd(lst,i,item));})()}
           </div>)}
         </div>;
       })()}
