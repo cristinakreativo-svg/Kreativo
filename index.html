@@ -2216,8 +2216,8 @@ function CalItem({item,onComplete,onReschedule}) {
   const [ed,setEd]=useState(false);
   const [nd,setNd]=useState("");
   const [nt,setNt]=useState(null);
-  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.surface,border:`1px solid ${item.isRecurent?"#D4B88A":C.border}`,marginBottom:6}}>
-    <input type="checkbox" checked={false} onChange={onComplete} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
+  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:item.isMontaj?"#FBEFE6":C.surface,border:`1px solid ${item.isMontaj?"#C2703D":item.isRecurent?"#D4B88A":C.border}`,borderLeft:item.isMontaj?"5px solid #C2703D":undefined,marginBottom:6}}>
+    {item.isMontaj?<span title="Montaj" style={{width:15,textAlign:"center",fontSize:13,flexShrink:0}}>🔧</span>:<input type="checkbox" checked={false} onChange={onComplete} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>}
     <div style={{flex:1}}>
       <div style={{fontSize:13,color:C.text}}>{item.title}</div>
       <div style={{fontSize:11,color:C.textMuted}}>{item.source}{item.loc?` · ${item.loc}`:""}{item.time?` · ${item.time}`:""}</div>
@@ -2226,9 +2226,9 @@ function CalItem({item,onComplete,onReschedule}) {
       <div style={{display:"flex",gap:4,alignItems:"center"}}>
         <input type="date" autoFocus defaultValue={item.date} onChange={e=>setNd(e.target.value)}
           style={{fontSize:12,border:`1px solid ${C.accent}`,padding:"3px 7px",background:C.surface,color:C.accent,outline:"none"}}/>
-        {item.source==="Program"&&<Ora24 value={item.time||""} onChange={v=>setNt(v)}
+        {(item.source==="Program"||item.isMontaj)&&<Ora24 value={item.time||""} onChange={v=>setNt(v)}
           style={{fontSize:12,border:`1px solid ${C.accent}`,background:C.surface,color:C.accent,outline:"none"}}/>}
-        <button onClick={()=>{onReschedule(nd||item.date,item.source==="Program"?(nt!==null?nt:item.time):undefined);setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",cursor:"pointer"}}>✓</button>
+        <button onClick={()=>{onReschedule(nd||item.date,(item.source==="Program"||item.isMontaj)?(nt!==null?nt:item.time):undefined);setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",cursor:"pointer"}}>✓</button>
         <button onClick={()=>{setEd(false);setNd("");setNt(null);}} style={{fontSize:11,padding:"4px 8px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",color:C.textSub}}>✕</button>
       </div>:
       <button onClick={()=>setEd(true)} style={{fontSize:11,color:C.textMuted,border:`1px solid ${C.border}`,padding:"3px 8px",background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Mută</button>
@@ -5168,7 +5168,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
 
   // ===== IMPORT OFERTĂ DIN EXCEL (hotel etc.) =====
   const [impOpen,setImpOpen]=React.useState(false);
-  const [impCfg,setImpCfg]=React.useState({dMat:"Diana",dCul:"10",pMat:"XO",pCul:"7",doarSina:false,sinaPret:"55"});
+  const [impCfg,setImpCfg]=React.useState({dMat:"Diana",dCul:"10",pMat:"XO",pCul:"7",doarSina:false,sinaPret:"65",montajPret:"35"});
   const [impMsg,setImpMsg]=React.useState("");
   const parseazaOfertaExcel=(wb)=>{
     const nr=(v)=>{ if(v==null||v==="") return null; const n=Number(String(v).replace(",",".")); return isNaN(n)?null:n; };
@@ -5264,6 +5264,9 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           const totCm=geamuri.reduce((t,g)=>t+(Number(g.lungime)||0),0)*2;
           if(totCm>0) produse.push({...golProdus(),tip:"sina manuala",material:"Șină Coulisse manuală",cantitate:String(Math.round(totCm)/100),sinaPeMl:true,lungimeSinaManCm:String(totCm),
             pretSinaManCustom:String(Number(String(impCfg.sinaPret).replace(",","."))||0)});
+          // rubrică separată de montaj, pe fiecare cameră: același număr de ml × preț montaj/ml
+          const pm=Number(String(impCfg.montajPret).replace(",","."))||0;
+          if(totCm>0 && pm>0) produse.push({...golProdus(),tip:"altele",material:"Montaj șină Coulisse manuală (ml)",cantitate:String(Math.round(totCm)/100),pretUnitar:String(pm)});
         }
         return {id:gid(),numeCamera:nume,nrGeamuri:geamuri.length,geamuri,produse:produse.length?produse:[golProdus()]};
       });
@@ -6575,7 +6578,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
         <span>Draperie:</span><input value={impCfg.dMat} onChange={e=>setImpCfg({...impCfg,dMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.dCul} onChange={e=>setImpCfg({...impCfg,dCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
         <span style={{marginLeft:10}}>Perdea:</span><input value={impCfg.pMat} onChange={e=>setImpCfg({...impCfg,pMat:e.target.value})} placeholder="material" style={{width:100,padding:5}}/><input value={impCfg.pCul} onChange={e=>setImpCfg({...impCfg,pCul:e.target.value})} placeholder="culoare" style={{width:60,padding:5}}/>
       </div>
-      <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,marginBottom:8,cursor:"pointer"}}><input type="checkbox" checked={!!impCfg.doarSina} onChange={e=>setImpCfg({...impCfg,doarSina:e.target.checked})}/> <b>Doar șină Coulisse manuală</b> (ofertă separată, fără draperie/perdea): lungime = suma geamurilor × 2, la <input value={impCfg.sinaPret} onChange={e=>setImpCfg({...impCfg,sinaPret:e.target.value})} style={{width:50,padding:4}}/> lei/ml</label>
+      <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,marginBottom:8,cursor:"pointer"}}><input type="checkbox" checked={!!impCfg.doarSina} onChange={e=>setImpCfg({...impCfg,doarSina:e.target.checked})}/> <b>Doar șină Coulisse manuală</b> (ofertă separată, fără draperie/perdea): lungime = suma geamurilor × 2, la <input value={impCfg.sinaPret} onChange={e=>setImpCfg({...impCfg,sinaPret:e.target.value})} style={{width:50,padding:4}}/> lei/ml, montaj <input value={impCfg.montajPret} onChange={e=>setImpCfg({...impCfg,montajPret:e.target.value})} style={{width:50,padding:4}}/> lei/ml (rubrică separată; 0 = fără montaj)</label>
             <input type="file" accept=".xlsx,.xls" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) importaExcelOferta(f); e.target.value="";}} style={{fontSize:12}}/>
       {impMsg&&<div style={{color:"#b00020",fontSize:12,marginTop:6}}>{impMsg}</div>}
     </div>}
@@ -9212,12 +9215,14 @@ function App() {
     ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.title,source:s.charAt(0).toUpperCase()+s.slice(1),id:t.id});}));
     data.tasks.filter(t=>!t.done&&t.deadline).forEach(t=>items.push({date:t.deadline,time:"",title:t.title,source:t.cat,id:t.id}));
     perdele.forEach((e,ei)=>e.taskuri.forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.text.slice(0,50),source:"Perdele",id:t.id,ei});}));
+    clients.forEach(c=>{ if(c.dataMontaj && c.stadiu!=="finalizat") items.push({date:c.dataMontaj,time:c.oraMontaj||"",title:`Montaj · ${c.name}`,source:"Montaj",isMontaj:true,clientId:c.id,loc:c.adresa||"",id:`mont-${c.id}`}); });
     recurente.forEach(r=>{const nd=nxtRecur(r);if(nd)items.push({date:nd,time:"",title:`${r.title} (recurent)`,source:"Recurent",id:r.id,isRecurent:true});});
     (trezorerie.inregistrari||[]).filter(x=>x.tip==="plata"&&x.data>=tday()).forEach(x=>items.push({date:x.data,time:"",title:`Plată · ${x.descriere||"—"} · ${Number(x.suma).toLocaleString("ro-RO")} RON`,source:"Cash Flow",id:x.id}));
     return items.sort((a,b)=>a.date>b.date?1:-1);
   }
 
   const compCal=(item)=>{
+    if(item.isMontaj) return;
     if(item.isRecurent){doneRec(item.id);return;}
     if(item.source==="Program") delEv(item.eventId);
     else if(item.source==="Client"){const ci=clients.findIndex(c=>c.name===item.clientName);if(ci!==-1)togCli(ci,item.ti);}
@@ -9227,6 +9232,7 @@ function App() {
     else if(data.tasks.find(t=>t.id===item.id)) togTask(item.id);
   };
   const reschedCal=(item,nd,ntime)=>{
+    if(item.isMontaj){ setClients(p=>p.map(c=>c.id!==item.clientId?c:{...c,dataMontaj:nd,...(ntime!==undefined?{oraMontaj:ntime}:{})})); return; }
     if(item.source==="Program") setData(d=>({...d,events:d.events.map(e=>e.id===item.eventId?{...e,date:nd,...(ntime!==undefined?{time:ntime}:{})}:e).sort((a,b)=>(a.date+a.time)>(b.date+b.time)?1:-1)}));
     else if(item.source==="Client"){const ci=clients.findIndex(c=>c.name===item.clientName);if(ci!==-1)updCliDate(ci,item.ti,nd);}
     else if(item.source==="Personal"){const pi=proiecte.findIndex(p=>p.name===item.proiectName);if(pi!==-1)updPrDate(pi,item.ti,nd);}
@@ -9794,8 +9800,8 @@ function App() {
         const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
         const todayKey=tday();
         const byDay={};
-        calItems.filter(i=>i.time).forEach(i=>(byDay[i.date]=byDay[i.date]||[]).push(i));
-        Object.values(byDay).forEach(arr=>arr.sort((a,b)=>a.time<b.time?-1:1));
+        calItems.filter(i=>i.time||i.isMontaj).forEach(i=>(byDay[i.date]=byDay[i.date]||[]).push(i));
+        Object.values(byDay).forEach(arr=>arr.sort((a,b)=>(a.time||"")<(b.time||"")?-1:1));
         return <div style={{marginBottom:24}}>
           <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:10}}>Programări cu oră · dintr-o privire</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
@@ -9803,6 +9809,7 @@ function App() {
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[calGridMonth.m]} {calGridMonth.y}</div>
             <button onClick={()=>setCalGridMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
           </div>
+          <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:10,color:C.textMuted,marginBottom:8}}><span><span style={{display:"inline-block",width:10,height:10,background:"#5C6B65",marginRight:5}}/>programări</span><span><span style={{display:"inline-block",width:10,height:10,background:"#C2703D",marginRight:5}}/>🔧 montaje (Dan)</span></div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:4}}>
             {ZILE_SCURT.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}
           </div>
@@ -9819,11 +9826,12 @@ function App() {
                 const dow=new Date(calGridMonth.y,calGridMonth.m,day).getDay();
                 const isWeekend=dow===0||dow===6;
                 const items=byDay[key]||[];
-                let bg=items.length?"#5C6B65":C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
-                if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
+                const doarMontaj=items.length>0&&items.every(it=>it.isMontaj);
+                let bg=items.length?(doarMontaj?"#C2703D":"#5C6B65"):C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
+                if(isWeekend&&!items.length){bg="#DDD6C8";textCol="#A89E8C";}
                 cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
                   <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
-                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.time} {it.title}</div>)}
+                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",...(it.isMontaj&&!doarMontaj?{background:"#C2703D",padding:"1px 3px",marginTop:1}:{})}}>{it.isMontaj?"🔧 ":""}{it.time} {it.title}</div>)}
                 </div>);
               }
               return cells;
