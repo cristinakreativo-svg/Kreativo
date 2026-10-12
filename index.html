@@ -2216,11 +2216,11 @@ function CalItem({item,onComplete,onReschedule}) {
   const [ed,setEd]=useState(false);
   const [nd,setNd]=useState("");
   const [nt,setNt]=useState(null);
-  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:item.isMontaj?"#F2EDF7":C.surface,border:`1px solid ${item.isMontaj?"#8E75A8":item.isRecurent?"#D4B88A":C.border}`,borderLeft:item.isMontaj?"5px solid #8E75A8":undefined,marginBottom:6}}>
+  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:item.isMontaj?"#F2EDF7":item.isDan?"#EAF0F6":C.surface,border:`1px solid ${item.isMontaj?"#8E75A8":item.isDan?"#5B7FA0":item.isRecurent?"#D4B88A":C.border}`,borderLeft:item.isMontaj?"5px solid #8E75A8":item.isDan?"5px solid #5B7FA0":undefined,marginBottom:6}}>
     {item.isMontaj?<span title="Montaj" style={{width:15,textAlign:"center",fontSize:13,flexShrink:0}}>🔧</span>:<input type="checkbox" checked={false} onChange={onComplete} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>}
     <div style={{flex:1}}>
       <div style={{fontSize:13,color:C.text}}>{item.title}</div>
-      <div style={{fontSize:11,color:C.textMuted}}>{item.source}{item.loc?` · ${item.loc}`:""}{item.time?` · ${item.time}`:""}</div>
+      <div style={{fontSize:11,color:C.textMuted}}>{item.isDan?"Sarcină Dan":item.source}{item.loc?` · ${item.loc}`:""}{item.time?` · ${item.time}`:""}</div>
     </div>
     {!item.isRecurent&&(ed?
       <div style={{display:"flex",gap:4,alignItems:"center"}}>
@@ -7884,7 +7884,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente,catalogSinaSimpla,catalogStorRomanElectric}){
+function TabDan({danEvents,onAddDanTask,onDelDanTask,clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente,catalogSinaSimpla,catalogStorRomanElectric}){
   const [openId,setOpenId]=React.useState(null);
   const [dView,setDView]=React.useState("activ");
   const danShowFin=dView==="fin";
@@ -7902,9 +7902,42 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
 
   const montajeByDay={};
   danClients.forEach(c=>{if(c.dataMontaj) (montajeByDay[c.dataMontaj]=montajeByDay[c.dataMontaj]||[]).push({name:c.name,ora:c.oraMontaj||""});});
+  (danEvents||[]).forEach(e=>{ if(e.date) (montajeByDay[e.date]=montajeByDay[e.date]||[]).push({name:e.title,ora:e.time||"",task:true}); });
+  const [dtTitlu,setDtTitlu]=React.useState(""); const [dtData,setDtData]=React.useState(()=>tday()); const [dtOra,setDtOra]=React.useState("");
+  const trimiteProgram=(offsetSapt)=>{
+    // luni–duminică, săptămâna curentă (0) sau viitoare (1)
+    const azi=new Date(tday()+"T12:00:00"); const dow=(azi.getDay()+6)%7;
+    const luni=new Date(azi); luni.setDate(azi.getDate()-dow+7*offsetSapt);
+    const zile=[]; for(let i=0;i<7;i++){ const d=new Date(luni); d.setDate(luni.getDate()+i); zile.push(d); }
+    const iso=(d)=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    const numeZi=["duminică","luni","marți","miercuri","joi","vineri","sâmbătă"];
+    const luniNume=["ianuarie","februarie","martie","aprilie","mai","iunie","iulie","august","septembrie","octombrie","noiembrie","decembrie"];
+    const fData=(d)=>d.getDate()+" "+luniNume[d.getMonth()];
+    const blocuri=[]; let total=0;
+    zile.forEach(d=>{
+      const k=iso(d); const linii=[];
+      const mont=clients.filter(c=>c.alocatDan&&c.dataMontaj===k&&c.stadiu!=="finalizat").sort((x,y)=>(x.oraMontaj||"99").localeCompare(y.oraMontaj||"99"));
+      mont.forEach(c=>linii.push({t:c.oraMontaj||"",txt:`${c.oraMontaj?c.oraMontaj+" ":""}🔧 Montaj — ${c.name}${c.adresa?"\n     📍 "+c.adresa:""}${c.telefon?"\n     📞 "+c.telefon:""}`}));
+      (danEvents||[]).filter(e=>e.date===k).forEach(e=>linii.push({t:e.time||"",txt:`${e.time?e.time+" ":""}✔ ${e.title}`}));
+      if(!linii.length) return;
+      linii.sort((x,y)=>(x.t||"99").localeCompare(y.t||"99"));
+      total+=linii.length;
+      blocuri.push(`*${numeZi[d.getDay()]} ${String(d.getDate()).padStart(2,"0")}.${String(d.getMonth()+1).padStart(2,"0")}.${d.getFullYear()}*\n`+linii.map(l=>"• "+l.txt).join("\n"));
+    });
+    if(!total){ alert("Nu ai nimic programat pentru Dan în "+(offsetSapt?"săptămâna viitoare":"săptămâna aceasta")+" ("+fData(zile[0])+" – "+fData(zile[6])+")."); return; }
+    let tel="";try{tel=localStorage.getItem("kreativo_dan_tel")||"";}catch(e){}
+    if(!tel){const v=window.prompt("Numărul de WhatsApp al lui Dan (ex: 0722123456):","");if(!v) return;tel=v;try{localStorage.setItem("kreativo_dan_tel",tel);}catch(e){}}
+    let n=tel.replace(/[^0-9]/g,"");if(n.startsWith("00")) n=n.slice(2);else if(n.startsWith("0")) n="40"+n.slice(1);
+    const msg=`Salut Dan! Programul tău pentru săptămâna ${fData(zile[0])} – ${fData(zile[6])}:\n\n`+blocuri.join("\n\n")+`\n\nKreativo Studio`;
+    window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`,"_blank");
+  };
 
   return <div>
-    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10,fontWeight:600}}>Programare montaje</div>
+    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:10}}>
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,flex:1}}>Programare montaje</div>
+      <button onClick={()=>trimiteProgram(0)} title="Trimite lui Dan montajele și sarcinile din săptămâna aceasta (luni–duminică)" style={{padding:"6px 12px",border:"1px solid #25D366",background:"transparent",color:"#1a9c4a",cursor:"pointer",fontSize:12,fontWeight:500}}>Trimite programul săptămânii (WhatsApp)</button>
+      <button onClick={()=>trimiteProgram(1)} title="Săptămâna viitoare" style={{padding:"6px 12px",border:"1px solid #25D366",background:"transparent",color:"#1a9c4a",cursor:"pointer",fontSize:12,fontWeight:500}}>Săptămâna viitoare</button>
+    </div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
       <button onClick={()=>setCalMonth(p=>{const m=p.m-1;return m<0?{y:p.y-1,m:11}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
       <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[calMonth.m]} {calMonth.y}</div>
@@ -7927,13 +7960,13 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
           const dow=new Date(calMonth.y,calMonth.m,day).getDay();
           const isWeekend=dow===0||dow===6;
           const blocat=(blocate||[]).find(z=>key>=z.dataStart&&key<=(z.dataEnd||z.dataStart));
-          let bg=nume.length?"#5C6B65":C.bg, textCol=nume.length?"rgba(255,255,255,0.75)":C.textMuted;
+          let bg=nume.length?(nume.every(n=>n.task)?"#5B7FA0":"#5C6B65"):C.bg, textCol=nume.length?"rgba(255,255,255,0.75)":C.textMuted;
           if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
           if(blocat){bg="#B8A88F";textCol="#fff";}
           cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
             <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
             {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
-             nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{n.ora?`${n.ora} `:""}{n.name}</div>)}
+             nume.map((n,i)=><div key={i} style={{fontSize:10,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",...(n.task&&!nume.every(x=>x.task)?{background:"#5B7FA0",padding:"1px 3px",marginTop:1}:{})}}>{n.task?"✔ ":""}{n.ora?`${n.ora} `:""}{n.name}</div>)}
           </div>);
         }
         return cells;
@@ -7941,6 +7974,25 @@ function TabDan({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBloc
     </div>
 
     <BlocareZi blocate={blocate} onAdd={onAddBlocat} onDel={onDelBlocat} C={C} fmtD={fmtD}/>
+
+    <div style={{marginTop:20,padding:"12px 14px",background:C.surface,border:`1px solid ${C.border}`}}>
+      <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10,fontWeight:600}}>Sarcini pentru Dan (apar în Calendar, în albastru)</div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
+        <input value={dtTitlu} onChange={e=>setDtTitlu(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&dtTitlu.trim()){onAddDanTask(dtTitlu,dtData,dtOra);setDtTitlu("");setDtOra("");}}} placeholder="ex: pregătire șine — Hotel" style={{flex:"1 1 240px",fontSize:13,border:`1px solid ${C.border}`,padding:"6px 10px",outline:"none",background:C.bg}}/>
+        <input type="date" value={dtData} onChange={e=>setDtData(e.target.value)} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 10px",outline:"none",background:C.bg}}/>
+        <Ora24 value={dtOra} onChange={v=>setDtOra(v)} style={{fontSize:13,border:`1px solid ${C.border}`,outline:"none",background:C.bg}}/>
+        <button onClick={()=>{if(!dtTitlu.trim()) return;onAddDanTask(dtTitlu,dtData,dtOra);setDtTitlu("");setDtOra("");}} style={{padding:"7px 14px",border:"none",background:"#5B7FA0",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:600}}>+ Adaugă sarcină</button>
+      </div>
+      {(()=>{
+        const lst=(danEvents||[]).filter(e=>e.date>=todayKey).slice().sort((a,b)=>((a.date||"")+(a.time||""))<((b.date||"")+(b.time||""))?-1:1);
+        if(lst.length===0) return <div style={{fontSize:12,color:C.textMuted}}>Nicio sarcină programată pentru Dan.</div>;
+        return lst.map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",background:"#EAF0F6",borderLeft:"4px solid #5B7FA0",marginBottom:4}}>
+          <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>{fmtD(e.date)}{e.time?` · ${e.time}`:""}</span>
+          <span style={{flex:1,fontSize:13,color:C.text}}>{e.title}</span>
+          <button onClick={()=>{if(window.confirm("Ștergi sarcina „"+e.title+"”?")) onDelDanTask(e.id);}} title="Șterge" style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:15}}>×</button>
+        </div>);
+      })()}
+    </div>
 
     <div style={{display:"flex",gap:6,marginTop:20,marginBottom:10}}>
       <button onClick={()=>{setDView("activ");setOpenId(null);}} style={{padding:"7px 14px",border:`1px solid ${dView==="activ"?C.accent:C.border}`,background:dView==="activ"?C.accentLight:"transparent",color:dView==="activ"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:dView==="activ"?500:400}}>Clienți activi</button>
@@ -9123,6 +9175,7 @@ function App() {
     setShowEvForm(false);
   };
   const delEv=(id)=>setData(d=>({...d,events:d.events.filter(e=>e.id!==id)}));
+  const addDanTask=(title,date,time)=>{ if(!String(title||"").trim()||!date) return; setData(d=>({...d,events:[{id:gid(),title:String(title).trim(),date,time:time||"",loc:"",dan:true},...d.events].sort((x,y)=>((x.date||"")+(x.time||""))>((y.date||"")+(y.time||""))?1:-1)})); };
   const togTask=(id)=>{const t=data.tasks.find(x=>x.id===id);if(t&&!t.done)addJurnal(t.title,t.cat||"Task");setData(d=>({...d,tasks:d.tasks.map(t=>t.id===id?{...t,done:!t.done}:t)}));};
   const addAdminTask=(s,v)=>{if(!v.trim()) return;setAdmin(a=>({...a,[s]:[{id:gid(),title:v,done:false,created:tday(),deadline:"",resp:"Cristina"},...a[s]]}));};
   const togAdmin=(s,id)=>{const t=(admin[s]||[]).find(x=>x.id===id);if(t&&!t.done)addJurnal(t.title,s.charAt(0).toUpperCase()+s.slice(1));setAdmin(a=>({...a,[s]:a[s].map(t=>t.id===id?{...t,done:!t.done}:t)}));};
@@ -9209,7 +9262,7 @@ function App() {
 
   function buildCal() {
     const items=[];
-    data.events.forEach(e=>items.push({date:e.date,time:e.time||"",title:e.title,source:"Program",loc:e.loc||"",eventId:e.id,id:e.id}));
+    data.events.forEach(e=>items.push({date:e.date,time:e.time||"",title:e.dan?`Dan · ${e.title}`:e.title,source:"Program",isDan:!!e.dan,loc:e.loc||"",eventId:e.id,id:e.id}));
     clients.forEach((c,ci)=>(c.tasks||[]).forEach((task,ti)=>{const date=(c.dates||[])[ti]||"";const taskTitle=typeof task==="object"?task.title:task;if(date&&!(c.done||[])[ti])items.push({date,time:(c.oraTask||[])[ti]||"",title:`${c.name} · ${taskTitle}`,source:"Client",clientName:c.name,ti,id:`${c.id}-${ti}`});}));
     proiecte.forEach((p,pi)=>(p.tasks||[]).forEach((task,ti)=>{const date=(p.dates||[])[ti]||"";if(date&&!(p.done||[])[ti])items.push({date,time:"",title:`${p.name} · ${task}`,source:"Personal",proiectName:p.name,ti,id:`pr-${p.id}-${ti}`});}));
     ["contabilitate","administrativ","marketing","personal"].forEach(s=>(admin[s]||[]).forEach(t=>{if(t.deadline&&!t.done)items.push({date:t.deadline,time:"",title:t.title,source:s.charAt(0).toUpperCase()+s.slice(1),id:t.id});}));
@@ -9512,7 +9565,7 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>:
+      {danView==="dan"?<TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
@@ -9817,7 +9870,7 @@ function App() {
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[calGridMonth.m]} {calGridMonth.y}</div>
             <button onClick={()=>setCalGridMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
           </div>
-          <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:10,color:C.textMuted,marginBottom:8}}><span><span style={{display:"inline-block",width:10,height:10,background:"#5C6B65",marginRight:5}}/>programări</span><span><span style={{display:"inline-block",width:10,height:10,background:"#8E75A8",marginRight:5}}/>🔧 montaje (Dan)</span></div>
+          <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:10,color:C.textMuted,marginBottom:8}}><span><span style={{display:"inline-block",width:10,height:10,background:"#5C6B65",marginRight:5}}/>programări</span><span><span style={{display:"inline-block",width:10,height:10,background:"#8E75A8",marginRight:5}}/>🔧 montaje (Dan)</span><span><span style={{display:"inline-block",width:10,height:10,background:"#5B7FA0",marginRight:5}}/>sarcini Dan</span></div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:4}}>
             {ZILE_SCURT.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}
           </div>
@@ -9835,11 +9888,12 @@ function App() {
                 const isWeekend=dow===0||dow===6;
                 const items=byDay[key]||[];
                 const doarMontaj=items.length>0&&items.every(it=>it.isMontaj);
-                let bg=items.length?(doarMontaj?"#8E75A8":"#5C6B65"):C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
+                const doarDan=items.length>0&&items.every(it=>it.isDan);
+                let bg=items.length?(doarMontaj?"#8E75A8":doarDan?"#5B7FA0":"#5C6B65"):C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
                 if(isWeekend&&!items.length){bg="#DDD6C8";textCol="#A89E8C";}
                 cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
                   <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
-                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",...(it.isMontaj&&!doarMontaj?{background:"#8E75A8",padding:"1px 3px",marginTop:1}:{})}}>{it.isMontaj?"🔧 ":""}{it.time} {it.title}</div>)}
+                  {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",...(it.isMontaj&&!doarMontaj?{background:"#8E75A8",padding:"1px 3px",marginTop:1}:it.isDan&&!doarDan?{background:"#5B7FA0",padding:"1px 3px",marginTop:1}:{})}}>{it.isMontaj?"🔧 ":""}{it.time} {it.title}</div>)}
                 </div>);
               }
               return cells;
@@ -10165,7 +10219,7 @@ function App() {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} setClients={setClients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} setClients={setClients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>}
+      <TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>}
     </div>}
 
     {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} setCatalogSinaSimpla={setCatalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} setCatalogStorRomanElectric={setCatalogStorRomanElectric}/>}
