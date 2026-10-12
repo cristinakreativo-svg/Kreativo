@@ -7884,7 +7884,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
   </div>;
 }
 
-function TabDan({danEvents,onAddDanTask,onDelDanTask,clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente,catalogSinaSimpla,catalogStorRomanElectric}){
+function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,rulouMateriale,setRulouMateriale,camereLista,setCamereLista,contractCounter,setContractCounter,pvCounter,setPvCounter,catalogMateriale,catalogSine,catalogPlisse,catalogJaluzele,ofertaCounter,setOfertaCounter,setDanView,setPendingEditCfg,catalogCostComponente,catalogSinaSimpla,catalogStorRomanElectric}){
   const [openId,setOpenId]=React.useState(null);
   const [dView,setDView]=React.useState("activ");
   const danShowFin=dView==="fin";
@@ -7904,6 +7904,7 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,clients,setClients,sb,tday,
   danClients.forEach(c=>{if(c.dataMontaj) (montajeByDay[c.dataMontaj]=montajeByDay[c.dataMontaj]||[]).push({name:c.name,ora:c.oraMontaj||""});});
   (danEvents||[]).forEach(e=>{ if(e.date) (montajeByDay[e.date]=montajeByDay[e.date]||[]).push({name:e.title,ora:e.time||"",task:true}); });
   const [dtTitlu,setDtTitlu]=React.useState(""); const [dtData,setDtData]=React.useState(()=>tday()); const [dtOra,setDtOra]=React.useState("");
+  const [mutaId,setMutaId]=React.useState(null); const [mTitlu,setMTitlu]=React.useState(""); const [mData,setMData]=React.useState(""); const [mOra,setMOra]=React.useState("");
   const trimiteProgram=(offsetSapt)=>{
     // luni–duminică, săptămâna curentă (0) sau viitoare (1)
     const azi=new Date(tday()+"T12:00:00"); const dow=(azi.getDay()+6)%7;
@@ -7986,9 +7987,18 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,clients,setClients,sb,tday,
       {(()=>{
         const lst=(danEvents||[]).filter(e=>e.date>=todayKey).slice().sort((a,b)=>((a.date||"")+(a.time||""))<((b.date||"")+(b.time||""))?-1:1);
         if(lst.length===0) return <div style={{fontSize:12,color:C.textMuted}}>Nicio sarcină programată pentru Dan.</div>;
-        return lst.map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",background:"#EAF0F6",borderLeft:"4px solid #5B7FA0",marginBottom:4}}>
+        return lst.map(e=>mutaId===e.id
+          ?<div key={e.id} style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",padding:"7px 10px",background:"#EAF0F6",borderLeft:"4px solid #5B7FA0",marginBottom:4}}>
+            <input value={mTitlu} onChange={ev=>setMTitlu(ev.target.value)} style={{flex:"1 1 200px",fontSize:13,border:`1px solid ${C.border}`,padding:"5px 8px",outline:"none",background:C.bg}}/>
+            <input type="date" value={mData} onChange={ev=>setMData(ev.target.value)} style={{fontSize:13,border:`1px solid ${C.border}`,padding:"4px 8px",outline:"none",background:C.bg}}/>
+            <Ora24 value={mOra} onChange={v=>setMOra(v)} style={{fontSize:13,border:`1px solid ${C.border}`,outline:"none",background:C.bg}}/>
+            <button onClick={()=>{if(!mData||!mTitlu.trim()) return;onUpdDanTask(e.id,{title:mTitlu.trim(),date:mData,time:mOra});setMutaId(null);}} style={{padding:"6px 12px",border:"none",background:"#5B7FA0",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:600}}>Salvează</button>
+            <button onClick={()=>setMutaId(null)} style={{padding:"6px 10px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:12}}>✕</button>
+          </div>
+          :<div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 10px",background:"#EAF0F6",borderLeft:"4px solid #5B7FA0",marginBottom:4}}>
           <span style={{fontSize:12,color:C.textMuted,minWidth:120}}>{fmtD(e.date)}{e.time?` · ${e.time}`:""}</span>
           <span style={{flex:1,fontSize:13,color:C.text}}>{e.title}</span>
+          <button onClick={()=>{setMutaId(e.id);setMTitlu(e.title);setMData(e.date);setMOra(e.time||"");}} title="Mută / modifică data, ora sau textul" style={{fontSize:11,color:C.textSub,border:`1px solid ${C.border}`,padding:"3px 9px",background:"transparent",cursor:"pointer"}}>Mută</button>
           <button onClick={()=>{if(window.confirm("Ștergi sarcina „"+e.title+"”?")) onDelDanTask(e.id);}} title="Șterge" style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:15}}>×</button>
         </div>);
       })()}
@@ -9175,6 +9185,7 @@ function App() {
     setShowEvForm(false);
   };
   const delEv=(id)=>setData(d=>({...d,events:d.events.filter(e=>e.id!==id)}));
+  const updDanTask=(id,patch)=>setData(d=>({...d,events:d.events.map(e=>e.id===id?{...e,...patch}:e).sort((x,y)=>((x.date||"")+(x.time||""))>((y.date||"")+(y.time||""))?1:-1)}));
   const addDanTask=(title,date,time)=>{ if(!String(title||"").trim()||!date) return; setData(d=>({...d,events:[{id:gid(),title:String(title).trim(),date,time:time||"",loc:"",dan:true},...d.events].sort((x,y)=>((x.date||"")+(x.time||""))>((y.date||"")+(y.time||""))?1:-1)})); };
   const togTask=(id)=>{const t=data.tasks.find(x=>x.id===id);if(t&&!t.done)addJurnal(t.title,t.cat||"Task");setData(d=>({...d,tasks:d.tasks.map(t=>t.id===id?{...t,done:!t.done}:t)}));};
   const addAdminTask=(s,v)=>{if(!v.trim()) return;setAdmin(a=>({...a,[s]:[{id:gid(),title:v,done:false,created:tday(),deadline:"",resp:"Cristina"},...a[s]]}));};
@@ -9565,7 +9576,7 @@ function App() {
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:danView==="taiere"?C.accentLight:"transparent",color:danView==="taiere"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:danView==="taiereprofil"?C.accentLight:"transparent",color:danView==="taiereprofil"?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
       </div>
-      {danView==="dan"?<TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>:
+      {danView==="dan"?<TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} onUpdDanTask={updDanTask} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
@@ -10219,7 +10230,7 @@ function App() {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} setClients={setClients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} setClients={setClients} C={C}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
-      <TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>}
+      <TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} onUpdDanTask={updDanTask} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>}
     </div>}
 
     {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} setCatalogSinaSimpla={setCatalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} setCatalogStorRomanElectric={setCatalogStorRomanElectric}/>}
