@@ -8985,6 +8985,18 @@ function App() {
   const [savingKeys,setSavingKeys]=useState(()=>new Set()); // chei cu modificări netrimise încă în Supabase (programate sau în curs de trimitere)
   const savingKeysRef=useRef(savingKeys);
   useEffect(()=>{savingKeysRef.current=savingKeys;},[savingKeys]);
+  // DETECTARE FILĂ DUBLĂ: dacă altă filă a aceluiași browser a salvat date, această filă are date vechi.
+  // O blocăm la salvare (altfel ar suprascrie în Supabase ce a adăugat cealaltă filă) și cerem reîncărcare.
+  const tabIdRef=useRef(Math.random().toString(36).slice(2));
+  const staleRef=useRef(false);
+  const [staleTab,setStaleTab]=useState(false);
+  useEffect(()=>{
+    const onStorage=(e)=>{
+      if(e.key==="kr__stamp"&&e.newValue&&!e.newValue.startsWith(tabIdRef.current+":")){ staleRef.current=true; setStaleTab(true); }
+    };
+    window.addEventListener("storage",onStorage);
+    return ()=>window.removeEventListener("storage",onStorage);
+  },[]);
   const marcheazaOcupat=(key)=>setSavingKeys(p=>{if(p.has(key))return p;const n=new Set(p);n.add(key);return n;});
   const marcheazaGata=(key)=>setSavingKeys(p=>{if(!p.has(key))return p;const n=new Set(p);n.delete(key);return n;});
 
@@ -8998,6 +9010,7 @@ function App() {
     }catch{return lsGet(key);}
   };
   const sbSet=async(key,value)=>{
+    if(staleRef.current){ marcheazaGata(key); return; }
     try{await sb.from("kreativo_data").upsert({key,value:JSON.stringify(value)},{onConflict:"key"});}catch(e){console.log("Supabase save error (date salvate local):",e);}
     finally{ marcheazaGata(key); }
   };
@@ -9007,7 +9020,11 @@ function App() {
   // asta alimentează indicatorul "Se salvează..." și blocajul de mai jos la închiderea paginii.
   const sbSave=(key,value)=>{
     if(protectRef.current){console.warn("Salvare blocată (mod protejat):",key);return;}
+    if(staleRef.current){console.warn("Salvare blocată (altă filă a modificat datele):",key);return;}
+    let schimbat=true;
+    try{ schimbat=localStorage.getItem("kr_"+key)!==JSON.stringify(value); }catch{}
     lsSet(key,value);
+    if(schimbat){ try{ localStorage.setItem("kr__stamp",tabIdRef.current+":"+Date.now()); }catch{} }
     marcheazaOcupat(key);
     if(saveTimer.current[key]) clearTimeout(saveTimer.current[key].timer);
     saveTimer.current[key]={value,timer:setTimeout(()=>{delete saveTimer.current[key];sbSet(key,value);},800)};
@@ -9590,6 +9607,10 @@ function App() {
   const furnizoriCunoscuti=[...new Set(clients.flatMap(c=>(c.achizFurnizor||[]).filter(Boolean)))].sort((a,b)=>a.localeCompare(b,"ro"));
 
   return <div style={{fontFamily:"'Jost',sans-serif",display:"flex",background:C.bg,minHeight:"100vh"}}>
+    {staleTab&&<div style={{position:"fixed",top:0,left:0,right:0,zIndex:99999,background:"#B3402F",color:"#fff",padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:16,fontSize:14,fontWeight:500,boxShadow:"0 2px 8px rgba(0,0,0,0.3)"}}>
+      <span>⚠ Ai aplicația deschisă în altă filă și acolo s-au salvat date mai noi. Salvarea din această filă este oprită ca să nu ștergi nimic. Reîncarcă pagina.</span>
+      <button onClick={()=>window.location.reload()} style={{background:"#fff",color:"#B3402F",border:"none",padding:"7px 16px",fontWeight:700,cursor:"pointer",fontSize:13}}>Reîncarcă acum</button>
+    </div>}
     {/* SIDEBAR */}
     <div style={{width:210,flexShrink:0,background:"#D4C9B8",borderRight:"1px solid #C4B8A4",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
       <div style={{padding:"24px 20px 18px",borderBottom:"1px solid #C4B8A4"}}>
@@ -9604,9 +9625,9 @@ function App() {
           </div>
         </div>
         <div style={{fontSize:9,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.12em",marginTop:12,fontWeight:500}}>Panou de control · 3P Design</div>
-        {protectMode?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● mod protejat · salvare blocată</div>:
+        {staleTab?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● date vechi · salvare oprită</div>:protectMode?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● mod protejat · salvare blocată</div>:
         !supabaseOk&&<div style={{fontSize:9,color:C.textSub,marginTop:8,letterSpacing:"0.08em"}}>● offline · date locale</div>}
-        {!protectMode&&supabaseOk&&(savingKeys.size>0?
+        {!staleTab&&!protectMode&&supabaseOk&&(savingKeys.size>0?
           <div style={{fontSize:9,color:"#A0845C",marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● se salvează…</div>:
           <div style={{fontSize:9,color:C.textMuted,marginTop:8,letterSpacing:"0.08em"}}>✓ salvat</div>)}
       </div>
