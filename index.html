@@ -794,7 +794,7 @@ function buildRomanPrintHtml(cfg){
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#EDE4D3;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Rezultat calcul — dimensiuni de tăiere</div>
       <div style="line-height:1.9;">
-        Șină: ${cfg.result.headrail}mm<br/>Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?"<br/>Tub/tijă (bucata 2): "+cfg.result.tiltrod2+"mm":""}<br/>Bară de jos: ${cfg.result.bottombar}mm<br/>Bobine: ${cfg.result.spools}<br/>Console: ${cfg.result.clips}
+        Șină: ${cfg.result.headrail}mm<br/>Tub/tijă: ${cfg.result.tiltrod1}mm${cfg.result.tiltrod2?"<br/>Tub/tijă (bucata 2): "+cfg.result.tiltrod2+"mm":""}<br/>Contragreutate: ${cfg.result.bottombar}mm<br/>Bobine: ${cfg.result.spools}<br/>Console: ${cfg.result.clips}
       </div>
     </div>
     <table style="border-collapse:collapse;width:100%;margin-top:14px;">
@@ -812,10 +812,10 @@ function buildRulouPrintHtml(cfg){
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
       <div style="line-height:1.9;">
-        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}${cfg.input.btbManual?"<br/>Bottombar: "+cfg.input.btb+" (manual, culoare: "+(cfg.input.btbManualColor||"nespecificată")+")":""}<br/>Cantitate: ${cfg.qty}
+        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}${cfg.input.btbManual?"<br/>Contragreutate: "+cfg.input.btb+" (manual, culoare: "+(cfg.input.btbManualColor||"nespecificată")+")":""}<br/>Cantitate: ${cfg.qty}
       </div>
     </div>
-    <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Înălțime stofă: ${cfg.result.fabricH}mm · Bottombar: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
+    <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Înălțime stofă: ${cfg.result.fabricH}mm · Contragreutate: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
     <table style="border-collapse:collapse;width:100%;margin-top:14px;">
       <tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>
       ${rows}
@@ -6933,7 +6933,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
         <div style={{fontSize:14,fontWeight:600,color:C.text,wordBreak:"break-all"}}>{result.articleCode}</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:0,padding:"14px 16px"}}>
-        {[["Șină",result.headrail+" mm"],result.tiltrod2?["Tub/tijă 1",result.tiltrod1+" mm"]:["Tub/tijă",result.tiltrod1+" mm"],...(result.tiltrod2?[["Tub/tijă 2",result.tiltrod2+" mm"]]:[]),["Bară de jos",result.bottombar+" mm"],["Bobine",result.spools],["Console",result.clips]].map(([l,v])=>
+        {[["Șină",result.headrail+" mm"],result.tiltrod2?["Tub/tijă 1",result.tiltrod1+" mm"]:["Tub/tijă",result.tiltrod1+" mm"],...(result.tiltrod2?[["Tub/tijă 2",result.tiltrod2+" mm"]]:[]),["Contragreutate",result.bottombar+" mm"],["Bobine",result.spools],["Console",result.clips]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}>{l}</div>
             <div style={{fontSize:15,fontWeight:600,color:C.text}}>{v}</div>
@@ -7014,7 +7014,7 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Rezultat calcul</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14,background:C.bg,padding:"10px"}}>
-        {[["Șină",cfg.result.headrail+" mm"],["Tub/tijă",cfg.result.tiltrod1+(cfg.result.tiltrod2?" + "+cfg.result.tiltrod2:"")+" mm"],["Bară de jos",cfg.result.bottombar+" mm"],["Bobine",cfg.result.spools],["Console",cfg.result.clips]].map(([l,v])=>
+        {[["Șină",cfg.result.headrail+" mm"],["Tub/tijă",cfg.result.tiltrod1+(cfg.result.tiltrod2?" + "+cfg.result.tiltrod2:"")+" mm"],["Contragreutate",cfg.result.bottombar+" mm"],["Bobine",cfg.result.spools],["Console",cfg.result.clips]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{v}</div>
@@ -7187,8 +7187,8 @@ function ListaTaiereProfile({clients,setClients,C}){
       if(cfg.produs) return;
       rows.push({categorie:"Rulou", tip:"Tub rulou", lungime:cfg.result.tubeL, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
         detalii:cfg.input.tube, cantitate:cfg.qty||1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-tu", cfgIdRaw:cfg.id, arrKey:"configuratiiRulou"});
-      if(cfg.input.btbManual && cfg.input.btb){
-        rows.push({categorie:"Bottombar (contragreutate manuală)", tip:`Bottombar ${cfg.input.btbManualColor||"culoare nespecificată"} — ${cfg.input.btb}`,
+      if(cfg.input.btb){
+        rows.push({categorie:"Contragreutate", tip:`Contragreutate ${cfg.input.btbManual?(cfg.input.btbManualColor||"culoare nespecificată")+" — ":""}${cfg.input.btb}`,
           lungime:cfg.result.btbL, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
           detalii:"rulou", cantitate:cfg.qty||1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-btb", cfgIdRaw:cfg.id, arrKey:"configuratiiRulou"});
       }
@@ -7205,7 +7205,7 @@ function ListaTaiereProfile({clients,setClients,C}){
         client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-ppvc", cfgIdRaw:cfg.id, arrKey:"configuratiiPanou"});
     });
   });
-  const CATEGORII=["Șină Coulisse","Șină Aluprof","Stor roman","Rulou","Bottombar (contragreutate manuală)","Panou"];
+  const CATEGORII=["Șină Coulisse","Șină Aluprof","Stor roman","Rulou","Contragreutate","Panou"];
   const grupuri={};
   rows.forEach(r=>{ (grupuri[r.tip]=grupuri[r.tip]||{categorie:r.categorie,items:[]}).items.push(r); });
   const tipuri=Object.keys(grupuri).sort((a,b)=>{
@@ -7395,7 +7395,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       parts = rulouPartsList(inp, result, Number(qty)||1);
       if(fabCat && fabMlNr>0) parts = [...parts, {article:fabCat.cod, code:fabCat.cod, desc:(fabCat.descriere||fabCat.cod)+" — metri liniari țesătură", qty:fabMlNr}];
       if(btbManual && (!btbManualName.trim() || !btbManualColor.trim())){
-        result.errs = [...(result.errs||[]), "Completează denumirea ȘI culoarea bottombar-ului manual — obligatoriu."];
+        result.errs = [...(result.errs||[]), "Completează denumirea ȘI culoarea contragreutății manuale — obligatoriu."];
       }
     }
   }catch(e){ calcError = "Verifică valorile introduse: "+e.message; }
@@ -7650,7 +7650,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
     </div>}
 
     <div style={{marginBottom:16}}>
-      <label style={lblStyle}>Bottombar (contragreutate)</label>
+      <label style={lblStyle}>Contragreutate</label>
       <div style={{display:"flex",gap:8,marginBottom:8}}>
         <button type="button" onClick={()=>setBtbManual(false)} style={{flex:1,fontSize:12,fontWeight:600,padding:"9px 8px",border:`1px solid ${!btbManual?C.accent:C.border}`,background:!btbManual?C.accentLight:C.surface,color:!btbManual?C.accent:C.textSub,cursor:"pointer"}}>Din lista Coulisse</button>
         <button type="button" onClick={()=>setBtbManual(true)} style={{flex:1,fontSize:12,fontWeight:600,padding:"9px 8px",border:`1px solid ${btbManual?C.accent:C.border}`,background:btbManual?C.accentLight:C.surface,color:btbManual?C.accent:C.textSub,cursor:"pointer"}}>Manual (nume + culoare)</button>
@@ -7659,7 +7659,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
         {availBtb.map(b=><option key={b} value={b}>{b}</option>)}
       </select>}
       {btbManual&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
-        <input value={btbManualName} onChange={e=>setBtbManualName(e.target.value)} placeholder="Denumire bottombar" style={selStyle}/>
+        <input value={btbManualName} onChange={e=>setBtbManualName(e.target.value)} placeholder="Denumire contragreutate" style={selStyle}/>
         <input value={btbManualColor} onChange={e=>setBtbManualColor(e.target.value)} placeholder="Culoare (ex: alb, negru, gri antracit)" style={selStyle}/>
       </div>}
     </div>
@@ -7681,7 +7681,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:0,padding:"14px 16px"}}>
         {[...(inp.materialName?[["Material",inp.materialName]]:[]),["Tub tăiat",result.tubeL+" mm"],["Lățime stofă",result.fabricW+" mm"],["Înălțime stofă",result.fabricH+" mm"],
-          ["Bottombar",result.btbL+" mm"],["Diametru rulou",result.rolDiam+" mm"],["Cuplu",result.torque.toFixed(2)+" Nm"],
+          ["Contragreutate",result.btbL+" mm"],["Diametru rulou",result.rolDiam+" mm"],["Cuplu",result.torque.toFixed(2)+" Nm"],
           ["Forță acționare",result.force.toFixed(2)+" kg"],
           ...(result.lprofile?[["Profil casetă (bază)",result.lprofile+" mm"]]:[]),
           ...(result.frontprofile?[["Profil casetă (față)",result.frontprofile+" mm"]]:[]),
@@ -7773,7 +7773,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
           ["Țesătură",cfg.input.fabricManual?(cfg.input.materialName||"material custom"):cfg.input.fabric],
           ...(cfg.input.fabricManual?[["Grosime",cfg.input.fabricThickness+" mm"],["Greutate",cfg.input.fabricWeight+" g/m²"]]:[]),
           ...(cfg.input.fabricCoulisse?[["Țesătură Coulisse",cfg.input.fabricCoulisse],["Metri liniari",cfg.input.fabricMl+" ml"]]:[]),
-          ["Bottombar",cfg.input.btbManual?`${cfg.input.btb} (manual, culoare: ${cfg.input.btbManualColor||"nespecificată"})`:cfg.input.btb],
+          ["Contragreutate",cfg.input.btbManual?`${cfg.input.btb} (manual, culoare: ${cfg.input.btbManualColor||"nespecificată"})`:cfg.input.btb],
           ["Opțiuni",(cfg.input.options||[]).length?cfg.input.options.join(", "):"—"],
           ["Accesorii",(cfg.input.mechOptions||[]).length?cfg.input.mechOptions.join(", "):"—"],
           ["Cantitate",cfg.qty+" buc."]].map(([l,v])=>
@@ -7786,7 +7786,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
 
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Rezultat calcul</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14,background:C.bg,padding:"10px"}}>
-        {[["Tub tăiat",cfg.result.tubeL+" mm"],["Lățime stofă",cfg.result.fabricW+" mm"],["Înălțime stofă",cfg.result.fabricH+" mm"],["Bottombar",cfg.result.btbL+" mm"],["Diametru",cfg.result.rolDiam+" mm"]].map(([l,v])=>
+        {[["Tub tăiat",cfg.result.tubeL+" mm"],["Lățime stofă",cfg.result.fabricW+" mm"],["Înălțime stofă",cfg.result.fabricH+" mm"],["Contragreutate",cfg.result.btbL+" mm"],["Diametru",cfg.result.rolDiam+" mm"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>{v}</div>
