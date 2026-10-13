@@ -292,6 +292,7 @@ const PARTS = [
 ];
 
 function descarcaPDF(html, filename, onDone){
+  html=pdfSafeFonts(html);
   const iframe=document.createElement("iframe");
   iframe.style.position="fixed"; iframe.style.right="0"; iframe.style.bottom="0";
   iframe.style.width="900px"; iframe.style.height="1px"; iframe.style.opacity="0"; iframe.style.border="none";
@@ -874,10 +875,7 @@ function kreativoSalveazaEditare(){
     alert("Nu pot salva în aplicație — deschide contractul din nou din Kreativo (nu dintr-o filă redeschisă separat) și încearcă din nou.");
     return;
   }
-  const notite = document.querySelectorAll(".notaEditare");
-  notite.forEach(n=>n.style.display="none");
   const htmlFull = "<!DOCTYPE html>" + document.documentElement.outerHTML;
-  notite.forEach(n=>n.style.display="");
   window.opener.postMessage({type:"kreativo-save-contract", clientId:window.__kreativoMeta.clientId, contractId:window.__kreativoMeta.contractId, html:htmlFull}, "*");
   alert("Salvat! Data viitoare când deschizi acest contract din aplicație, va apărea cu editarea făcută.");
 }
@@ -1058,10 +1056,7 @@ function kreativoSalveazaEditare(){
     alert("Nu pot salva în aplicație — deschide contractul din nou din Kreativo (nu dintr-o filă redeschisă separat) și încearcă din nou.");
     return;
   }
-  const notite = document.querySelectorAll(".notaEditare");
-  notite.forEach(n=>n.style.display="none");
   const htmlFull = "<!DOCTYPE html>" + document.documentElement.outerHTML;
-  notite.forEach(n=>n.style.display="");
   window.opener.postMessage({type:"kreativo-save-contract", clientId:window.__kreativoMeta.clientId, contractId:window.__kreativoMeta.contractId, html:htmlFull}, "*");
   alert("Salvat! Data viitoare când deschizi acest contract din aplicație, va apărea cu editarea făcută.");
 }
@@ -1345,10 +1340,7 @@ function kreativoSalveazaEditare(){
     alert("Nu pot salva în aplicație — deschide oferta din nou din Kreativo (nu dintr-o filă redeschisă separat) și încearcă din nou.");
     return;
   }
-  const notite = document.querySelectorAll(".notaEditare");
-  notite.forEach(n=>n.style.display="none");
   const htmlFull = "<!DOCTYPE html>" + document.documentElement.outerHTML;
-  notite.forEach(n=>n.style.display="");
   window.opener.postMessage({type:"kreativo-save-oferta", clientId:window.__kreativoMeta.clientId, ofertaId:window.__kreativoMeta.contractId, html:htmlFull}, "*");
   alert("Salvat! Data viitoare când deschizi această ofertă din aplicație, va apărea cu editarea făcută.");
 }
@@ -1834,7 +1826,22 @@ function normalizeazaCamereOferta(camereRaw){
     produse: (c&&Array.isArray(c.produse)&&c.produse.length) ? c.produse.map(pr=>({...golProdusDefault(), ...(pr||{}), id:(pr&&pr.id)||gid()})) : [golProdusDefault()]
   }));
 }
+// PDF compatibil cu telefonul: fonturile variabile Google (Source Serif/Sans) ies din Chrome ca fonturi "Type 3",
+// pe care vizualizatoarele de pe telefon / WhatsApp nu le deschid. Folosim fonturi de sistem (se încorporează normal).
+function pdfSafeFonts(html){
+  // Variantele salvate înainte aveau caseta cu butoanele (notaEditare) ascunsă definitiv — o facem vizibilă la loc.
+  html=String(html).replace(/(class="notaEditare"[^>]*?style="[^"]*?)display:\s*none\s*;?/gi,"$1");
+  // Titlul paginii devine numele fișierului la "Salvează ca PDF". Fără diacritice, ca să se deschidă și din Total Commander / programe vechi.
+  html=String(html).replace(/<title>([\s\S]*?)<\/title>/i,(m,t)=>"<title>"+t.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[șş]/g,"s").replace(/[ȘŞ]/g,"S").replace(/[țţ]/g,"t").replace(/[ȚŢ]/g,"T")+"</title>");
+  return String(html)
+    .replace(/<link[^>]*fonts\.googleapis\.com[^>]*>/gi,"")
+    .replace(/'Source Serif 4'/g,"Cambria,Georgia")
+    .replace(/'Source Sans 3'/g,"Calibri,Arial")
+    .replace(/"Source Serif 4"/g,"Cambria,Georgia")
+    .replace(/"Source Sans 3"/g,"Calibri,Arial");
+}
 function printHtmlDoc(html){
+  html=pdfSafeFonts(html);
   const iframe=document.createElement("iframe");
   iframe.style.position="fixed";
   iframe.style.right="0";
@@ -1853,6 +1860,7 @@ function printHtmlDoc(html){
 // Ca printHtmlDoc, dar așteaptă să se încarce toate pozele înainte să deschidă printarea
 // (printHtmlDoc așteaptă doar 300 ms — prea puțin pentru poze aduse din cloud).
 function printHtmlDocCuImagini(html){
+  html=pdfSafeFonts(html);
   const iframe=document.createElement("iframe");
   iframe.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
   document.body.appendChild(iframe);
@@ -3764,20 +3772,20 @@ function ContractClientSection({client,ci,setClients,C,contractCounter,setContra
   };
 
   const vizualizeaza=(html)=>{
-    const blob = new Blob([html], {type:"text/html"});
+    const blob = new Blob([pdfSafeFonts(html)], {type:"text/html"});
     const url = URL.createObjectURL(blob);
     window.open(url, "_blank");
     setTimeout(()=>URL.revokeObjectURL(url), 60000);
   };
   const printeaza=(html)=>{
-    const blob = new Blob([html], {type:"text/html"});
+    const blob = new Blob([pdfSafeFonts(html)], {type:"text/html"});
     const url = URL.createObjectURL(blob);
     const w = window.open(url, "_blank");
     if(w){ w.addEventListener("load",()=>{ setTimeout(()=>w.print(),300); }); }
     setTimeout(()=>URL.revokeObjectURL(url), 60000);
   };
   const descarca=(html, numarContract)=>{
-    const blob = new Blob([html], {type:"text/html"});
+    const blob = new Blob([pdfSafeFonts(html)], {type:"text/html"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -5633,20 +5641,20 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   };
 
   const vizualizeaza=(html)=>{
-    const blob=new Blob([html],{type:"text/html"});
+    const blob=new Blob([pdfSafeFonts(html)],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     window.open(url,"_blank");
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   };
   const printeaza=(html)=>{
-    const blob=new Blob([html],{type:"text/html"});
+    const blob=new Blob([pdfSafeFonts(html)],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     const w=window.open(url,"_blank");
     if(w){ w.addEventListener("load",()=>{ setTimeout(()=>w.print(),300); }); }
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   };
   const descarca=(html,numar)=>{
-    const blob=new Blob([html],{type:"text/html"});
+    const blob=new Blob([pdfSafeFonts(html)],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
     a.href=url; a.download=`Oferta_${numar.replace("/","-")}_${(numeClient||client.name).replace(/[^a-zA-Z0-9]+/g,"_")}.html`;
@@ -6666,20 +6674,20 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
   }).join("");
 
   const vizualizeaza=(html)=>{
-    const blob=new Blob([html],{type:"text/html"});
+    const blob=new Blob([pdfSafeFonts(html)],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     window.open(url,"_blank");
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   };
   const printeaza=(html)=>{
-    const blob=new Blob([html],{type:"text/html"});
+    const blob=new Blob([pdfSafeFonts(html)],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     const w=window.open(url,"_blank");
     if(w){ w.addEventListener("load",()=>{ setTimeout(()=>w.print(),300); }); }
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   };
   const descarca=(html,numar)=>{
-    const blob=new Blob([html],{type:"text/html"});
+    const blob=new Blob([pdfSafeFonts(html)],{type:"text/html"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
     a.href=url; a.download=`ProcesVerbal_${numar.replace("/","-")}_${(numeClient||client.name).replace(/[^a-zA-Z0-9]+/g,"_")}.html`;
