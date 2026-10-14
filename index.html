@@ -85,6 +85,7 @@ const CJK = "kreativo_catalog_jaluzele_v1";
 const CCK = "kreativo_catalog_costcomponente_v1";
 const CSSK = "kreativo_catalog_sina_simpla_v1";
 const CSRE = "kreativo_catalog_stor_roman_electric_v1";
+const CFK = "kreativo_comenzi_furnizori_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -5050,6 +5051,271 @@ function TabCatalogStorRomanElectric({C,catalogStorRomanElectric,setCatalogStorR
   </div>;
 }
 
+// ===== COMENZI CĂTRE FURNIZORI (plisee Schrader) =====
+// Date furnizor / client luate din factura Schrader 2026-291746 (nr. client Schrader = 25030).
+const SCHRADER_DATE={nume:"3S Schrader GmbH",adresa:"Zuckerfabrik 5, 31162 Bad Salzdetfurth, Germania",tel:"+49 5060 2042-0",email:"info@3S-Schrader.de"};
+const COMANDA_CUSTOMER={nume:"3P Design SRL",nrClient:"25030",adresa:"Strada Principală nr. 872, sat Cărpiniș, comuna Tărlungeni, 507220 Brașov, România"};
+const RAIL_OPTIUNI=["WEISS","SILBER","BRONZE","ANTRACIT RAL 7016","SCHWARZ"];
+const MODELE_PLISEU=["PV2","VS2","Casa VS2"];
+const railPentruSchrader=(c)=>{
+  const k=String(c||"").trim().toLowerCase().replace(/\s+/g,"");
+  const m={"weiss":"WEISS","silber":"SILBER","bronze":"BRONZE","anthrazitral7016":"ANTRACIT RAL 7016","anthrazit":"ANTRACIT RAL 7016","schwarz":"SCHWARZ"};
+  return m[k]||String(c||"").trim().toUpperCase();
+};
+const numAsciiFisier=(s)=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-zA-Z0-9]+/g,"_").replace(/^_+|_+$/g,"");
+
+function buildComandaFurnizorHtml(o,intern){
+  const esc=(t)=>String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const linii=(o.linii||[]).filter(l=>String(l.model||"").trim()||String(l.fabric||"").trim()||String(l.width||"").trim());
+  const dataFmt=fmtD(o.data);
+  const totalBuc=linii.reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
+  const clienti=[...new Set(linii.map(l=>(l.client||"").trim()).filter(Boolean))];
+  const titlu=`Order nr ${o.numar} - ${dataFmt}`+(intern?` - INTERN${clienti.length?" - "+clienti.join(", "):""}`:"");
+  const td="padding:7px 9px;border:1px solid #CFC4B2;";
+  const th="padding:7px 9px;border:1px solid #CFC4B2;background:#EDE4D3;font:600 .72em/1.2 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5C4F3E;text-align:left;";
+  const rows=linii.map((l,i)=>`<tr>
+    <td style="${td}text-align:center;color:#8A7A64">${i+1}</td>
+    <td style="${td}font-weight:600">${esc(l.model)}</td>
+    <td style="${td}text-align:center;font-weight:600">${esc(l.qty)}</td>
+    <td style="${td}">${esc(l.rail)}</td>
+    <td style="${td}">${esc(l.fabric)}</td>
+    <td style="${td}text-align:right">${esc(l.width)}</td>
+    <td style="${td}text-align:right">${esc(l.drop)}</td>
+    ${intern?`<td style="${td}background:#F6F1E6">${esc(l.client)}</td><td style="${td}background:#F6F1E6">${esc(l.camera)}</td>`:""}
+  </tr>`).join("");
+  const pe={};
+  linii.forEach(l=>{const k=(l.client||"").trim()||"(fără client)"; pe[k]=(pe[k]||0)+(Number(String(l.qty).replace(",","."))||0);});
+  const sumarClienti=intern?`<div style="margin-top:14px;font-size:.9em;color:#5C4F3E"><b>Pe clienți:</b> ${Object.entries(pe).map(([k,v])=>`${esc(k)} — ${v} buc.`).join(" · ")}</div>`:"";
+  const banner=intern?`<div style="background:#B3402F;color:#fff;padding:8px 14px;margin-bottom:14px;font:700 .85em 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase">Document intern — conține clienții și camerele. Nu se trimite furnizorului.</div>`:"";
+  return `<!DOCTYPE html><html lang="${intern?"ro":"en"}"><head><meta charset="utf-8"><title>${esc(titlu)}</title>
+  <style>@page{size:A4;margin:0.55in}body{margin:0;background:#fff;font-family:'Source Sans 3',Calibri,sans-serif;color:#2A2118;font-size:13px}</style></head><body>
+  ${banner}
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:2px solid #A0845C;padding-bottom:12px">
+    <div>
+      <img alt="" src="${CONTRACT_LOGO_URI}" style="height:40px;width:auto;display:block;margin-bottom:8px"/>
+      <div style="font:600 1.05em 'Source Serif 4',Cambria,Georgia,serif">${esc(COMANDA_CUSTOMER.nume)}</div>
+      <div style="font-size:.88em;color:#5C4F3E;line-height:1.45">${esc(COMANDA_CUSTOMER.adresa)}<br/>${intern?"Nr. client Schrader":"Customer no."}: <b>${esc(COMANDA_CUSTOMER.nrClient)}</b></div>
+    </div>
+    <div style="text-align:right">
+      <div style="font:400 2em/1.1 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${intern?"Comandă":"Order"} nr. ${esc(o.numar)}</div>
+      <div style="font-size:.95em;color:#5C4F3E;margin-top:4px">${intern?"Data":"Date"}: <b>${dataFmt}</b></div>
+    </div>
+  </div>
+  <div style="margin:14px 0 16px;font-size:.92em;line-height:1.5">
+    <div style="font:600 .72em 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64;margin-bottom:2px">${intern?"Furnizor":"Supplier"}</div>
+    <b>${esc(o.furnizor||SCHRADER_DATE.nume)}</b>${o.adresaFurnizor!==""?` · ${esc(o.adresaFurnizor||SCHRADER_DATE.adresa)}`:""}
+    ${o.emailFurnizor!==""?`<br/>${esc(o.emailFurnizor||SCHRADER_DATE.email)}`:""}
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th style="${th}text-align:center">${intern?"Nr.":"No."}</th><th style="${th}">${intern?"Model":"Model"}</th><th style="${th}text-align:center">QTY</th><th style="${th}">RAIL</th><th style="${th}">Fabric / Design</th><th style="${th}text-align:right">Width cm</th><th style="${th}text-align:right">Drop cm</th>
+      ${intern?`<th style="${th}">Client</th><th style="${th}">Cameră</th>`:""}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+    <tfoot><tr><td colspan="2" style="${td}text-align:right;font-weight:700">${intern?"Total bucăți":"Total pcs"}</td><td style="${td}text-align:center;font-weight:700">${totalBuc}</td><td colspan="${intern?6:4}" style="${td}"></td></tr></tfoot>
+  </table>
+  ${sumarClienti}
+  ${(o.mentiuni||"").trim()?`<div style="margin-top:16px"><div style="font:600 .72em 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64;margin-bottom:3px">${intern?"Mențiuni către furnizor":"Remarks"}</div><div style="white-space:pre-wrap;line-height:1.5">${esc(o.mentiuni)}</div></div>`:""}
+  ${intern&&(o.notiteInterne||"").trim()?`<div style="margin-top:16px"><div style="font:600 .72em 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64;margin-bottom:3px">Notițe interne</div><div style="white-space:pre-wrap;line-height:1.5">${esc(o.notiteInterne)}</div></div>`:""}
+  <div style="margin-top:28px;padding-top:8px;border-top:1px solid #D4C9B8;font-size:.78em;color:#8A7A64;display:flex;justify-content:space-between"><span>Kreativo Studio · S.C. 3P Design S.R.L. · Brașov</span><span>${esc(titlu.split(" - INTERN")[0])}</span></div>
+  </body></html>`;
+}
+
+function exportComandaFurnizorXLSX(o){
+  if(typeof XLSX==="undefined"){ alert("Modulul Excel nu s-a încărcat (verifică conexiunea la internet) — încearcă din nou."); return; }
+  const linii=(o.linii||[]).filter(l=>String(l.model||"").trim()||String(l.fabric||"").trim()||String(l.width||"").trim());
+  const n=(v)=>{ const x=Number(String(v).replace(",",".")); return (String(v).trim()!==""&&!isNaN(x))?x:String(v||""); };
+  const data=[
+    [`Order nr ${o.numar} - ${fmtD(o.data)}`],
+    [],
+    ["Customer","","","3P Design SRL"],
+    ["Customer no.","","",COMANDA_CUSTOMER.nrClient],
+    ["Supplier","","",o.furnizor||SCHRADER_DATE.nume],
+    [],
+    ["Nr crt","Modell","QTY","RAIL","fabric/Design","width cm","drop cm"],
+    ...linii.map((l,i)=>[i+1,l.model||"",n(l.qty),l.rail||"",String(l.fabric||""),n(l.width),n(l.drop)]),
+  ];
+  if((o.mentiuni||"").trim()){ data.push([]); data.push(["Remarks",o.mentiuni.trim()]); }
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"]=[{wch:8},{wch:12},{wch:7},{wch:22},{wch:14},{wch:10},{wch:10}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Order");
+  XLSX.writeFile(wb,`Order_nr_${numAsciiFisier(o.numar)}_${fmtD(o.data).replace(/\./g,"-")}.xlsx`);
+}
+
+function ComenziFurnizori({clients,comenzi,setComenzi,C}){
+  const [openId,setOpenId]=React.useState(null);
+  const [impOpen,setImpOpen]=React.useState(false);
+  const [impSel,setImpSel]=React.useState({});
+  const lista=Array.isArray(comenzi)?comenzi:[];
+  const comanda=lista.find(o=>o.id===openId)||null;
+  const inpS={padding:"5px 6px",border:`1px solid ${C.border}`,background:C.bg,color:C.text,fontSize:12,width:"100%",boxSizing:"border-box",fontFamily:"inherit"};
+  const btn=(primary)=>({padding:"7px 14px",border:primary?"none":`1px solid ${C.border}`,background:primary?C.accent:"transparent",color:primary?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:primary?600:400});
+  const setAll=(fn)=>setComenzi(p=>fn(Array.isArray(p)?p:[]));
+  const upd=(id,patch)=>setAll(p=>p.map(o=>o.id===id?{...o,...patch}:o));
+  const updLinie=(id,lid,patch)=>setAll(p=>p.map(o=>o.id!==id?o:{...o,linii:(o.linii||[]).map(l=>l.id===lid?{...l,...patch}:l)}));
+  const linieGoala=()=>({id:gid(),model:"PV2",qty:"1",rail:"",fabric:"",width:"",drop:"",client:"",camera:"",src:""});
+  const addLinie=(id)=>setAll(p=>p.map(o=>o.id!==id?o:{...o,linii:[...(o.linii||[]),linieGoala()]}));
+  const delLinie=(id,lid)=>setAll(p=>p.map(o=>o.id!==id?o:{...o,linii:(o.linii||[]).filter(l=>l.id!==lid)}));
+  const mutaLinie=(id,lid,d)=>setAll(p=>p.map(o=>{ if(o.id!==id) return o; const a=[...(o.linii||[])]; const i=a.findIndex(l=>l.id===lid); const j=i+d; if(i<0||j<0||j>=a.length) return o; [a[i],a[j]]=[a[j],a[i]]; return {...o,linii:a}; }));
+  const nouaComanda=()=>{
+    const nrMax=lista.filter(o=>/schrader/i.test(o.furnizor||"")).reduce((m,o)=>Math.max(m,parseInt(o.numar)||0),6);
+    const o={id:gid(),furnizor:SCHRADER_DATE.nume,tip:"plisee",numar:String(nrMax+1),data:tday(),status:"ciorna",linii:[],mentiuni:"",notiteInterne:""};
+    setAll(p=>[o,...p]);
+    setOpenId(o.id); setImpOpen(true); setImpSel({});
+  };
+  const stergeComanda=(o)=>{ if(window.confirm(`Ștergi comanda nr. ${o.numar}? Nu poate fi recuperată.`)){ setAll(p=>p.filter(x=>x.id!==o.id)); if(openId===o.id) setOpenId(null); } };
+
+  // candidați: produse "pliseu" din toate ofertele clienților
+  const candidati=[];
+  (clients||[]).forEach(c=>(c.oferte||[]).forEach(of=>(of.camere||[]).forEach(cam=>(cam.produse||[]).forEach(pr=>{
+    if(pr.tip!=="pliseu") return;
+    if(!(Number(String(pr.latimePliseuCm).replace(",","."))>0 && Number(String(pr.inaltimePliseuCm).replace(",","."))>0)) return;
+    candidati.push({key:`${of.id}|${pr.id}`,client:c.name,oferta:of.numar,denumire:of.denumire||"",acceptata:!!of.acceptata,camera:cam.numeCamera||"",pr});
+  }))));
+  const deja=new Map();
+  lista.forEach(o=>(o.linii||[]).forEach(l=>{ if(l.src) deja.set(l.src,o.numar); }));
+  const adaugaSelectate=()=>{
+    if(!comanda) return;
+    const alese=candidati.filter(x=>impSel[x.key]);
+    if(!alese.length){ alert("Bifează cel puțin un pliseu din listă."); return; }
+    const noi=alese.map(x=>({id:gid(),model:"PV2",qty:String(x.pr.cantitate||"1"),rail:railPentruSchrader(x.pr.culoare),fabric:String(x.pr.material||""),width:String(x.pr.latimePliseuCm||""),drop:String(x.pr.inaltimePliseuCm||""),client:x.client,camera:x.camera,src:x.key}));
+    upd(comanda.id,{linii:[...(comanda.linii||[]),...noi]});
+    setImpSel({}); setImpOpen(false);
+  };
+  const printSupplier=()=>{ if(!(comanda.linii||[]).length){ alert("Comanda nu are niciun rând."); return; } printHtmlDocCuImagini(buildComandaFurnizorHtml(comanda,false)); };
+  const printIntern=()=>{ if(!(comanda.linii||[]).length){ alert("Comanda nu are niciun rând."); return; } printHtmlDocCuImagini(buildComandaFurnizorHtml(comanda,true)); };
+  const marcheazaTrimisa=()=>upd(comanda.id,comanda.status==="trimisa"?{status:"ciorna",dataTrimis:""}:{status:"trimisa",dataTrimis:tday()});
+
+  // ---------- LISTA COMENZILOR ----------
+  if(!comanda){
+    return <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Comenzi către furnizori · plisee Schrader</div>
+        <button onClick={nouaComanda} style={btn(true)}>+ Comandă nouă Schrader</button>
+      </div>
+      {lista.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"20px 0"}}>Nicio comandă încă. Apasă „+ Comandă nouă Schrader”, apoi preia plisseele din oferte sau adaugă rânduri de mână.</div>}
+      {lista.map(o=>{
+        const buc=(o.linii||[]).reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
+        const clienti=[...new Set((o.linii||[]).map(l=>(l.client||"").trim()).filter(Boolean))];
+        return <div key={o.id} onClick={()=>{setOpenId(o.id);setImpOpen(false);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6,cursor:"pointer"}}>
+          <span style={{fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>Order nr. {o.numar}</span>
+          <span style={{fontSize:12,color:C.textSub,minWidth:80}}>{fmtD(o.data)}</span>
+          <span style={{fontSize:12,color:C.textSub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.furnizor} · {buc} buc.{clienti.length?` · ${clienti.join(", ")}`:""}</span>
+          <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",background:o.status==="trimisa"?"#E3EEE3":C.accentLight,color:o.status==="trimisa"?"#3A6A3A":C.accent}}>{o.status==="trimisa"?`TRIMISĂ ${fmtD(o.dataTrimis)}`:"CIORNĂ"}</span>
+          <button onClick={e=>{e.stopPropagation();stergeComanda(o);}} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:14}}>🗑</button>
+        </div>;
+      })}
+    </div>;
+  }
+
+  // ---------- EDITOR COMANDĂ ----------
+  const o=comanda;
+  const buc=(o.linii||[]).reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
+  const noiDisponibile=candidati.filter(x=>!deja.has(x.key));
+  const lbl={fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:3};
+  return <div>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+      <button onClick={()=>setOpenId(null)} style={btn(false)}>← Toate comenzile</button>
+      <span style={{fontSize:14,fontWeight:600,color:C.text}}>Order nr. {o.numar}</span>
+      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",background:o.status==="trimisa"?"#E3EEE3":C.accentLight,color:o.status==="trimisa"?"#3A6A3A":C.accent}}>{o.status==="trimisa"?`TRIMISĂ ${fmtD(o.dataTrimis)}`:"CIORNĂ"}</span>
+    </div>
+
+    <datalist id="rail-opt">{RAIL_OPTIUNI.map(r=><option key={r} value={r}/>)}</datalist>
+    <datalist id="model-opt">{MODELE_PLISEU.map(r=><option key={r} value={r}/>)}</datalist>
+
+    <div style={{display:"grid",gridTemplateColumns:"1.4fr 90px 130px 1.4fr",gap:10,marginBottom:12}}>
+      <div><div style={lbl}>Furnizor</div><input style={inpS} value={o.furnizor||""} onChange={e=>upd(o.id,{furnizor:e.target.value})}/></div>
+      <div><div style={lbl}>Nr. comandă</div><input style={inpS} value={o.numar||""} onChange={e=>upd(o.id,{numar:e.target.value})}/></div>
+      <div><div style={lbl}>Data</div><input type="date" style={inpS} value={o.data||""} onChange={e=>upd(o.id,{data:e.target.value})}/></div>
+      <div><div style={lbl}>E-mail furnizor (informativ)</div><input style={inpS} value={o.emailFurnizor!==undefined?o.emailFurnizor:SCHRADER_DATE.email} onChange={e=>upd(o.id,{emailFurnizor:e.target.value})}/></div>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginBottom:14}}>{SCHRADER_DATE.adresa} · Tel. {SCHRADER_DATE.tel} · Customer no. {COMANDA_CUSTOMER.nrClient} ({COMANDA_CUSTOMER.nume})</div>
+
+    <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap",alignItems:"center"}}>
+      <button onClick={()=>{setImpOpen(v=>!v);setImpSel({});}} style={btn(true)}>📥 Preia plisee din oferte</button>
+      <button onClick={()=>addLinie(o.id)} style={btn(false)}>+ rând manual</button>
+      <span style={{fontSize:12,color:C.textMuted,marginLeft:"auto"}}>{(o.linii||[]).length} rânduri · {buc} buc.</span>
+    </div>
+
+    {impOpen&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:"12px 14px",marginBottom:14}}>
+      <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:8}}>Plisee din oferte ({candidati.length} găsite, {noiDisponibile.length} încă necomandate)</div>
+      {candidati.length===0&&<div style={{fontSize:12,color:C.textMuted}}>Nu există nicio ofertă cu produs „Pliseu” cu dimensiuni completate. Poți adăuga rânduri de mână.</div>}
+      {candidati.length>0&&<>
+        <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+          <button onClick={()=>{const s={};noiDisponibile.forEach(x=>{s[x.key]=true;});setImpSel(s);}} style={btn(false)}>Bifează toate necomandatele</button>
+          <button onClick={()=>setImpSel({})} style={btn(false)}>Debifează</button>
+        </div>
+        <div style={{maxHeight:300,overflowY:"auto",border:`1px solid ${C.border}`}}>
+          {candidati.map(x=>{
+            const gata=deja.get(x.key);
+            return <label key={x.key} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",borderBottom:`1px solid ${C.border}`,fontSize:12,color:gata?C.textMuted:C.text,background:gata?C.bg:"transparent",cursor:gata?"default":"pointer"}}>
+              <input type="checkbox" disabled={!!gata} checked={!!impSel[x.key]} onChange={e=>setImpSel(p=>({...p,[x.key]:e.target.checked}))}/>
+              <span style={{fontWeight:600,minWidth:110}}>{x.client}</span>
+              <span style={{minWidth:90}}>{x.camera||"—"}</span>
+              <span style={{flex:1}}>{x.pr.cantitate||1} buc. · {x.pr.latimePliseuCm}×{x.pr.inaltimePliseuCm} cm · {x.pr.material||"?"} · {x.pr.culoare||"fără culoare"}</span>
+              <span style={{fontSize:10,color:C.textMuted}}>oferta {x.oferta}{x.acceptata?" ✓":""}</span>
+              {gata&&<span style={{fontSize:10,color:"#3A6A3A",fontWeight:600}}>deja în comanda {gata}</span>}
+            </label>;
+          })}
+        </div>
+        <div style={{marginTop:8}}><button onClick={adaugaSelectate} style={btn(true)}>Adaugă bifatele în comandă</button></div>
+      </>}
+    </div>}
+
+    <div style={{overflowX:"auto",marginBottom:14}}>
+      <table style={{width:"100%",borderCollapse:"collapse",minWidth:880}}>
+        <thead>
+          <tr style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+            <th style={{padding:"4px 4px",width:26}}>#</th>
+            <th style={{padding:"4px 4px",textAlign:"left"}}>Model</th>
+            <th style={{padding:"4px 4px",textAlign:"left",width:52}}>QTY</th>
+            <th style={{padding:"4px 4px",textAlign:"left"}}>RAIL</th>
+            <th style={{padding:"4px 4px",textAlign:"left"}}>Fabric / Design</th>
+            <th style={{padding:"4px 4px",textAlign:"left",width:70}}>Width cm</th>
+            <th style={{padding:"4px 4px",textAlign:"left",width:70}}>Drop cm</th>
+            <th style={{padding:"4px 4px",textAlign:"left",background:C.accentLight}} title="Nu apare în documentul pentru furnizor">Client · intern</th>
+            <th style={{padding:"4px 4px",textAlign:"left",background:C.accentLight}} title="Nu apare în documentul pentru furnizor">Cameră · intern</th>
+            <th style={{width:64}}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {(o.linii||[]).map((l,i)=><tr key={l.id}>
+            <td style={{padding:"3px 4px",textAlign:"center",fontSize:11,color:C.textMuted}}>{i+1}</td>
+            <td style={{padding:"3px 3px"}}><input list="model-opt" style={inpS} value={l.model||""} onChange={e=>updLinie(o.id,l.id,{model:e.target.value})}/></td>
+            <td style={{padding:"3px 3px"}}><input style={inpS} value={l.qty||""} onChange={e=>updLinie(o.id,l.id,{qty:e.target.value})}/></td>
+            <td style={{padding:"3px 3px"}}><input list="rail-opt" style={inpS} value={l.rail||""} onChange={e=>updLinie(o.id,l.id,{rail:e.target.value})}/></td>
+            <td style={{padding:"3px 3px"}}><input style={inpS} value={l.fabric||""} onChange={e=>updLinie(o.id,l.id,{fabric:e.target.value})}/></td>
+            <td style={{padding:"3px 3px"}}><input style={inpS} value={l.width||""} onChange={e=>updLinie(o.id,l.id,{width:e.target.value})}/></td>
+            <td style={{padding:"3px 3px"}}><input style={inpS} value={l.drop||""} onChange={e=>updLinie(o.id,l.id,{drop:e.target.value})}/></td>
+            <td style={{padding:"3px 3px",background:C.accentLight}}><input style={inpS} value={l.client||""} onChange={e=>updLinie(o.id,l.id,{client:e.target.value})}/></td>
+            <td style={{padding:"3px 3px",background:C.accentLight}}><input style={inpS} value={l.camera||""} onChange={e=>updLinie(o.id,l.id,{camera:e.target.value})}/></td>
+            <td style={{padding:"3px 3px",whiteSpace:"nowrap"}}>
+              <button onClick={()=>mutaLinie(o.id,l.id,-1)} title="Mută sus" style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:12}}>↑</button>
+              <button onClick={()=>mutaLinie(o.id,l.id,1)} title="Mută jos" style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:12}}>↓</button>
+              <button onClick={()=>delLinie(o.id,l.id)} title="Șterge rândul" style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:15}}>×</button>
+            </td>
+          </tr>)}
+          {(o.linii||[]).length===0&&<tr><td colSpan={10} style={{padding:"18px",textAlign:"center",fontSize:12,color:C.textMuted}}>Niciun rând. Preia plisee din oferte sau adaugă un rând manual (poți pune și articole/accesorii: scrie codul la Model).</td></tr>}
+        </tbody>
+      </table>
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+      <div><div style={lbl}>Mențiuni către furnizor (apar pe document)</div><textarea style={{...inpS,minHeight:70,resize:"vertical"}} value={o.mentiuni||""} onChange={e=>upd(o.id,{mentiuni:e.target.value})} placeholder="ex: livrare până la..., profil, montaj, fixare..."/></div>
+      <div><div style={lbl}>Notițe interne (doar la printarea internă)</div><textarea style={{...inpS,minHeight:70,resize:"vertical"}} value={o.notiteInterne||""} onChange={e=>upd(o.id,{notiteInterne:e.target.value})}/></div>
+    </div>
+
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",borderTop:`1px solid ${C.border}`,paddingTop:14}}>
+      <button onClick={printSupplier} style={btn(true)}>🖨 Printează / PDF pentru furnizor</button>
+      <button onClick={()=>exportComandaFurnizorXLSX(o)} style={btn(false)}>⬇ Excel pentru furnizor</button>
+      <button onClick={printIntern} style={btn(false)}>🖨 Printează intern (cu client și cameră)</button>
+      <button onClick={marcheazaTrimisa} style={{...btn(false),marginLeft:"auto"}}>{o.status==="trimisa"?"Marchează ca ciornă":"✓ Marchează ca trimisă"}</button>
+    </div>
+    <div style={{fontSize:11,color:C.textMuted,marginTop:8}}>Documentul pentru furnizor și Excelul nu conțin clientul și camera. Printarea internă le arată, pentru montajele voastre.</div>
+  </div>;
+}
+
 function TabCataloage({C,catalogMateriale,setCatalogMateriale,catalogSine,setCatalogSine,catalogPlisse,setCatalogPlisse,catalogJaluzele,setCatalogJaluzele,catalogCostComponente,setCatalogCostComponente,catalogSinaSimpla,setCatalogSinaSimpla,catalogStorRomanElectric,setCatalogStorRomanElectric}){
   const [sub,setSub]=React.useState("materiale");
   const OPTIUNI=[
@@ -8919,6 +9185,8 @@ function App() {
   const [catalogMateriale,setCatalogMateriale]=useState([]);
   const [ofertaCounter,setOfertaCounter]=useState(1);
   const [comandaExecutieCounter,setComandaExecutieCounter]=useState(1);
+  const [comenziFurnizori,setComenziFurnizori]=useState([]);
+  const [achizSub,setAchizSub]=useState("lista");
   const [catalogSine,setCatalogSine]=useState([]);
   const [catalogPlisse,setCatalogPlisse]=useState([]);
   const [catalogJaluzele,setCatalogJaluzele]=useState([]);
@@ -9110,6 +9378,7 @@ function App() {
             [CCK,(d)=>{setCatalogCostComponente(Array.isArray(d)?d:[]);}],
             [CSSK,(d)=>{setCatalogSinaSimpla(Array.isArray(d)?d:[]);}],
             [CSRE,(d)=>{setCatalogStorRomanElectric(Array.isArray(d)?d:[]);}],
+            [CFK,(d)=>{setComenziFurnizori(Array.isArray(d)?d:[]);}],
           ];
           // Toate cheile în paralel — nu una câte una — ca o singură cerere lentă (sau multe cereri, chiar dacă fiecare e rapidă)
           // să nu epuizeze singură bugetul de timp și să arunce toată aplicația fals în modul „offline · date locale".
@@ -9121,8 +9390,8 @@ function App() {
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -9159,6 +9428,7 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CCK,catalogCostComponente);},[catalogCostComponente,loaded]);
   useEffect(()=>{if(loaded) sbSave(CSSK,catalogSinaSimpla);},[catalogSinaSimpla,loaded]);
   useEffect(()=>{if(loaded) sbSave(CSRE,catalogStorRomanElectric);},[catalogStorRomanElectric,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CFK,comenziFurnizori);},[comenziFurnizori,loaded]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
@@ -9341,7 +9611,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -9398,7 +9668,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori
         }
       };
       // Un fișier nou pe zi (kreativo_backup_2026-09-30.json) — nu se mai suprascrie fișierul de ieri.
@@ -9481,6 +9751,7 @@ function App() {
         if(d[CCK]) setCatalogCostComponente(Array.isArray(d[CCK])?d[CCK]:[]);
         if(d[CSSK]) setCatalogSinaSimpla(Array.isArray(d[CSSK])?d[CSSK]:[]);
         if(d[CSRE]) setCatalogStorRomanElectric(Array.isArray(d[CSRE])?d[CSRE]:[]);
+        if(d[CFK]) setComenziFurnizori(Array.isArray(d[CFK])?d[CFK]:[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -10265,6 +10536,12 @@ function App() {
     {tab==="cataloage"&&<TabCataloage C={C} catalogMateriale={catalogMateriale} setCatalogMateriale={setCatalogMateriale} catalogSine={catalogSine} setCatalogSine={setCatalogSine} catalogPlisse={catalogPlisse} setCatalogPlisse={setCatalogPlisse} catalogJaluzele={catalogJaluzele} setCatalogJaluzele={setCatalogJaluzele} catalogCostComponente={catalogCostComponente} setCatalogCostComponente={setCatalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} setCatalogSinaSimpla={setCatalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} setCatalogStorRomanElectric={setCatalogStorRomanElectric}/>}
 
     {tab==="achizitii"&&<div>
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        {[["lista","De achiziționat"],["comenzi","Comenzi către furnizori"]].map(([id,l])=>
+          <button key={id} onClick={()=>setAchizSub(id)} style={{padding:"7px 14px",border:`1px solid ${achizSub===id?C.accent:C.border}`,background:achizSub===id?C.accentLight:"transparent",color:achizSub===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:achizSub===id?500:400}}>{l}</button>)}
+      </div>
+      {achizSub==="comenzi"&&<ComenziFurnizori clients={clients} comenzi={comenziFurnizori} setComenzi={setComenziFurnizori} C={C}/>}
+      {achizSub==="lista"&&<>
       <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
       {(()=>{
         const rows=[];
@@ -10290,6 +10567,7 @@ function App() {
           </div>)}
         </div>);
       })()}
+      </>}
     </div>}
 
     {tab==="tudor"&&<div>
