@@ -2362,7 +2362,7 @@ function construiesteLiniiExecutie(oferta){
   }).filter(cam=>cam.linii.length>0);
 }
 
-function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,oferteClient,catalogMateriale}){
+function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,oferteClient,catalogMateriale,readOnly}){
   const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
   const [open,setOpen]=React.useState(false);
   const [pickerFor,setPickerFor]=React.useState(null); // {camId, liniaId} sau null — picker Articol
@@ -2531,6 +2531,47 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
     </body></html>`;
     printHtmlDoc(html);
   };
+  if(readOnly){
+    const Camp=({et,val})=>val?<div style={{marginRight:18,marginBottom:4}}><span style={{fontSize:12,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.04em"}}>{et} </span><span style={{fontSize:20,fontWeight:700,color:C.text}}>{val}</span></div>:null;
+    const Sec=({t})=><div style={{fontSize:13,fontWeight:700,color:C.text,textTransform:"uppercase",letterSpacing:"0.05em",margin:"16px 0 8px",paddingBottom:4,borderBottom:`2px solid ${C.accent}`}}>{t}</div>;
+    return <div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:10}}>
+      <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"14px 14px",cursor:"pointer",background:C.bg}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:17,fontWeight:700,color:C.text}}>Comandă execuție nr. {comanda.numar}</div>
+          <div style={{fontSize:13,color:C.textMuted,marginTop:2}}>{fmtD(comanda.dataCreat)} · {comanda.camere.reduce((s,c)=>s+c.linii.length,0)} linii</div>
+        </div>
+        <span style={{fontSize:16,color:C.textMuted}}>{open?"▾":"▸"}</span>
+      </div>
+      {open&&<div style={{padding:"4px 14px 16px"}}>
+        {comanda.camere.map(cam=>
+          <div key={cam.id}>
+            <Sec t={cam.numeCamera||"Cameră"}/>
+            {(cam.geamuri||[]).length>0&&<div style={{display:"flex",flexWrap:"wrap",marginBottom:8,padding:"8px 10px",background:C.bg}}>
+              {(cam.geamuri||[]).map((g,gi)=><div key={g.id||gi} style={{marginRight:18,fontSize:16,color:C.text}}><b>Geam {gi+1}:</b> L {g.lungime||"—"} × H {g.inaltime||"—"} cm</div>)}
+            </div>}
+            {cam.linii.map(l=>
+              <div key={l.id} style={{border:`1px solid ${C.border}`,padding:"10px 12px",marginBottom:8,background:C.bg}}>
+                <div style={{fontSize:18,fontWeight:700,color:C.text,marginBottom:4}}>{cap(l.tip)||"—"}{l.geamNr?<span style={{fontSize:14,fontWeight:500,color:C.textMuted}}> · geam {l.geamNr}</span>:null}</div>
+                <div style={{fontSize:17,color:C.text,marginBottom:6}}>{l.material||"—"}{l.culoare?<b> · {l.culoare}</b>:null}</div>
+                <div style={{display:"flex",flexWrap:"wrap"}}>
+                  <Camp et="H" val={l.h}/><Camp et="L" val={l.l}/><Camp et="Buc." val={l.nrBucati}/><Camp et="Bandă" val={l.banda}/>
+                </div>
+                {l.obs&&<div style={{fontSize:16,color:C.text,marginTop:6,padding:"6px 8px",background:C.surface}}><b>Obs.:</b> {l.obs}</div>}
+              </div>
+            )}
+          </div>
+        )}
+        {(consum.materiale.length>0||consum.banda.length>0||(consum.liniiManuale||[]).length>0)&&<Sec t="Consum materiale"/>}
+        {consum.materiale.map(it=><div key={it.id} style={{display:"flex",justifyContent:"space-between",gap:10,padding:"8px 4px",borderBottom:`1px solid ${C.border}`,fontSize:17,color:C.text}}><span>{it.material}{it.culoare?<b> · {it.culoare}</b>:null}</span><b>{it.cantitate} m</b></div>)}
+        {consum.banda.map(it=><div key={it.id} style={{display:"flex",justifyContent:"space-between",gap:10,padding:"8px 4px",borderBottom:`1px solid ${C.border}`,fontSize:17,color:C.text}}><span>Bandă {it.tipBanda}</span><b>{it.cantitate} m</b></div>)}
+        {(consum.liniiManuale||[]).map(it=><div key={it.id} style={{display:"flex",justifyContent:"space-between",gap:10,padding:"8px 4px",borderBottom:`1px solid ${C.border}`,fontSize:17,color:C.text}}><span>{it.denumire}{it.obs?<span style={{color:C.textMuted}}> · {it.obs}</span>:null}</span><b>{it.cantitate}</b></div>)}
+        <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",padding:"14px 12px",marginTop:16,background:consum.verificatNico?"#DCE8DC":C.bg,border:`1px solid ${consum.verificatNico?"#7A9A7A":C.border}`}}>
+          <input type="checkbox" style={{width:22,height:22}} checked={!!consum.verificatNico} onChange={e=>updConsum("verificatNico",e.target.checked)}/>
+          <span style={{fontSize:16,fontWeight:700,color:consum.verificatNico?"#3A5A3A":C.text}}>{consum.verificatNico?"✓ Verificat de Nico":"Verificat de Nico"}</span>
+        </label>
+      </div>}
+    </div>;
+  }
   return <div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:8}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <div style={{flex:1}}>
@@ -2784,7 +2825,7 @@ function BlocareZi({blocate,onAdd,onDel,C,fmtD}){
   </div>;
 }
 
-function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,comandaExecutieCounter,setComandaExecutieCounter,catalogMateriale}){
+function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlocat,comandaExecutieCounter,setComandaExecutieCounter,catalogMateriale,readOnly}){
   const [openId,setOpenId]=React.useState(null);
   const [calMonth,setCalMonth]=React.useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
@@ -2793,12 +2834,16 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
   const todayKey=tday();
 
-  const nicoClients=clients.filter(c=>c.alocatNico).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
+  const stadiuNicoEf=(c)=>c.stadiuNico||((c.livrat||c.stadiu==="finalizat")?"livrat":"lucru");
+  const [nView,setNView]=React.useState("lucru");
+  const toateNico=clients.filter(c=>c.alocatNico);
+  const nicoClients=toateNico.filter(c=>stadiuNicoEf(c)===nView).sort((a,b)=>a.name.localeCompare(b.name,"ro"));
+  const mutaNico=(id,st)=>{ setClients(p=>p.map(c=>c.id!==id?c:{...c,stadiuNico:st})); setOpenId(null); };
   const client=clients.find(c=>c.id===openId);
   const ci=client?clients.indexOf(client):-1;
 
   const productieByDay={};
-  nicoClients.forEach(c=>{
+  toateNico.filter(c=>stadiuNicoEf(c)!=="livrat").forEach(c=>{
     const start=c.prodStart||"", end=c.prodEnd||start;
     if(!start||!end) return;
     let d=new Date(start);
@@ -2887,11 +2932,17 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
 
     <BlocareZi blocate={blocate} onAdd={onAddBlocat} onDel={onDelBlocat} C={C} fmtD={fmtD}/>
 
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16,marginTop:20}}>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:20,marginBottom:10}}>
+      {[["lucru","Clienți în lucru"],["nelivrat","Clienți nelivrați"],["livrat","Clienți livrați"]].map(([id,l])=>{
+        const n=toateNico.filter(c=>stadiuNicoEf(c)===id).length;
+        return <button key={id} onClick={()=>{setNView(id);setOpenId(null);}} style={{flex:"1 1 30%",minWidth:100,padding:"10px 8px",border:`1px solid ${nView===id?C.accent:C.border}`,background:nView===id?C.accentLight:"transparent",color:nView===id?C.text:C.textSub,fontSize:13,fontWeight:nView===id?700:500,cursor:"pointer"}}>{l} ({n})</button>;
+      })}
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
       {nicoClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
       </div>)}
-      {nicoClients.length===0&&<div style={{fontSize:13,color:C.textMuted,gridColumn:"1/-1",padding:"20px 0"}}>Niciun client alocat încă. Bifează "Alocă la Nico" din fișa clientului, în tab-ul Clienți.</div>}
+      {nicoClients.length===0&&<div style={{fontSize:13,color:C.textMuted,gridColumn:"1/-1",padding:"20px 0"}}>{nView==="lucru"?(toateNico.length===0?'Niciun client alocat încă. Bifează "Alocă la Nico" din fișa clientului, în tab-ul Clienți.':"Niciun client în lucru."):nView==="nelivrat"?"Niciun client nelivrat (cusut, în așteptare de montaj).":"Niciun client livrat."}</div>}
     </div>
     {client&&<div style={{border:`1px solid ${C.border}`,background:C.surface}}>
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
@@ -2899,6 +2950,15 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
         <button onClick={()=>setOpenId(null)} style={{background:"none",border:"none",cursor:"pointer",color:C.textSub,fontSize:15}}>×</button>
       </div>
       <div style={{padding:"12px 16px"}}>
+        <div style={{marginBottom:14,padding:"10px 14px",background:C.bg}}>
+          <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Mută clientul în</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {[["lucru","În lucru"],["nelivrat","Nelivrat (cusut)"],["livrat","Livrat (montat)"]].map(([id,l])=>{
+              const cur=stadiuNicoEf(client)===id;
+              return <button key={id} disabled={cur} onClick={()=>mutaNico(client.id,id)} style={{flex:"1 1 28%",minWidth:90,padding:"10px 6px",fontSize:13,fontWeight:600,border:`1px solid ${cur?C.accent:C.border}`,background:cur?C.accent:C.surface,color:cur?"#fff":C.text,cursor:cur?"default":"pointer"}}>{cur?"✓ ":""}{l}</button>;
+            })}
+          </div>
+        </div>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,padding:"10px 14px",background:C.bg,flexWrap:"wrap"}}>
           <span style={{fontSize:12,color:C.textMuted}}>Producție:</span>
           <input type="date" value={client.prodStart||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,prodStart:e.target.value}))} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",background:C.surface}}/>
@@ -2908,7 +2968,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
 
         <div style={{marginBottom:16}}>
           <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comandă execuție — perdele, draperii, stor roman</div>
-          <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+          {!readOnly&&<div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             {(client.oferte||[]).length>0&&<>
               <select value={ofertaSelectataId} onChange={e=>setOfertaSelectataId(e.target.value)} style={{flex:1,minWidth:160,fontSize:12,border:`1px solid ${C.border}`,padding:"7px 8px",background:C.surface,outline:"none"}}>
                 <option value="">— alege oferta, ca să preiei liniile din ea —</option>
@@ -2917,9 +2977,9 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
               <button onClick={creeazaComandaDinOferta} disabled={!ofertaSelectataId} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:ofertaSelectataId?"#5C6B65":C.border,color:"#fff",border:"none",cursor:ofertaSelectataId?"pointer":"default",whiteSpace:"nowrap"}}>+ Din ofertă</button>
             </>}
             <button onClick={creeazaComandaManuala} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>+ Comandă manuală (fără ofertă)</button>
-          </div>
+          </div>}
           {(client.comenziExecutieNico||[]).slice().reverse().map(cx=>
-            <ComandaExecutieCard key={cx.id} comanda={cx} clientId={client.id} setClients={setClients} C={C} clientNume={client.name} fmtD={fmtD} oferteClient={client.oferte} catalogMateriale={catalogMateriale}/>
+            <ComandaExecutieCard key={cx.id} comanda={cx} clientId={client.id} setClients={setClients} C={C} clientNume={client.name} fmtD={fmtD} oferteClient={client.oferte} catalogMateriale={catalogMateriale} readOnly={readOnly}/>
           )}
         </div>
 
@@ -9851,7 +9911,7 @@ function App() {
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Nico</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Croitorie · Kreativo Studio</div>
       </div>
-      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale}/>
+      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale} readOnly={true}/>
     </div>;
   }
 
