@@ -12,6 +12,7 @@
   var href = 'manifest.json';
   if(p.get('dan')==='1') href = 'manifest-dan.json';
   else if(p.get('nico')==='1') href = 'manifest-nico.json';
+  else if(p.get('radu')==='1') href = 'manifest-radu.json';
   document.write('<link rel="manifest" href="'+href+'">');
 })();
 </script>
@@ -87,6 +88,8 @@ const CSSK = "kreativo_catalog_sina_simpla_v1";
 const CSRE = "kreativo_catalog_stor_roman_electric_v1";
 const CFK = "kreativo_comenzi_furnizori_v1";
 const CVS = "kreativo_vopsele_stoc_v1";
+const CVM = "kreativo_vopsele_miscari_v1";
+const CVC = "kreativo_vopsele_comenzi_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -5205,34 +5208,162 @@ function exportComandaFurnizorXLSX(o){
 }
 
 
-const VOPSELE_SEED_RAW = [["v0001","046","Start Fresh Primer","Deep Base","Primer",0.95,178.17,222.69,"1273978",2,0],["v0002","046","Start Fresh Primer","Deep Base","Primer",18.9,1449.3,2521.01,"1275790",0,0],["v0003","046","Start Fresh Primer","Deep Base","Primer",3.78,429.24,588.24,"1273977",1,0],["v0004","046","Start Fresh Primer","Alb","Primer",0.95,179.76,222.69,"1273976",2,0],["v0005","046","Start Fresh Primer","Alb","Primer",18.9,2031.29,2521.01,"1275334",2,0],["v0006","046","Start Fresh Primer","Alb","Primer",3.78,410.79,588.24,"1273973",8,0],["v0007","127","Color Samples","1X","Probă",0.48,76.42,105.04,"1274017",0,0],["v0008","127","Color Samples","2X","Probă",0.48,78.01,105.04,"1274018",0,0],["v0009","127","Color Samples","3X","Probă",0.48,68.47,105.04,"1274019",0,0],["v0010","127","Color Samples","4X","Probă",0.48,63.7,105.04,"1274020",0,0],["v0011","200","Color Sample","1X","Probă",0.2,48.72,63,"1274293",4,0],["v0012","200","Color Sample","2X","Probă",0.2,50.31,63,"1274294",6,0],["v0013","200","Color Sample","3X","Probă",0.2,40.77,63,"1274295",6,0],["v0014","200","Color Sample","4X","Probă",0.2,40.77,63,"1274296",6,0],["v0015","355","Super Hide Zero VOC","1X","Flat",18.9,1086.57,1386.55,"1273996",0,0],["v0016","355","Super Hide Zero VOC","1X","Flat",3.78,294.49,369.75,"1273995",1,0],["v0017","355","Super Hide Zero VOC","2X","Flat",3.78,263.75,369.75,"1273997",4,0],["v0018","355","Super Hide Zero VOC","3X","Flat",3.78,157.75,369.75,"1273998",3,0],["v0019","355","Super Hide Zero VOC","Alb","Flat",18.9,1176.47,1176.47,"1275351",0,0],["v0020","355","Super Hide Zero VOC","Alb","Flat",3.78,264.71,369.75,"1275349",3,0],["v0021","357","Super Hide Zero VOC","1X","Eggshell",18.9,1254.64,1554.62,"1274101",0,0],["v0022","357","Super Hide Zero VOC","1X","Eggshell",3.78,319.7,394.96,"1273999",5,0],["v0023","357","Super Hide Zero VOC","2X","Eggshell",3.78,288.96,394.96,"1274000",4,0],["v0024","357","Super Hide Zero VOC","3X","Eggshell",3.78,182.96,394.96,"1274001",4,0],["v0025","423","Stays Clear Low Luster","","Low Luster",0.95,327.73,327.73,"1276117",0,0],["v0026","423","Stays Clear Low Luster","","Low Luster",3.78,890.76,890.76,"1276116",0,0],["v0027","425","Stays Clear Flat","","Flat",3.78,890.76,890.76,"1276118",0,0],["v0028","425","Stays Clear Flat","","Flat",0.95,327.73,327.73,"1276119",0,0],["v0029","484","Scuff-X","Alb","Mat",3.78,630.25,630.25,"1275513",0,0],["v0030","484","Scuff-X","1X","Mat",18.9,2894.36,3193.28,"1275496",0,0],["v0031","484","Scuff-X","1X","Mat",3.78,630.62,705.88,"1274002",1,0],["v0032","484","Scuff-X","2X","Mat",18.9,2771.4,3193.28,"1275497",0,0],["v0033","484","Scuff-X","2X","Mat",3.78,599.88,705.88,"1274003",1,0],["v0034","484","Scuff-X","3X","Mat",18.9,2342.1,3193.28,"1275498",0,0],["v0035","484","Scuff-X","3X","Mat",3.78,493.88,705.88,"1274004",4,0],["v0036","484","Scuff-X","4X","Mat",18.9,2090.88,3193.28,"1275690",0,0],["v0037","484","Scuff-X","4X","Mat",3.78,430.3,705.88,"1274005",0,0],["v0038","484","Scuff-X","Alb","Mat",18.9,2773.11,2773.11,"1275337",0,0],["v0039","485","Scuff-X","1X","Eggshell",3.78,630.62,705.88,"1274006",0,0],["v0040","485","Scuff-X","1X","Eggshell",18.9,2894.36,3193.28,"1275691",0,0],["v0041","485","Scuff-X","2X","Eggshell",3.78,599.88,705.88,"1274060",0,0],["v0042","485","Scuff-X","2X","Eggshell",18.9,2771.4,3193.28,"1275692",0,0],["v0043","485","Scuff-X","3X","Eggshell",3.78,493.88,705.88,"1274061",1,0],["v0044","485","Scuff-X","4X","Eggshell",18.9,2090.88,3193.28,"1275872",0,0],["v0045","485","Scuff-X","4X","Eggshell",3.78,430.28,705.88,"1274008",3,0],["v0046","485","Scuff-X","Alb","Eggshell",3.78,525.21,525.21,"1275871",0,0],["v0047","508","Waterborne Ceiling Paint","1X","Flat",0.95,216.74,235.29,"1274109",1,0],["v0048","508","Waterborne Ceiling Paint","1X","Flat",18.9,2222,2521.01,"1275593",0,0],["v0049","508","Waterborne Ceiling Paint","1X","Flat",3.78,529.78,605.04,"1274108",0,0],["v0050","508","Waterborne Ceiling Paint","2X","Flat",0.95,208.79,235.29,"1274111",2,0],["v0051","508","Waterborne Ceiling Paint","2X","Flat",3.78,499.04,605.04,"1274110",0,0],["v0052","508","Waterborne Ceiling Paint","3X","Flat",0.95,182.29,235.29,"1274113",0,0],["v0053","508","Waterborne Ceiling Paint","3X","Flat",3.78,393.04,605.04,"1274112",0,0],["v0054","508","Waterborne Ceiling Paint","4X","Flat",0.95,166.39,235.29,"1274114",0,0],["v0055","508","Waterborne Ceiling Paint","4X","Flat",3.78,329.44,605.04,"1274840",0,0],["v0056","508","Waterborne Ceiling Paint","Alb","Flat",18.9,2268.91,2268.91,"1275592",0,0],["v0057","508","Waterborne Ceiling Paint","Alb","Flat",3.78,571.43,571.43,"1273975",0,0],["v0058","508","Waterborne Ceiling Paint","Alb","Flat",0.95,210.08,210.08,"1273982",0,0],["v0059","518","Paint Extender","","Auxiliar",0.95,142.86,142.86,"1274925",0,0],["v0060","522","Aura","1X","Mat",0.95,275.57,294.12,"1274010",0,0],["v0061","522","Aura","1X","Mat",18.9,3398.56,3697.48,"1275499",0,0],["v0062","522","Aura","1X","Mat",3.78,765.08,840.34,"1274009",1,0],["v0063","522","Aura","2X","Mat",0.95,267.62,294.12,"1274012",0,0],["v0064","522","Aura","2X","Mat",18.9,3275.6,3697.48,"1275500",0,0],["v0065","522","Aura","2X","Mat",3.78,734.34,840.34,"1274011",0,0],["v0066","522","Aura","3X","Mat",0.95,241.12,294.12,"1274014",1,0],["v0067","522","Aura","3X","Mat",3.78,628.34,840.34,"1274013",0,0],["v0068","522","Aura","4X","Mat",0.95,225.22,294.12,"1274016",0,0],["v0069","522","Aura","4X","Mat",3.78,564.74,840.34,"1274015",0,0],["v0070","524","Aura","1X","Eggshell",0.95,275.57,294.12,"1273981",8,0],["v0071","524","Aura","1X","Eggshell",18.9,3398.56,3697.48,"1275686",0,0],["v0072","524","Aura","1X","Eggshell",3.78,765.08,840.34,"1273974",0,0],["v0073","524","Aura","2X","Eggshell",0.95,267.62,294.12,"1274022",4,0],["v0074","524","Aura","2X","Eggshell",18.9,3275.6,3697.48,"1275687",0,0],["v0075","524","Aura","2X","Eggshell",3.78,734.34,840.34,"1274021",0,0],["v0076","524","Aura","3X","Eggshell",0.95,241.12,294.12,"1274024",3,0],["v0077","524","Aura","3X","Eggshell",3.78,628.34,840.34,"1274023",0,0],["v0078","524","Aura","4X","Eggshell",0.95,225.22,294.12,"1274026",1,0],["v0079","524","Aura","4X","Eggshell",3.78,564.74,840.34,"1274025",0,0],["v0080","526","Aura","1X","Satin",3.78,765.08,840.34,"1275681",0,0],["v0081","526","Aura","1X","Satin",0.95,275.57,294.12,"1274027",0,0],["v0082","526","Aura","1X","Satin",18.9,3398.56,3697.48,"1275688",0,0],["v0083","526","Aura","2X","Satin",3.78,734.34,840.34,"1275682",0,0],["v0084","526","Aura","2X","Satin",0.95,267.62,294.12,"1274028",0,0],["v0085","526","Aura","3X","Satin",3.78,628.34,840.34,"1275683",0,0],["v0086","526","Aura","3X","Satin",0.95,241.12,294.12,"1274029",0,0],["v0087","526","Aura","4X","Satin",3.78,564.74,840.34,"1275684",0,0],["v0088","526","Aura","4X","Satin",0.95,225.22,294.12,"1274030",0,0],["v0089","528","Aura","1X","Semi-Gloss",18.9,3398.56,3697.48,"1275791",0,0],["v0090","532","Aura Bath & Spa","1X","Mat",0.95,275.57,294.12,"1274115",8,0],["v0091","532","Aura Bath & Spa","1X","Mat",3.78,765.08,840.34,"1274031",0,0],["v0092","532","Aura Bath & Spa","2X","Mat",0.95,267.62,294.12,"1274033",2,0],["v0093","532","Aura Bath & Spa","2X","Mat",3.78,734.34,840.34,"1274032",5,0],["v0094","532","Aura Bath & Spa","3X","Mat",0.95,241.12,294.12,"1274035",1,0],["v0095","532","Aura Bath & Spa","3X","Mat",3.78,628.34,840.34,"1274034",1,0],["v0096","532","Aura Bath & Spa","4X","Mat",0.95,225.22,294.12,"1274037",1,0],["v0097","532","Aura Bath & Spa","4X","Mat",3.78,564.74,840.34,"1274036",0,0],["v0098","534","Ultra Spec Primer","Alb","Primer",18.9,1210.08,1210.08,"1276115",0,0],["v0099","534","Ultra Spec Primer","Alb","Primer",3.78,281.51,281.51,"1276114",2,0],["v0100","535","Ultra Spec 500","1X","Flat",0.95,157.92,176.47,"1274643",0,0],["v0101","535","Ultra Spec 500","1X","Flat",18.9,1506.74,1806.72,"1274607",0,0],["v0102","535","Ultra Spec 500","1X","Flat",3.78,386.92,462.18,"1274644",4,0],["v0103","535","Ultra Spec 500","2X","Flat",0.95,149.97,176.47,"1274841",0,0],["v0104","535","Ultra Spec 500","2X","Flat",18.9,1384.84,1806.72,"1275519",0,0],["v0105","535","Ultra Spec 500","2X","Flat",3.78,356.2,462.18,"1274647",0,0],["v0106","535","Ultra Spec 500","3X","Flat",0.95,123.47,176.47,"1274924",0,0],["v0107","535","Ultra Spec 500","3X","Flat",18.9,955.54,1806.72,"1275927",0,0],["v0108","535","Ultra Spec 500","3X","Flat",3.78,292.58,468.18,"1274645",0,0],["v0109","535","Ultra Spec 500","4X","Flat",0.95,107.57,176.47,"1274842",0,0],["v0110","535","Ultra Spec 500","4X","Flat",18.9,704.32,1806.72,"1275928",0,0],["v0111","535","Ultra Spec 500","4X","Flat",3.78,250.18,462.18,"1274646",0,0],["v0112","535","Ultra Spec 500","Alb","Flat",18.9,1554.62,1554.62,"1274849",0,0],["v0113","535","Ultra Spec 500","Alb","Flat",3.78,403.36,403.36,"1274760",0,0],["v0114","536","Ultra Spec 500","1X","",3.78,298.69,373.95,"1274090",0,0],["v0115","538","Ultra Spec 500","1X","Eggshell",3.78,428.94,504.2,"1275619",1,0],["v0116","538","Ultra Spec 500","1X","Eggshell",0.95,170.53,189.08,"1275623",1,0],["v0117","538","Ultra Spec 500","2X","Eggshell",3.78,398.2,504.2,"1275620",3,0],["v0118","538","Ultra Spec 500","2X","Eggshell",0.95,162.58,189.08,"1275624",0,0],["v0119","538","Ultra Spec 500","3X","Eggshell",3.78,292.2,504.2,"1275621",6,0],["v0120","538","Ultra Spec 500","3X","Eggshell",0.95,136.08,189.08,"1275625",0,0],["v0121","538","Ultra Spec 500","4X","Eggshell",3.78,228.6,504.2,"1275622",2,0],["v0122","538","Ultra Spec 500","4X","Eggshell",0.95,120.18,189.08,"1275626",0,0],["v0123","546","Ultra Spec 500","Alb","Semi-Gloss",3.78,462.18,462.18,"1275514",0,0],["v0124","546","Ultra Spec 500","1X","Semi-Gloss",3.78,470.96,546.22,"1275515",0,0],["v0125","546","Ultra Spec 500","2X","Semi-Gloss",3.78,440.22,546.22,"1275516",0,0],["v0126","546","Ultra Spec 500","3X","Semi-Gloss",3.78,334.22,546.22,"1275517",0,0],["v0127","546","Ultra Spec 500","4X","Semi-Gloss",3.78,270.62,546.22,"1275518",0,0],["v0128","547","Regal Select","1X","Flat",18.9,2305.06,2605.04,"1275935",0,0],["v0129","547","Regal Select","1X","Flat",3.78,554.99,630.25,"1275341",7,0],["v0130","547","Regal Select","2X","Flat",0.95,199.94,219.49,"1275343",0,0],["v0131","547","Regal Select","2X","Flat",3.78,524.25,630.25,"1275342",2,0],["v0132","547","Regal Select","3X","Flat",0.95,165.49,218.49,"1275344",5,0],["v0133","547","Regal Select","3X","Flat",3.78,418.25,630.25,"1275793",4,0],["v0134","547","Regal Select","4X","Flat",0.95,149.59,218.49,"1275345",5,0],["v0135","548","Regal Select","1X","Mat",0.95,250.36,268.91,"1274039",1,0],["v0136","548","Regal Select","1X","Mat",3.78,706.25,781.51,"1274038",0,0],["v0137","548","Regal Select","2X","Mat",0.95,242.41,268.91,"1274041",1,0],["v0138","548","Regal Select","2X","Mat",18.9,2477.28,2899.16,"1275502",0,0],["v0139","548","Regal Select","2X","Mat",3.78,675.51,781.51,"1274040",0,0],["v0140","548","Regal Select","3X","Mat",0.95,215.91,268.91,"1274291",1,0],["v0141","548","Regal Select","3X","Mat",3.78,569.51,781.51,"1274102",0,0],["v0142","548","Regal Select","4X","Mat",0.95,200.01,268.91,"1274292",1,0],["v0143","548","Regal Select","4X","Mat",3.78,505.91,781.51,"1274103",0,0],["v0144","549","Regal Select","Alb","Eggshell",3.78,672.27,672.27,"1275685",0,0],["v0145","549","Regal Select","1X","Eggshell",0.95,250.36,268.91,"1274043",0,0],["v0146","549","Regal Select","1X","Eggshell",3.78,706.25,781.51,"1274042",0,0],["v0147","549","Regal Select","2X","Eggshell",0.95,242.41,268.91,"1274045",0,0],["v0148","549","Regal Select","2X","Eggshell",3.78,675.51,781.51,"1274044",0,0],["v0149","549","Regal Select","3X","Eggshell",0.95,215.91,268.91,"1274105",0,0],["v0150","549","Regal Select","3X","Eggshell",3.78,569.51,781.51,"1274104",0,0],["v0151","549","Regal Select","4X","Eggshell",0.95,200.01,268.91,"1274107",0,0],["v0152","549","Regal Select","4X","Eggshell",3.78,505.91,781.51,"1274106",0,0],["v0153","608","Ultra Spec Masonry 100% Acrylic Sealer","","Primer",3.78,268.91,268.91,"1275335",0,0],["v0154","629","Aura Exterior","1X","Flat",18.9,3481.53,3781.51,"1274298",0,0],["v0155","629","Aura Exterior","1X","Flat",3.78,849.11,924.37,"1274297",0,0],["v0156","629","Aura Exterior","2X","Flat",3.78,818.37,924.37,"1275617",0,0],["v0157","629","Aura Exterior","3X","Flat",3.78,712.37,924.37,"1275618",0,0],["v0158","629","Aura Exterior","4X","Flat",3.78,648.77,924.37,"1274299",0,0],["v0159","631","Aura Exterior","1X","Satin",3.78,849.11,924.37,"1274147",0,0],["v0160","631","Aura Exterior","2X","Satin",3.78,818.37,924.37,"1275794",0,0],["v0161","631","Aura Exterior","3X","Satin",3.78,712.37,924.37,"1275795",0,0],["v0162","631","Aura Exterior","4X","Satin",3.78,648.77,924.37,"1274148",0,0],["v0163","634","Aura Exterior","1X","Low Luster",0.95,267.16,285.71,"1275929",0,0],["v0164","634","Aura Exterior","1X","Low Luster",3.78,748.27,823.53,"1274921",0,0],["v0165","634","Aura Exterior","2X","Low Luster",0.95,259.21,285.71,"1275931",0,0],["v0166","634","Aura Exterior","2X","Low Luster",3.78,717.53,823.53,"1274922",0,0],["v0167","634","Aura Exterior","3X","Low Luster",0.95,232.71,285.71,"1275930",0,0],["v0168","634","Aura Exterior","3X","Low Luster",3.78,611.53,823.53,"1275933",0,0],["v0169","634","Aura Exterior","4X","Low Luster",0.95,216.81,285.71,"1275932",0,0],["v0170","634","Aura Exterior","4X","Low Luster",3.78,547.93,823.53,"1274979",0,0],["v0171","763","Element Guard","1X","Flat",3.78,512.98,588.24,"1274838",3,0],["v0172","763","Element Guard","2X","Flat",3.78,482.24,588.24,"1274923",0,0],["v0173","763","Element Guard","3X","Flat",3.78,376.24,588.24,"1276066",0,0],["v0174","763","Element Guard","4X","Flat",3.78,312.64,588.24,"1274839",0,0],["v0175","792","Advance","1X","Satin",0.95,283.97,302.52,"1275157",0,0],["v0176","792","Advance","1X","Satin",3.78,681.04,756.3,"1274046",0,0],["v0177","792","Advance","2X","Satin",0.95,276.02,302.52,"1274047",1,0],["v0178","792","Advance","2X","Satin",3.78,650.3,756.3,"1275934",0,0],["v0179","792","Advance","3X","Satin",0.95,249.52,302.52,"1274048",1,0],["v0180","792","Advance","3X","Satin",3.78,544.3,756.3,"1275336",2,0],["v0181","792","Advance","4X","Satin",0.95,233.62,302.52,"1274049",0,0],["v0182","792","Advance","4X","Satin",3.78,480.7,756.3,"1275792",0,0],["v0183","792","Advance","1X","Satin",18.9,3229.43,3529.41,"1275693",0,0],["v0184","B1","Pigment Gennex Thalo Blue","","Pigment",0.95,394.96,null,"1273979",1,0],["v0185","G1","Pigment Gennex Thalo Green","","Pigment",0.95,394.96,null,"1273980",2,0],["v0186","M1","Pigment Gennex Magenta","","Pigment",0.95,394.96,null,"1273983",0,0],["v0187","MAXBLOCK","Max Block","Alb","Primer",0.95,134.46,134.46,"1276135",0,0],["v0188","MAXBLOCK","Max Block","Alb","Primer",18.9,2142.86,2142.86,"1276136",0,0],["v0189","MAXBLOCK","Max Block","Alb","Primer",3.78,453.78,453.78,"1276134",0,0],["v0190","O1","Pigment Gennex Orange","","Pigment",0.95,394.96,null,"1273984",0,0],["v0191","R1","Pigment Gennex Red","","Pigment",0.95,394.96,null,"1273985",0,0],["v0192","R2","Pigment Gennex Organic Red","","Pigment",0.95,394.94,null,"1273986",1,0],["v0193","R3","Pigment Gennex Oxide Red","","Pigment",0.95,394.96,null,"1273987",0,0],["v0194","S1","Pigment Gennex Black","","Pigment",0.95,394.96,null,"1273988",1,0],["v0195","S1","Pigment Gennex Black","","Pigment",3.78,1500,null,"1274287",1,0],["v0196","S2","Pigment Gennex Gray","","Pigment",0.95,394.96,null,"1273989",1,0],["v0197","110","Stix Primer","","Primer",0.95,201.68,201.68,"1274758",2,0],["v0198","110","Stix Primer","","Primer",3.78,640.34,640.34,"1274050",8,0],["v0199","110","Stix Primer","Alb","Primer",3.78,521.01,521.01,"1275936",0,0],["v0200","110","Stix Primer","Alb","Primer",18.9,2936.97,2936.97,"1275789",0,0],["v0201","V027","Clear Acrylic Sealer","","Primer",null,210.08,210.08,"1274051",1,0],["v0202","W1","Pigment Gennex White","","Pigment",0.95,394.96,null,"1273990",1,0],["v0203","W1","Pigment Gennex White","","Pigment",3.78,1500,null,"1274288",0,0],["v0204","Y1","Pigment Gennex Organic Yellow 1","","Pigment",0.95,394.96,null,"1273991",0,0],["v0205","Y2","Pigment Gennex Organic Yellow 2","","Pigment",0.95,394.96,null,"1273992",0,0],["v0206","Y3","Pigment Gennex Oxide Yellow","","Pigment",0.95,394.96,null,"1274057",1,0],["v0207","Y3","Pigment Gennex Oxide Yellow","","Pigment",3.78,1500,null,"1274289",0,0],["v0208","547","Regal Select","1X","Flat",0.95,null,null,"",4,1],["v0209","547","Regal Select","4X","Flat",3.78,null,null,"",2,1]];
-const vopseleSeed = () => VOPSELE_SEED_RAW.map(a=>({id:a[0],cod:a[1],den:a[2],baza:a[3],fin:a[4],amb:a[5],pret:a[6],pretRec:a[7],cf:a[8],stoc:a[9],extra:!!a[10]}));
+const VOPSELE_SEED_RAW = [["v0001","046","Start Fresh Primer","Deep Base","Primer",0.95,178.17,222.69,"1273978",2,0,"BM SUA 046 PRIMER DEEP BASE 0.95L"],["v0002","046","Start Fresh Primer","Deep Base","Primer",18.9,1449.3,2521.01,"1275790",0,0,"BM SUA 046 PRIMER DEEP BASE 18.9L"],["v0003","046","Start Fresh Primer","Deep Base","Primer",3.78,429.24,588.24,"1273977",1,0,"BM SUA 046 PRIMER DEEP BASE 3.78L"],["v0004","046","Start Fresh Primer","Alb","Primer",0.95,179.76,222.69,"1273976",2,0,"BM SUA 046 PRIMER WHITE 0.95L"],["v0005","046","Start Fresh Primer","Alb","Primer",18.9,2031.29,2521.01,"1275334",2,0,"BM SUA 046 PRIMER WHITE 18.9L"],["v0006","046","Start Fresh Primer","Alb","Primer",3.78,410.79,588.24,"1273973",8,0,"BM SUA 046 PRIMER WHITE 3.78L"],["v0007","127","Color Samples","1X","Probă",0.48,76.42,105.04,"1274017",0,0,"BM SUA 127 1X COLOR SAMPLES 0.48L"],["v0008","127","Color Samples","2X","Probă",0.48,78.01,105.04,"1274018",0,0,"BM SUA 127 2X COLOR SAMPLES 0.48L"],["v0009","127","Color Samples","3X","Probă",0.48,68.47,105.04,"1274019",0,0,"BM SUA 127 3X COLOR SAMPLES 0.48L"],["v0010","127","Color Samples","4X","Probă",0.48,63.7,105.04,"1274020",0,0,"BM SUA 127 4X COLOR SAMPLES 0.48L"],["v0011","200","Color Sample","1X","Probă",0.2,48.72,63,"1274293",4,0,"BM SUA 200 1X COLOR SAMPLE"],["v0012","200","Color Sample","2X","Probă",0.2,50.31,63,"1274294",6,0,"BM SUA 200 2X COLOR SAMPLE"],["v0013","200","Color Sample","3X","Probă",0.2,40.77,63,"1274295",6,0,"BM SUA 200 3X COLOR SAMPLE"],["v0014","200","Color Sample","4X","Probă",0.2,40.77,63,"1274296",6,0,"BM SUA 200 4X COLOR SAMPLE"],["v0015","355","Super Hide Zero VOC","1X","Flat",18.9,1086.57,1386.55,"1273996",0,0,"BM SUA 355 1X SUPER HIDE ZERO FLAT 18.9L"],["v0016","355","Super Hide Zero VOC","1X","Flat",3.78,294.49,369.75,"1273995",1,0,"BM SUA 355 1X SUPER HIDE ZERO FLAT 3.78L"],["v0017","355","Super Hide Zero VOC","2X","Flat",3.78,263.75,369.75,"1273997",4,0,"BM SUA 355 2X SUPER HIDE ZERO FLAT 3.78L"],["v0018","355","Super Hide Zero VOC","3X","Flat",3.78,157.75,369.75,"1273998",3,0,"BM SUA 355 3X SUPER HIDE ZERO FLAT 3.78L"],["v0019","355","Super Hide Zero VOC","Alb","Flat",18.9,1176.47,1176.47,"1275351",0,0,"BM SUA 355 WHITE SUPER HIDE ZERO FLAT 18.9"],["v0020","355","Super Hide Zero VOC","Alb","Flat",3.78,264.71,369.75,"1275349",3,0,"BM SUA 355 WHITE SUPER HIDE ZERO FLAT 3.78"],["v0021","357","Super Hide Zero VOC","1X","Eggshell",18.9,1254.64,1554.62,"1274101",0,0,"BM SUA 357 1X SUPER HIDE ZERO EGGSHELL 18."],["v0022","357","Super Hide Zero VOC","1X","Eggshell",3.78,319.7,394.96,"1273999",5,0,"BM SUA 357 1X SUPER HIDE ZERO EGGSHELL 3.7"],["v0023","357","Super Hide Zero VOC","2X","Eggshell",3.78,288.96,394.96,"1274000",4,0,"BM SUA 357 2X SUPER HIDE ZERO EGGSHELL 3.7"],["v0024","357","Super Hide Zero VOC","3X","Eggshell",3.78,182.96,394.96,"1274001",4,0,"BM SUA 357 3X SUPER HIDE ZERO EGGSHELL 3.7"],["v0025","423","Stays Clear Low Luster","","Low Luster",0.95,327.73,327.73,"1276117",0,0,"BM SUA 423 STAYS CLEAR LL 0.95L"],["v0026","423","Stays Clear Low Luster","","Low Luster",3.78,890.76,890.76,"1276116",0,0,"BM SUA 423 STAYS CLEAR LL 3.78L"],["v0027","425","Stays Clear Flat","","Flat",3.78,890.76,890.76,"1276118",0,0,"BM SUA 425 STAYS FLAT+CLEAR 3.78L"],["v0028","425","Stays Clear Flat","","Flat",0.95,327.73,327.73,"1276119",0,0,"BM SUA 425 STAYS FLAT-CLEAR 0.95L"],["v0029","484","Scuff-X","Alb","Mat",3.78,630.25,630.25,"1275513",0,0,"BM SUA 484 01 SCUFF-X MATTE 3.78L WHITE"],["v0030","484","Scuff-X","1X","Mat",18.9,2894.36,3193.28,"1275496",0,0,"BM SUA 484 1X SCUFF-X MATTE 18.9L"],["v0031","484","Scuff-X","1X","Mat",3.78,630.62,705.88,"1274002",1,0,"BM SUA 484 1X SCUFF-X MATTE 3.78L"],["v0032","484","Scuff-X","2X","Mat",18.9,2771.4,3193.28,"1275497",0,0,"BM SUA 484 2X SCUFF-X MATTE 18.9L"],["v0033","484","Scuff-X","2X","Mat",3.78,599.88,705.88,"1274003",1,0,"BM SUA 484 2X SCUFF-X MATTE 3.78L"],["v0034","484","Scuff-X","3X","Mat",18.9,2342.1,3193.28,"1275498",0,0,"BM SUA 484 3X SCUFF-X MATTE 18.9L"],["v0035","484","Scuff-X","3X","Mat",3.78,493.88,705.88,"1274004",4,0,"BM SUA 484 3X SCUFF-X MATTE 3.78L"],["v0036","484","Scuff-X","4X","Mat",18.9,2090.88,3193.28,"1275690",0,0,"BM SUA 484 4X SCUFF-X INT MATTE 18.9L"],["v0037","484","Scuff-X","4X","Mat",3.78,430.3,705.88,"1274005",0,0,"BM SUA 484 4X SCUFF-X MATTE 3.78L"],["v0038","484","Scuff-X","Alb","Mat",18.9,2773.11,2773.11,"1275337",0,0,"BM SUA 484 WHITE SCUFF-X MATTE 18.9L"],["v0039","485","Scuff-X","1X","Eggshell",3.78,630.62,705.88,"1274006",0,0,"BM SUA 485 1X SCUFF-X EGGSHELL 3.78L"],["v0040","485","Scuff-X","1X","Eggshell",18.9,2894.36,3193.28,"1275691",0,0,"BM SUA 485 1X SCUFF-X INT EGG 18.9L"],["v0041","485","Scuff-X","2X","Eggshell",3.78,599.88,705.88,"1274060",0,0,"BM SUA 485 2X SCUFF-X EGGSHELL 3.78L"],["v0042","485","Scuff-X","2X","Eggshell",18.9,2771.4,3193.28,"1275692",0,0,"BM SUA 485 2X SCUFF-X INT EGG 18.9L"],["v0043","485","Scuff-X","3X","Eggshell",3.78,493.88,705.88,"1274061",1,0,"BM SUA 485 3X SCUFF-X EGGSHELL 3.78L"],["v0044","485","Scuff-X","4X","Eggshell",18.9,2090.88,3193.28,"1275872",0,0,"BM SUA 485 4X SCUFF-X EGGSHELL 18.9L"],["v0045","485","Scuff-X","4X","Eggshell",3.78,430.28,705.88,"1274008",3,0,"BM SUA 485 4X SCUFF-X EGGSHELL 3.78L"],["v0046","485","Scuff-X","Alb","Eggshell",3.78,525.21,525.21,"1275871",0,0,"BM SUA 485 WHITE SCUFF-X INT EGGSHELL 3.78L"],["v0047","508","Waterborne Ceiling Paint","1X","Flat",0.95,216.74,235.29,"1274109",1,0,"BM SUA 508 1X CEILING PAINT 0.95L"],["v0048","508","Waterborne Ceiling Paint","1X","Flat",18.9,2222,2521.01,"1275593",0,0,"BM SUA 508 1X CEILING PAINT 18.9L"],["v0049","508","Waterborne Ceiling Paint","1X","Flat",3.78,529.78,605.04,"1274108",0,0,"BM SUA 508 1X CEILING PAINT 3.78L"],["v0050","508","Waterborne Ceiling Paint","2X","Flat",0.95,208.79,235.29,"1274111",2,0,"BM SUA 508 2X CEILING PAINT 0.95L"],["v0051","508","Waterborne Ceiling Paint","2X","Flat",3.78,499.04,605.04,"1274110",0,0,"BM SUA 508 2X CEILING PAINT 3.78L"],["v0052","508","Waterborne Ceiling Paint","3X","Flat",0.95,182.29,235.29,"1274113",0,0,"BM SUA 508 3X CEILING PAINT 0.95L"],["v0053","508","Waterborne Ceiling Paint","3X","Flat",3.78,393.04,605.04,"1274112",0,0,"BM SUA 508 3X CEILING PAINT 3.78L"],["v0054","508","Waterborne Ceiling Paint","4X","Flat",0.95,166.39,235.29,"1274114",0,0,"BM SUA 508 4X CEILING PAINT 0.95L"],["v0055","508","Waterborne Ceiling Paint","4X","Flat",3.78,329.44,605.04,"1274840",0,0,"BM SUA 508 4X CEILING PAINT 3.78L"],["v0056","508","Waterborne Ceiling Paint","Alb","Flat",18.9,2268.91,2268.91,"1275592",0,0,"BM SUA 508 CEILING PAINT WHITE 18.9L"],["v0057","508","Waterborne Ceiling Paint","Alb","Flat",3.78,571.43,571.43,"1273975",0,0,"BM SUA 508 G CEILING PAINT WHITE 3.78L"],["v0058","508","Waterborne Ceiling Paint","Alb","Flat",0.95,210.08,210.08,"1273982",0,0,"BM SUA 508 Q CEILING PAINT WHITE 0.95L"],["v0059","518","Paint Extender","","Auxiliar",0.95,142.86,142.86,"1274925",0,0,"BM SUA 518 PAINT EXTENDER 0.95L"],["v0060","522","Aura","1X","Mat",0.95,275.57,294.12,"1274010",0,0,"BM SUA 522 1X AURA MATTE 0.95L"],["v0061","522","Aura","1X","Mat",18.9,3398.56,3697.48,"1275499",0,0,"BM SUA 522 1X AURA MATTE 18.9L"],["v0062","522","Aura","1X","Mat",3.78,765.08,840.34,"1274009",1,0,"BM SUA 522 1X AURA MATTE 3.78L"],["v0063","522","Aura","2X","Mat",0.95,267.62,294.12,"1274012",0,0,"BM SUA 522 2X AURA MATTE 0.95L"],["v0064","522","Aura","2X","Mat",18.9,3275.6,3697.48,"1275500",0,0,"BM SUA 522 2X AURA MATTE 18.9L"],["v0065","522","Aura","2X","Mat",3.78,734.34,840.34,"1274011",0,0,"BM SUA 522 2X AURA MATTE 3.78L"],["v0066","522","Aura","3X","Mat",0.95,241.12,294.12,"1274014",1,0,"BM SUA 522 3X AURA MATTE 0.95L"],["v0067","522","Aura","3X","Mat",3.78,628.34,840.34,"1274013",0,0,"BM SUA 522 3X AURA MATTE 3.78L"],["v0068","522","Aura","4X","Mat",0.95,225.22,294.12,"1274016",0,0,"BM SUA 522 4X AURA MATTE 0.95L"],["v0069","522","Aura","4X","Mat",3.78,564.74,840.34,"1274015",0,0,"BM SUA 522 4X AURA MATTE 3.78L"],["v0070","524","Aura","1X","Eggshell",0.95,275.57,294.12,"1273981",8,0,"BM SUA 524 1X AURA EGGSHEL 0.95L"],["v0071","524","Aura","1X","Eggshell",18.9,3398.56,3697.48,"1275686",0,0,"BM SUA 524 1X AURA EGGSHELL 18.9L"],["v0072","524","Aura","1X","Eggshell",3.78,765.08,840.34,"1273974",0,0,"BM SUA 524 1X AURA EGGSHELL 3.78L"],["v0073","524","Aura","2X","Eggshell",0.95,267.62,294.12,"1274022",4,0,"BM SUA 524 2X AURA EGGSHEL 0.95L"],["v0074","524","Aura","2X","Eggshell",18.9,3275.6,3697.48,"1275687",0,0,"BM SUA 524 2X AURA EGGSHELL 18.9L"],["v0075","524","Aura","2X","Eggshell",3.78,734.34,840.34,"1274021",0,0,"BM SUA 524 2X AURA EGGSHELL 3.78L"],["v0076","524","Aura","3X","Eggshell",0.95,241.12,294.12,"1274024",3,0,"BM SUA 524 3X AURA EGGSHELL 0.95L"],["v0077","524","Aura","3X","Eggshell",3.78,628.34,840.34,"1274023",0,0,"BM SUA 524 3X AURA EGGSHELL 3.78L"],["v0078","524","Aura","4X","Eggshell",0.95,225.22,294.12,"1274026",1,0,"BM SUA 524 4X AURA EGGSHELL 0.95L"],["v0079","524","Aura","4X","Eggshell",3.78,564.74,840.34,"1274025",0,0,"BM SUA 524 4X AURA EGGSHELL 3.78L"],["v0080","526","Aura","1X","Satin",3.78,765.08,840.34,"1275681",0,0,"BM SUA 526 1X AURA SATIN 3.78L"],["v0081","526","Aura","1X","Satin",0.95,275.57,294.12,"1274027",0,0,"BM SUA 526 1X AURA SATIN 0.95L"],["v0082","526","Aura","1X","Satin",18.9,3398.56,3697.48,"1275688",0,0,"BM SUA 526 1X AURA SATIN 18.9L"],["v0083","526","Aura","2X","Satin",3.78,734.34,840.34,"1275682",0,0,"BM SUA 526 2X AURA SATIN 3.78L"],["v0084","526","Aura","2X","Satin",0.95,267.62,294.12,"1274028",0,0,"BM SUA 526 2X AURA SATIN 0.95L"],["v0085","526","Aura","3X","Satin",3.78,628.34,840.34,"1275683",0,0,"BM SUA 526 3X AURA SATIN 3.78L"],["v0086","526","Aura","3X","Satin",0.95,241.12,294.12,"1274029",0,0,"BM SUA 526 3X AURA SATIN 0.95L"],["v0087","526","Aura","4X","Satin",3.78,564.74,840.34,"1275684",0,0,"BM SUA 526 4X AURA SATIN 3.78L"],["v0088","526","Aura","4X","Satin",0.95,225.22,294.12,"1274030",0,0,"BM SUA 526 4X AURA SATIN 0.95L"],["v0089","528","Aura","1X","Semi-Gloss",18.9,3398.56,3697.48,"1275791",0,0,"BM SUA 528 1X AURA SEMI GLOSS 18.9L"],["v0090","532","Aura Bath & Spa","1X","Mat",0.95,275.57,294.12,"1274115",8,0,"BM SUA 532 1X AURA BATH&SPA 0.95L"],["v0091","532","Aura Bath & Spa","1X","Mat",3.78,765.08,840.34,"1274031",0,0,"BM SUA 532 1X AURA BATH&SPA 3.78L"],["v0092","532","Aura Bath & Spa","2X","Mat",0.95,267.62,294.12,"1274033",2,0,"BM SUA 532 2X AURA BATH&SPA 0.95L"],["v0093","532","Aura Bath & Spa","2X","Mat",3.78,734.34,840.34,"1274032",5,0,"BM SUA 532 2X AURA BATH&SPA 3.78L"],["v0094","532","Aura Bath & Spa","3X","Mat",0.95,241.12,294.12,"1274035",1,0,"BM SUA 532 3X AURA BATH&SPA 0.95L"],["v0095","532","Aura Bath & Spa","3X","Mat",3.78,628.34,840.34,"1274034",1,0,"BM SUA 532 3X AURA BATH&SPA 3.78L"],["v0096","532","Aura Bath & Spa","4X","Mat",0.95,225.22,294.12,"1274037",1,0,"BM SUA 532 4X AURA BATH&SPA 0.95L"],["v0097","532","Aura Bath & Spa","4X","Mat",3.78,564.74,840.34,"1274036",0,0,"BM SUA 532 4X AURA BATH&SPA 3.78L"],["v0098","534","Ultra Spec Primer","Alb","Primer",18.9,1210.08,1210.08,"1276115",0,0,"BM SUA 534 ULTRA SPEC PRIMER-WHITE 18.9L"],["v0099","534","Ultra Spec Primer","Alb","Primer",3.78,281.51,281.51,"1276114",2,0,"BM SUA 534 ULTRA SPEC PRIMER-WHITE 3.78L"],["v0100","535","Ultra Spec 500","1X","Flat",0.95,157.92,176.47,"1274643",0,0,"BM SUA 535 1X ULTRA SPEC 500 FLAT 0.95L"],["v0101","535","Ultra Spec 500","1X","Flat",18.9,1506.74,1806.72,"1274607",0,0,"BM SUA 535 1X ULTRA SPEC 500 FLAT 18.9L"],["v0102","535","Ultra Spec 500","1X","Flat",3.78,386.92,462.18,"1274644",4,0,"BM SUA 535 1X ULTRA SPEC 500 FLAT 3.78L"],["v0103","535","Ultra Spec 500","2X","Flat",0.95,149.97,176.47,"1274841",0,0,"BM SUA 535 2X ULTRA SPEC 500 FLAT 0.95L"],["v0104","535","Ultra Spec 500","2X","Flat",18.9,1384.84,1806.72,"1275519",0,0,"BM SUA 535 2X ULTRA SPEC 500 FLAT 18.9L"],["v0105","535","Ultra Spec 500","2X","Flat",3.78,356.2,462.18,"1274647",0,0,"BM SUA 535 2X ULTRA SPEC 500 FLAT 3.78L"],["v0106","535","Ultra Spec 500","3X","Flat",0.95,123.47,176.47,"1274924",0,0,"BM SUA 535 3X ULTRA SPEC 500 FLAT 0.95L"],["v0107","535","Ultra Spec 500","3X","Flat",18.9,955.54,1806.72,"1275927",0,0,"BM SUA 535 3X ULTRA SPEC 500 FLAT 18.9L"],["v0108","535","Ultra Spec 500","3X","Flat",3.78,292.58,468.18,"1274645",0,0,"BM SUA 535 3X ULTRA SPEC 500 FLAT 3.78L"],["v0109","535","Ultra Spec 500","4X","Flat",0.95,107.57,176.47,"1274842",0,0,"BM SUA 535 4X ULTRA SPEC 500 FLAT 0.95L"],["v0110","535","Ultra Spec 500","4X","Flat",18.9,704.32,1806.72,"1275928",0,0,"BM SUA 535 4X ULTRA SPEC 500 FLAT 18.9L"],["v0111","535","Ultra Spec 500","4X","Flat",3.78,250.18,462.18,"1274646",0,0,"BM SUA 535 4X ULTRA SPEC 500 FLAT 3.78L"],["v0112","535","Ultra Spec 500","Alb","Flat",18.9,1554.62,1554.62,"1274849",0,0,"BM SUA 535 ULTRA SPEC 500 FLAT WHITE 18.9L"],["v0113","535","Ultra Spec 500","Alb","Flat",3.78,403.36,403.36,"1274760",0,0,"BM SUA 535 ULTRA SPEC 500 FLAT WHITE 3.78L"],["v0114","536","Ultra Spec 500","1X","",3.78,298.69,373.95,"1274090",0,0,"BM SUA 536 1X ULTRA SPEC 500, 3.78L"],["v0115","538","Ultra Spec 500","1X","Eggshell",3.78,428.94,504.2,"1275619",1,0,"BM SUA 538 1X ULTRA SPEC 500 EGGSHELL 3.78"],["v0116","538","Ultra Spec 500","1X","Eggshell",0.95,170.53,189.08,"1275623",1,0,"BM SUA 538 1X ULTRA SPEC 500 EGGSHELL 0.95L"],["v0117","538","Ultra Spec 500","2X","Eggshell",3.78,398.2,504.2,"1275620",3,0,"BM SUA 538 2X ULTRA SPEC 500 EGGSHELL 3.78"],["v0118","538","Ultra Spec 500","2X","Eggshell",0.95,162.58,189.08,"1275624",0,0,"BM SUA 538 2X ULTRA SPEC 500 EGGSHELL 0.95L"],["v0119","538","Ultra Spec 500","3X","Eggshell",3.78,292.2,504.2,"1275621",6,0,"BM SUA 538 3X ULTRA SPEC 500 EGG 3.78L"],["v0120","538","Ultra Spec 500","3X","Eggshell",0.95,136.08,189.08,"1275625",0,0,"BM SUA 538 3X ULTRA SPEC 500 EGGSHELL 0.95L"],["v0121","538","Ultra Spec 500","4X","Eggshell",3.78,228.6,504.2,"1275622",2,0,"BM SUA 538 4X ULTRA SPEC 500 EGGSHELL 3.78"],["v0122","538","Ultra Spec 500","4X","Eggshell",0.95,120.18,189.08,"1275626",0,0,"BM SUA 538 4X ULTRA SPEC 500 EGGSHELL 0.95L"],["v0123","546","Ultra Spec 500","Alb","Semi-Gloss",3.78,462.18,462.18,"1275514",0,0,"BM SUA 546 01 ULTRA SPEC500 SEMI 3.78L WHIT"],["v0124","546","Ultra Spec 500","1X","Semi-Gloss",3.78,470.96,546.22,"1275515",0,0,"BM SUA 546 1X ULTRA SPEC 500 SEMI 3.78L"],["v0125","546","Ultra Spec 500","2X","Semi-Gloss",3.78,440.22,546.22,"1275516",0,0,"BM SUA 546 2X ULTRA SPEC 500 SEMI 3.78L"],["v0126","546","Ultra Spec 500","3X","Semi-Gloss",3.78,334.22,546.22,"1275517",0,0,"BM SUA 546 3X ULTRA SPEC 500 SEMI 3.78L"],["v0127","546","Ultra Spec 500","4X","Semi-Gloss",3.78,270.62,546.22,"1275518",0,0,"BM SUA 546 4X ULTRA SPEC 500 SEMI 3.78 L"],["v0128","547","Regal Select","1X","Flat",18.9,2305.06,2605.04,"1275935",0,0,"BM SUA 547 1X REGAL SELECT FLAT 18.9L"],["v0129","547","Regal Select","1X","Flat",3.78,554.99,630.25,"1275341",7,0,"BM SUA 547 1X REGAL SELECT FLAT 3.78 L"],["v0130","547","Regal Select","2X","Flat",0.95,199.94,219.49,"1275343",0,0,"BM SUA 547 2X REGAL SELECT FLAT 0.95 L"],["v0131","547","Regal Select","2X","Flat",3.78,524.25,630.25,"1275342",2,0,"BM SUA 547 2X REGAL SELECT FLAT 3.78 L"],["v0132","547","Regal Select","3X","Flat",0.95,165.49,218.49,"1275344",5,0,"BM SUA 547 3X REGAL SELECT FLAT 0.95 L"],["v0133","547","Regal Select","3X","Flat",3.78,418.25,630.25,"1275793",4,0,"BM SUA 547 3X REGAL SELECT FLAT 3.78L"],["v0134","547","Regal Select","4X","Flat",0.95,149.59,218.49,"1275345",5,0,"BM SUA 547 4X REGAL SELECT FLAT 0.95 L"],["v0135","548","Regal Select","1X","Mat",0.95,250.36,268.91,"1274039",1,0,"BM SUA 548 1X REGAL MATTE 0.95L"],["v0136","548","Regal Select","1X","Mat",3.78,706.25,781.51,"1274038",0,0,"BM SUA 548 1X REGAL MATTE 3.78L"],["v0137","548","Regal Select","2X","Mat",0.95,242.41,268.91,"1274041",1,0,"BM SUA 548 2X REGAL MATTE 0.95L"],["v0138","548","Regal Select","2X","Mat",18.9,2477.28,2899.16,"1275502",0,0,"BM SUA 548 2X REGAL MATTE 18.9L"],["v0139","548","Regal Select","2X","Mat",3.78,675.51,781.51,"1274040",0,0,"BM SUA 548 2X REGAL MATTE 3.78L"],["v0140","548","Regal Select","3X","Mat",0.95,215.91,268.91,"1274291",1,0,"BM SUA 548 3X REGAL MATTE 0.95L"],["v0141","548","Regal Select","3X","Mat",3.78,569.51,781.51,"1274102",0,0,"BM SUA 548 3X REGAL MATTE 3.78L"],["v0142","548","Regal Select","4X","Mat",0.95,200.01,268.91,"1274292",1,0,"BM SUA 548 4X REGAL MATTE 0.95L"],["v0143","548","Regal Select","4X","Mat",3.78,505.91,781.51,"1274103",0,0,"BM SUA 548 4X REGAL MATTE 3.78L"],["v0144","549","Regal Select","Alb","Eggshell",3.78,672.27,672.27,"1275685",0,0,"BM SUA 549 02 REGAL SELECT EGG SUPER WHIT"],["v0145","549","Regal Select","1X","Eggshell",0.95,250.36,268.91,"1274043",0,0,"BM SUA 549 1X REGAL EGGSHEL 0.95L"],["v0146","549","Regal Select","1X","Eggshell",3.78,706.25,781.51,"1274042",0,0,"BM SUA 549 1X REGAL EGGSHELL 3.78L"],["v0147","549","Regal Select","2X","Eggshell",0.95,242.41,268.91,"1274045",0,0,"BM SUA 549 2X REGAL EGGSHELL 0.95L"],["v0148","549","Regal Select","2X","Eggshell",3.78,675.51,781.51,"1274044",0,0,"BM SUA 549 2X REGAL EGGSHELL 3.78L"],["v0149","549","Regal Select","3X","Eggshell",0.95,215.91,268.91,"1274105",0,0,"BM SUA 549 3X REGAL EGGSHEL0.95L"],["v0150","549","Regal Select","3X","Eggshell",3.78,569.51,781.51,"1274104",0,0,"BM SUA 549 3X REGAL EGGSHELL 3.78L"],["v0151","549","Regal Select","4X","Eggshell",0.95,200.01,268.91,"1274107",0,0,"BM SUA 549 4X REGAL EGGSHEL0.95L"],["v0152","549","Regal Select","4X","Eggshell",3.78,505.91,781.51,"1274106",0,0,"BM SUA 549 4X REGAL EGGSHEL3.78L"],["v0153","608","Ultra Spec Masonry 100% Acrylic Sealer","","Primer",3.78,268.91,268.91,"1275335",0,0,"BM SUA 608 ULTRA SPEC MASON 100% ACRYL SE"],["v0154","629","Aura Exterior","1X","Flat",18.9,3481.53,3781.51,"1274298",0,0,"BM SUA 629 1x AURA EXTERIOR FLAT 18.9l"],["v0155","629","Aura Exterior","1X","Flat",3.78,849.11,924.37,"1274297",0,0,"BM SUA 629 1x AURA EXTERIOR FLAT 3.78L"],["v0156","629","Aura Exterior","2X","Flat",3.78,818.37,924.37,"1275617",0,0,"BM SUA 629 2x AURA EXTERIOR FLAT 3.78L"],["v0157","629","Aura Exterior","3X","Flat",3.78,712.37,924.37,"1275618",0,0,"BM SUA 629 3x AURA EXTERIOR FLAT 3.78L"],["v0158","629","Aura Exterior","4X","Flat",3.78,648.77,924.37,"1274299",0,0,"BM SUA 629 4X AURA EXTERIOR FLAT 3.78L"],["v0159","631","Aura Exterior","1X","Satin",3.78,849.11,924.37,"1274147",0,0,"BM SUA 631 1X AURA EXTERIOR SATIN 3.78L"],["v0160","631","Aura Exterior","2X","Satin",3.78,818.37,924.37,"1275794",0,0,"BM SUA 631 2X AURA EXTERIOR SATIN 3.78L"],["v0161","631","Aura Exterior","3X","Satin",3.78,712.37,924.37,"1275795",0,0,"BM SUA 631 3X AURA EXTERIOR SATIN 3.78L"],["v0162","631","Aura Exterior","4X","Satin",3.78,648.77,924.37,"1274148",0,0,"BM SUA 631 4X AURA EXTERIOR SATIN 3.78L"],["v0163","634","Aura Exterior","1X","Low Luster",0.95,267.16,285.71,"1275929",0,0,"BM SUA 634 1X AURA EXTERIOR LL 0.95L"],["v0164","634","Aura Exterior","1X","Low Luster",3.78,748.27,823.53,"1274921",0,0,"BM SUA 634 1X AURA EXTERIOR LL 3.78L"],["v0165","634","Aura Exterior","2X","Low Luster",0.95,259.21,285.71,"1275931",0,0,"BM SUA 634 2X AURA EXTERIOR LL 0.95L"],["v0166","634","Aura Exterior","2X","Low Luster",3.78,717.53,823.53,"1274922",0,0,"BM SUA 634 2X AURA EXTERIOR LL 3.78L"],["v0167","634","Aura Exterior","3X","Low Luster",0.95,232.71,285.71,"1275930",0,0,"BM SUA 634 3X AURA EXTERIOR LL 0.95L"],["v0168","634","Aura Exterior","3X","Low Luster",3.78,611.53,823.53,"1275933",0,0,"BM SUA 634 3X AURA EXTERIOR LL 3.78L"],["v0169","634","Aura Exterior","4X","Low Luster",0.95,216.81,285.71,"1275932",0,0,"BM SUA 634 4X AURA EXTERIOR LL 0.95L"],["v0170","634","Aura Exterior","4X","Low Luster",3.78,547.93,823.53,"1274979",0,0,"BM SUA 634 4X AURA EXTERIOR LL 3.78L"],["v0171","763","Element Guard","1X","Flat",3.78,512.98,588.24,"1274838",3,0,"BM SUA 763 1X ELEMENT GUARD FLAT BASE 3.78"],["v0172","763","Element Guard","2X","Flat",3.78,482.24,588.24,"1274923",0,0,"BM SUA 763 2X ELEMENT GUARD FLAT BASE 3.78"],["v0173","763","Element Guard","3X","Flat",3.78,376.24,588.24,"1276066",0,0,"BM SUA 763 3X ELEMENT GUARD EXT 3.78L"],["v0174","763","Element Guard","4X","Flat",3.78,312.64,588.24,"1274839",0,0,"BM SUA 763 4X ELEMENT GUARD FLAT BASE 3.78"],["v0175","792","Advance","1X","Satin",0.95,283.97,302.52,"1275157",0,0,"BM SUA 792 1X ADVANCE SATIN 0.95L"],["v0176","792","Advance","1X","Satin",3.78,681.04,756.3,"1274046",0,0,"BM SUA 792 1X ADVANCE SATIN 3.78L"],["v0177","792","Advance","2X","Satin",0.95,276.02,302.52,"1274047",1,0,"BM SUA 792 2X ADVANCE SATIN 0.95L"],["v0178","792","Advance","2X","Satin",3.78,650.3,756.3,"1275934",0,0,"BM SUA 792 2X ADVANCE SATIN 3.78L"],["v0179","792","Advance","3X","Satin",0.95,249.52,302.52,"1274048",1,0,"BM SUA 792 3X ADVANCE SATIN 0.95L"],["v0180","792","Advance","3X","Satin",3.78,544.3,756.3,"1275336",2,0,"BM SUA 792 3X ADVANCE SATIN 3.78L"],["v0181","792","Advance","4X","Satin",0.95,233.62,302.52,"1274049",0,0,"BM SUA 792 4X ADVANCE SATIN 0.95L"],["v0182","792","Advance","4X","Satin",3.78,480.7,756.3,"1275792",0,0,"BM SUA 792 4X ADVANCE SATIN 3.78L"],["v0183","792","Advance","1X","Satin",18.9,3229.43,3529.41,"1275693",0,0,"BM SUA ADVANCE WB SATIN 1X 18.9L"],["v0184","B1","Pigment Gennex Thalo Blue","","Pigment",0.95,394.96,null,"1273979",1,0,"BM SUA B1 PIGMENT GENNEX THALO BLUE 0.95L"],["v0185","G1","Pigment Gennex Thalo Green","","Pigment",0.95,394.96,null,"1273980",2,0,"BM SUA G1 PIGMENT GENNEX THALO GRN 0.95L"],["v0186","M1","Pigment Gennex Magenta","","Pigment",0.95,394.96,null,"1273983",0,0,"BM SUA M1 PIGMENT GENNEX MAGENTA 0.95L"],["v0187","MAXBLOCK","Max Block","Alb","Primer",0.95,134.46,134.46,"1276135",0,0,"BM SUA Max Block White 0.95L"],["v0188","MAXBLOCK","Max Block","Alb","Primer",18.9,2142.86,2142.86,"1276136",0,0,"BM SUA Max Block White 18.9L"],["v0189","MAXBLOCK","Max Block","Alb","Primer",3.78,453.78,453.78,"1276134",0,0,"BM SUA Max Block White 3.78L"],["v0190","O1","Pigment Gennex Orange","","Pigment",0.95,394.96,null,"1273984",0,0,"BM SUA O1 PIGMENT GENNEX ORANGE 0.95L"],["v0191","R1","Pigment Gennex Red","","Pigment",0.95,394.96,null,"1273985",0,0,"BM SUA R1 PIGMENT GENNEX RED 0.95L"],["v0192","R2","Pigment Gennex Organic Red","","Pigment",0.95,394.94,null,"1273986",1,0,"BM SUA R2 PIGMENT GENNEX ORGANIC RD 0.95L"],["v0193","R3","Pigment Gennex Oxide Red","","Pigment",0.95,394.96,null,"1273987",0,0,"BM SUA R3 PIGMENT GENNEX OXIDE RED 0.95L"],["v0194","S1","Pigment Gennex Black","","Pigment",0.95,394.96,null,"1273988",1,0,"BM SUA S1 PIGMENT GENNEX BLACK 0.95L"],["v0195","S1","Pigment Gennex Black","","Pigment",3.78,1500,null,"1274287",1,0,"BM SUA S1 PIGMENT GENNEX BLACK 3.78L"],["v0196","S2","Pigment Gennex Gray","","Pigment",0.95,394.96,null,"1273989",1,0,"BM SUA S2 PIGMENT GENNEX GRAY 0.95L"],["v0197","110","Stix Primer","","Primer",0.95,201.68,201.68,"1274758",2,0,"BM SUA SXA 110 PRIMER 0.95L"],["v0198","110","Stix Primer","","Primer",3.78,640.34,640.34,"1274050",8,0,"BM SUA SXA 110 PRIMER 3.78L"],["v0199","110","Stix Primer","Alb","Primer",3.78,521.01,521.01,"1275936",0,0,"BM SUA SXA 110 PRIMER METAL WHITE 3.78L"],["v0200","110","Stix Primer","Alb","Primer",18.9,2936.97,2936.97,"1275789",0,0,"BM SUA SXA 110 PRIMER-WHITE 18.9L"],["v0201","V027","Clear Acrylic Sealer","","Primer",null,210.08,210.08,"1274051",1,0,"BM SUA V027 CLEAR ACRYLIC SEALER TRANSPAR"],["v0202","W1","Pigment Gennex White","","Pigment",0.95,394.96,null,"1273990",1,0,"BM SUA W1 PIGMENT GENNEX WHITE 0.95L"],["v0203","W1","Pigment Gennex White","","Pigment",3.78,1500,null,"1274288",0,0,"BM SUA W1 PIGMENT GENNEX WHITE 3.78L"],["v0204","Y1","Pigment Gennex Organic Yellow 1","","Pigment",0.95,394.96,null,"1273991",0,0,"BM SUA Y1 PIGMENT GENNEX ORG YELL1 0.95L"],["v0205","Y2","Pigment Gennex Organic Yellow 2","","Pigment",0.95,394.96,null,"1273992",0,0,"BM SUA Y2 PIGMENT GENNEX ORG YELL2 0.95L"],["v0206","Y3","Pigment Gennex Oxide Yellow","","Pigment",0.95,394.96,null,"1274057",1,0,"BM SUA Y3 PIGMENT GENNEX OXIDE YELL 0.95L"],["v0207","Y3","Pigment Gennex Oxide Yellow","","Pigment",3.78,1500,null,"1274289",0,0,"BM SUA Y3 PIGMENT GENNEX OXIDE YELL 3.78l"],["v0208","547","Regal Select","1X","Flat",0.95,null,null,"",4,1,""],["v0209","547","Regal Select","4X","Flat",3.78,null,null,"",2,1,""]];
+const vopseleSeed = () => VOPSELE_SEED_RAW.map(a=>({id:a[0],cod:a[1],den:a[2],baza:a[3],fin:a[4],amb:a[5],pret:a[6],pretRec:a[7],cf:a[8],stoc:a[9],extra:!!a[10],pn:a[11]||""}));
 const fmtAmb = (a)=> a==null||a===""?"—":(String(a).replace(".",",")+" L");
+const vopNormFin = (arr)=>arr.map(x=>{ if(!x) return x; let y=x; if(y.fin==="Grund") y={...y,fin:"Primer"}; if(!y.pn){ const s=VOPSELE_SEED_RAW.find(a=>a[0]===y.id); if(s&&s[11]) y={...y,pn:s[11]}; } return y; });
+const vopKeyNume = (s)=>String(s||"").toUpperCase().replace(/\s+/g,"");
+// Potrivește o linie de factură Murali cu un produs din nomenclator
+function vopPotrivire(denFact, items){
+  const k=vopKeyNume(denFact);
+  let it=items.find(x=>x.pn&&vopKeyNume(x.pn)===k);
+  if(it) return it;
+  const t=String(denFact||"").toUpperCase().replace(/\s+/g," ").trim().replace(/^BM SUA /,"");
+  let cod,baza="",amb=null;
+  const pm=t.match(/^([A-Z]\d) PIGMENT/);
+  const sm=t.match(/(18\.9|18\.|3\.78|3\.7|0\.95|0\.48)/);
+  if(sm) amb={"18.9":18.9,"18.":18.9,"3.78":3.78,"3.7":3.78,"0.95":0.95,"0.48":0.48}[sm[1]];
+  if(pm) cod=pm[1];
+  else{
+    if(t.startsWith("MAX BLOCK")) cod="MAXBLOCK"; else if(t.startsWith("SXA 110")) cod="110"; else if(t.startsWith("ADVANCE WB")) cod="792"; else cod=t.split(" ")[0];
+    const m=t.match(/\b([1-4])X\b/);
+    if(m) baza=m[1]+"X"; else if(t.includes("DEEP BASE")) baza="Deep Base"; else if(/WHIT/.test(t)||/\b(01|02|G|Q)\b/.test(t)) baza="Alb";
+    if(cod==="046"&&baza==="") baza="Alb";
+  }
+  const c=items.filter(x=>String(x.cod)===cod&&x.baza===baza&&(x.amb==null?amb==null:x.amb===amb));
+  return c.length===1?c[0]:null;
+}
+const vopAzi = ()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
+const vopFmtData = (d)=>{ if(!d) return ""; const p=String(d).split("-"); return p.length===3?p[2]+"."+p[1]+"."+p[0]:d; };
 
-function VopseleStoc({items,setItems,C}){
-  const [view,setView]=React.useState("inventar");
+// Citește factura Murali (PDF) cu pdf.js → {doc, data, linii:[{den,cant}]}
+function citesteFacturaMurali(file){
+  return new Promise((resolve,reject)=>{
+    if(!window.pdfjsLib){ reject(new Error("Motorul de citire PDF nu s-a încărcat.")); return; }
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error("Fișierul nu poate fi citit."));
+    reader.onload=async(ev)=>{
+      try{
+        const pdf=await pdfjsLib.getDocument({data:new Uint8Array(ev.target.result)}).promise;
+        const texte=[];
+        for(let p=1;p<=pdf.numPages;p++){
+          const page=await pdf.getPage(p);
+          const content=await page.getTextContent();
+          const its=content.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5]})).filter(i=>i.str.trim());
+          its.sort((a,b)=>b.y-a.y||a.x-b.x);
+          const lines=[];
+          for(const it of its){ let l=lines.find(z=>Math.abs(z.y-it.y)<=3); if(!l){l={y:it.y,items:[]};lines.push(l);} l.items.push(it); }
+          lines.sort((a,b)=>b.y-a.y);
+          for(const l of lines){ l.items.sort((a,b)=>a.x-b.x); texte.push(l.items.map(i=>i.str.trim()).filter(Boolean).join(" ")); }
+        }
+        let doc="",data="";const linii=[];
+        for(const t of texte){
+          let m=t.match(/Numar:\s*([A-Z]*\s*\d+)/i); if(m&&!doc) doc=m[1].replace(/\s+/g," ").trim();
+          m=t.match(/Data emitere:\s*(\d{2})\.(\d{2})\.(\d{4})/i); if(m&&!data) data=m[3]+"-"+m[2]+"-"+m[1];
+          m=t.match(/^\s*(\d+)\s+(BM SUA .+?)\s+(?:Buc|BUC|buc)\s+(\d+(?:[.,]\d+)?)\s+/);
+          if(m) linii.push({den:m[2].replace(/\s+/g," ").trim(),cant:parseFloat(m[3].replace(",","."))});
+        }
+        resolve({doc,data,linii});
+      }catch(e){ reject(e); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function vopTiparesteComanda(cmd,lista){
+  const byId={}; lista.forEach(x=>{byId[x.id]=x;});
+  const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const rows=(cmd.linii||[]).map(l=>{const x=byId[l.itemId]||{};
+    return `<tr><td class="c">${esc(x.cod)}</td><td>${esc(x.den)}</td><td class="c">${esc(x.baza||"—")}</td><td class="c">${esc(x.fin||"")}</td><td class="c">${esc(fmtAmb(x.amb))}</td><td class="c"><b>${esc(l.cant)}</b></td><td class="c"><b>${esc(l.codCuloare||"")}</b></td><td class="pic"></td></tr>`;}).join("");
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Comandă vopsele ${esc(cmd.numar)}</title><style>
+  @page{size:A4;margin:12mm}
+  body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
+  h1{font-size:20px;margin:0 0 4px}
+  .meta{margin:0 0 10px;font-size:13px;line-height:1.6}
+  .meta b{display:inline-block;min-width:92px}
+  table{border-collapse:collapse;width:100%}
+  th{background:#eee;text-align:left;font-size:11px;padding:6px;border:1px solid #888}
+  td{border:1px solid #888;padding:6px;vertical-align:middle;font-size:12px}
+  td.c{text-align:center}
+  td.pic{width:3.2cm;height:2.6cm}
+  thead{display:table-header-group} tr{page-break-inside:avoid}
+  .obs{margin-top:12px;border:1px solid #888;padding:8px;min-height:40px;font-size:12px}
+  </style></head><body>
+  <h1>Comandă vopsele nr. ${esc(cmd.numar)}</h1>
+  <div class="meta"><div><b>Client:</b> ${esc(cmd.client)}</div><div><b>Data:</b> ${esc(vopFmtData(cmd.data))}</div></div>
+  <table><thead><tr><th>Cod</th><th>Denumire</th><th>Bază</th><th>Finisaj</th><th>Ambalare</th><th>Buc</th><th>Cod culoare</th><th>Picătură de culoare (2 cm)</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="obs"><b>Observații:</b> ${esc(cmd.obs||"")}</div>
+  </body></html>`;
+  printHtmlDoc(html);
+}
+
+function VopComandaNoua({lista,C,inpS,btn,onSave,onCancel}){
+  const [client,setClient]=React.useState("");
+  const [codC,setCodC]=React.useState({});
+  const [obs,setObs]=React.useState("");
+  const [q,setQ]=React.useState("");
+  const [cant,setCant]=React.useState({});
+  const norm=(t)=>String(t||"").toLowerCase();
+  const disp=lista.filter(x=>x.stoc>0).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})||String(a.baza).localeCompare(String(b.baza),"ro")||(a.amb||0)-(b.amb||0));
+  const vis=disp.filter(x=>!q||norm(x.cod+" "+x.den+" "+x.baza+" "+x.fin+" "+fmtAmb(x.amb)).includes(norm(q)));
+  const linii=disp.map(x=>({itemId:x.id,cant:Math.min(parseInt(cant[x.id],10)||0,x.stoc),codCuloare:(codC[x.id]||"").trim()})).filter(l=>l.cant>0);
+  const total=linii.reduce((s,l)=>s+l.cant,0);
+  const g="60px 1fr 80px 90px 76px 92px 130px";
+  return <div style={{border:`1px solid ${C.border}`,padding:14,background:C.surface,marginBottom:14}}>
+    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,marginBottom:8}}>Comandă nouă pentru Radu</div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8,marginBottom:10}}>
+      <input value={client} onChange={e=>setClient(e.target.value)} placeholder="Nume client" style={{...inpS,fontSize:13,padding:"9px 10px"}}/>
+    </div>
+    <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Caută în inventar (cod, denumire, bază, finisaj...)" style={{...inpS,marginBottom:6}}/>
+    <div style={{overflowX:"auto",maxHeight:420,overflowY:"auto",border:`1px solid ${C.border}`}}><div style={{minWidth:700}}>
+      <div style={{display:"grid",gridTemplateColumns:g,gap:8,padding:"6px 8px",fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,position:"sticky",top:0,background:C.surface,borderBottom:`1px solid ${C.border}`}}><div>Cod</div><div>Denumire</div><div>Bază</div><div>Finisaj</div><div>Ambalare</div><div style={{textAlign:"center"}}>Buc (stoc)</div><div>Cod culoare</div></div>
+      {vis.map(x=><div key={x.id} style={{display:"grid",gridTemplateColumns:g,gap:8,padding:"6px 8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:`1px solid ${C.border}`,background:(parseInt(cant[x.id],10)||0)>0?C.accentLight:"transparent"}}>
+        <div style={{fontWeight:600}}>{x.cod}</div><div>{x.den}</div><div style={{whiteSpace:"nowrap"}}>{x.baza||"—"}</div><div>{x.fin||"—"}</div><div style={{whiteSpace:"nowrap"}}>{fmtAmb(x.amb)}</div>
+        <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}><input type="number" min="0" max={x.stoc} value={cant[x.id]||""} onChange={e=>setCant(p=>({...p,[x.id]:e.target.value}))} placeholder="0" style={{...inpS,width:46,padding:"5px 2px",textAlign:"center"}}/><span style={{fontSize:11,color:C.textMuted}}>/{x.stoc}</span></div>
+        <input value={codC[x.id]||""} onChange={e=>setCodC(p=>({...p,[x.id]:e.target.value}))} placeholder="cod culoare" style={inpS}/>
+      </div>)}
+      {vis.length===0&&<div style={{padding:16,fontSize:13,color:C.textMuted}}>Niciun produs în inventar pentru căutarea aceasta.</div>}
+    </div></div>
+    <textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Observații" rows={2} style={{...inpS,marginTop:10,fontSize:13,padding:"9px 10px",resize:"vertical"}}/>
+    <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
+      <button onClick={()=>{ if(!client.trim()){alert("Scrie numele clientului.");return;} if(!linii.length){alert("Alege cel puțin un produs (cantitate > 0).");return;} if(linii.some(l=>!l.codCuloare)&&!window.confirm("Unele produse nu au cod de culoare. Salvezi oricum?")) return; onSave({client:client.trim(),obs:obs.trim(),linii}); }} style={btn(true)}>Salvează comanda ({linii.length} {linii.length===1?"produs":"produse"} · {total} buc)</button>
+      <button onClick={onCancel} style={btn(false)}>Renunță</button>
+      <span style={{fontSize:11,color:C.textMuted}}>La salvare, cantitățile ies din stoc.</span>
+    </div>
+  </div>;
+}
+
+function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRadu,C}){
+  const [view,setView]=React.useState(rolRadu?"comenzi":"inventar");
+  const [cmdNoua,setCmdNoua]=React.useState(false);
   const [fCod,setFCod]=React.useState("");
-  const [fTxt,setFTxt]=React.useState("");
+  const [fDen,setFDen]=React.useState("");
   const [fFin,setFFin]=React.useState("");
   const [fBaza,setFBaza]=React.useState("");
   const [fAmb,setFAmb]=React.useState("");
   const [adding,setAdding]=React.useState(false);
   const [nou,setNou]=React.useState({cod:"",den:"",baza:"",fin:"",amb:"3.78"});
-  const lista=Array.isArray(items)?items:[];
-  const inpS={padding:"8px 10px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:13,boxSizing:"border-box",fontFamily:"inherit",outline:"none",width:"100%"};
+  const [fisaId,setFisaId]=React.useState(null);
+  const [panou,setPanou]=React.useState(null); // null | "factura" | "manual"
+  const [mf,setMf]=React.useState({tip:"intrare",cant:"",data:vopAzi(),doc:"",obs:"",itemId:"",q:""});
+  const [fact,setFact]=React.useState(null); // {doc,data,linii:[{den,cant,itemId,inc}]}
+  const [factMsg,setFactMsg]=React.useState("");
+  const mis=Array.isArray(miscari)?miscari:[];
+  const inpS={padding:"7px 8px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:12,boxSizing:"border-box",fontFamily:"inherit",outline:"none",width:"100%"};
   const btn=(primary)=>({padding:"7px 14px",border:primary?"none":`1px solid ${C.border}`,background:primary?C.accent:"transparent",color:primary?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:primary?600:400});
+  const stocMap={};
+  for(const m of mis) stocMap[m.itemId]=(stocMap[m.itemId]||0)+(Number(m.cant)||0);
+  const lista=(Array.isArray(items)?items:[]).map(x=>({...x,stoc:stocMap[x.id]||0}));
   const uniq=(f)=>Array.from(new Set(lista.map(f).filter(x=>x!==""&&x!=null)));
   const finOpt=uniq(x=>x.fin).sort((a,b)=>a.localeCompare(b,"ro"));
   const bazaOpt=uniq(x=>x.baza).sort((a,b)=>a.localeCompare(b,"ro"));
   const ambOpt=uniq(x=>x.amb).sort((a,b)=>a-b);
-  const upd=(id,patch)=>setItems(p=>(Array.isArray(p)?p:[]).map(x=>x.id===id?{...x,...patch}:x));
-  const setStoc=(id,v)=>{const n=parseInt(v,10);upd(id,{stoc:isNaN(n)?0:n});};
-  const adj=(id,d)=>setItems(p=>(Array.isArray(p)?p:[]).map(x=>x.id===id?{...x,stoc:(x.stoc||0)+d}:x));
+  const denOpt=uniq(x=>x.den).sort((a,b)=>a.localeCompare(b,"ro"));
   const norm=(s)=>String(s||"").toLowerCase();
   const filtrat=lista.filter(x=>{
     if(view==="inventar"&&!(x.stoc>0)) return false;
     if(fCod&&!norm(x.cod).includes(norm(fCod.trim()))) return false;
-    if(fTxt&&!(norm(x.den)+" "+norm(x.fin)).includes(norm(fTxt.trim()))) return false;
+    if(fDen&&!norm(x.den).includes(norm(fDen.trim()))) return false;
     if(fFin&&x.fin!==fFin) return false;
     if(fBaza){ if(fBaza==="__fara"){ if(x.baza) return false; } else if(x.baza!==fBaza) return false; }
     if(fAmb&&String(x.amb)!==fAmb) return false;
@@ -5240,46 +5371,190 @@ function VopseleStoc({items,setItems,C}){
   }).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})||String(a.baza).localeCompare(String(b.baza),"ro")||(a.amb||0)-(b.amb||0));
   const totalBuc=filtrat.reduce((s,x)=>s+(x.stoc>0?x.stoc:0),0);
   const nrInv=lista.filter(x=>x.stoc>0).length;
-  const reset=()=>{setFCod("");setFTxt("");setFFin("");setFBaza("");setFAmb("");};
+  const reset=()=>{setFCod("");setFDen("");setFFin("");setFBaza("");setFAmb("");};
+  const numeProd=(x)=>x?`${x.cod} · ${x.den}${x.baza?" "+x.baza:""} · ${fmtAmb(x.amb)}`:"";
   const adauga=()=>{
     if(!nou.cod.trim()||!nou.den.trim()) return;
-    setItems(p=>[...(Array.isArray(p)?p:[]),{id:"v"+Date.now().toString(36),cod:nou.cod.trim(),den:nou.den.trim(),baza:nou.baza,fin:nou.fin,amb:nou.amb===""?null:parseFloat(nou.amb),pret:null,pretRec:null,cf:"",stoc:0,extra:true}]);
+    setItems(p=>[...(Array.isArray(p)?p:[]),{id:"v"+Date.now().toString(36),cod:nou.cod.trim(),den:nou.den.trim(),baza:nou.baza,fin:nou.fin,amb:nou.amb===""?null:parseFloat(nou.amb),pret:null,pretRec:null,cf:"",stoc:0,extra:true,pn:""}]);
     setNou({cod:"",den:"",baza:"",fin:"",amb:"3.78"});setAdding(false);
   };
-  const grid="64px 280px 96px 100px 84px 124px";
+  const mid=()=>"m"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const adaugaMiscare=(itemId,f)=>{
+    const c=parseFloat(String(f.cant).replace(",","."));
+    if(!itemId||isNaN(c)||c===0) return false;
+    const semn=f.tip==="iesire"?-Math.abs(c):f.tip==="intrare"?Math.abs(c):c;
+    setMiscari(p=>[...(Array.isArray(p)?p:[]),{id:mid(),itemId,data:f.data||vopAzi(),tip:f.tip,doc:(f.doc||"").trim(),cant:semn,obs:(f.obs||"").trim()}]);
+    return true;
+  };
+  const stergeMiscare=(id)=>{ if(window.confirm("Ștergi această mișcare din fișa de magazie?")) setMiscari(p=>(Array.isArray(p)?p:[]).filter(m=>m.id!==id)); };
+  const tipLbl={initial:"Stoc inițial",intrare:"Intrare",iesire:"Ieșire",corectie:"Corecție"};
+  const incarcaFactura=async(file)=>{
+    setFactMsg("Se citește factura...");setFact(null);
+    try{
+      const r=await citesteFacturaMurali(file);
+      if(!r.linii.length){ setFactMsg("Nu am găsit produse BM în factură. Folosește intrarea manuală."); return; }
+      setFact({doc:r.doc?"Factură Murali "+r.doc:"",data:r.data||vopAzi(),linii:r.linii.map(l=>{const it=vopPotrivire(l.den,lista);return {den:l.den,cant:l.cant,itemId:it?it.id:"",inc:!!it};})});
+      setFactMsg("");
+    }catch(e){ setFactMsg("Eroare la citire: "+(e&&e.message||e)); }
+  };
+  const confirmaFactura=()=>{
+    const bune=fact.linii.filter(l=>l.inc&&l.itemId&&l.cant>0);
+    if(!bune.length) return;
+    if(mis.some(m=>m.doc&&m.doc===fact.doc.trim())&&!window.confirm("Documentul „"+fact.doc+"” are deja intrări în stoc. Îl adaugi încă o dată?")) return;
+    const noi=bune.map(l=>({id:mid(),itemId:l.itemId,data:fact.data,tip:"intrare",doc:fact.doc.trim(),cant:l.cant,obs:""}));
+    setMiscari(p=>[...(Array.isArray(p)?p:[]),...noi]);
+    setFact(null);setPanou(null);
+  };
+  const grid="64px 270px 96px 100px 84px 150px";
+  const FormMiscare=({itemId,onDone})=>{
+    const [f,setF]=React.useState({tip:"intrare",cant:"",data:vopAzi(),doc:"",obs:""});
+    return <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:6,marginTop:8}}>
+      <select value={f.tip} onChange={e=>setF(p=>({...p,tip:e.target.value}))} style={inpS}><option value="intrare">Intrare</option><option value="iesire">Ieșire</option><option value="corectie">Corecție (+/−)</option></select>
+      <input value={f.cant} onChange={e=>setF(p=>({...p,cant:e.target.value}))} placeholder="Cantitate (buc)" style={inpS}/>
+      <input type="date" value={f.data} onChange={e=>setF(p=>({...p,data:e.target.value}))} style={inpS}/>
+      <input value={f.doc} onChange={e=>setF(p=>({...p,doc:e.target.value}))} placeholder="Document (factură, client...)" style={inpS}/>
+      <input value={f.obs} onChange={e=>setF(p=>({...p,obs:e.target.value}))} placeholder="Observații" style={inpS}/>
+      <button onClick={()=>{if(adaugaMiscare(itemId,f)){setF({tip:"intrare",cant:"",data:vopAzi(),doc:"",obs:""});onDone&&onDone();}}} style={btn(true)}>Adaugă</button>
+    </div>;
+  };
+  const Fisa=({x})=>{
+    const ms=mis.filter(m=>m.itemId===x.id).sort((a,b)=>String(a.data).localeCompare(String(b.data))||String(a.id).localeCompare(String(b.id)));
+    let sold=0;
+    return <div style={{padding:"10px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+      <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,marginBottom:6}}>Fișă de magazie · {numeProd(x)}</div>
+      {ms.length===0?<div style={{fontSize:12,color:C.textMuted}}>Nicio mișcare.</div>:
+      <div style={{fontSize:12,color:C.text}}>
+        <div style={{display:"grid",gridTemplateColumns:"84px 90px 1fr 60px 60px 28px",gap:6,fontSize:10,textTransform:"uppercase",color:C.textMuted,padding:"2px 0"}}><div>Data</div><div>Tip</div><div>Document</div><div style={{textAlign:"right"}}>Cant.</div><div style={{textAlign:"right"}}>Sold</div><div/></div>
+        {ms.map(m=>{sold+=Number(m.cant)||0;return <div key={m.id} style={{display:"grid",gridTemplateColumns:"84px 90px 1fr 60px 60px 28px",gap:6,padding:"4px 0",borderTop:`1px solid ${C.border}`,alignItems:"center"}}>
+          <div>{vopFmtData(m.data)}</div><div>{tipLbl[m.tip]||m.tip}</div><div>{m.doc||"—"}{m.obs?<span style={{color:C.textMuted}}> · {m.obs}</span>:null}</div>
+          <div style={{textAlign:"right",color:m.cant<0?"#A04030":C.text}}>{m.cant>0?"+":""}{m.cant}</div><div style={{textAlign:"right",fontWeight:600}}>{sold}</div>
+          <button onClick={()=>stergeMiscare(m.id)} title="Șterge mișcarea" style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:14}}>×</button>
+        </div>;})}
+      </div>}
+      <FormMiscare itemId={x.id}/>
+    </div>;
+  };
+  const prodCautare=lista.filter(x=>!mf.q||norm(numeProd(x)+" "+x.fin).includes(norm(mf.q))).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})).slice(0,60);
+
+  const cmds=Array.isArray(comenzi)?comenzi:[];
+  const esteCmd=view==="comenzi"||view==="finalizate";
+  const cmdActive=cmds.filter(c=>c.stare!=="finalizata").sort((a,b)=>(b.numar||0)-(a.numar||0));
+  const cmdFin=cmds.filter(c=>c.stare==="finalizata").sort((a,b)=>String(b.dataFin||"").localeCompare(String(a.dataFin||""))||(b.numar||0)-(a.numar||0));
+  const salveazaComanda=(d)=>{
+    const numar=cmds.reduce((m,c)=>Math.max(m,c.numar||0),0)+1;
+    const id="c"+Date.now().toString(36);
+    const doc="Comandă vopsele nr. "+numar+" – "+d.client;
+    setComenzi(p=>[...(Array.isArray(p)?p:[]),{id,numar,data:vopAzi(),client:d.client,obs:d.obs,linii:d.linii,stare:"activa",dataFin:""}]);
+    setMiscari(p=>[...(Array.isArray(p)?p:[]),...d.linii.map(l=>({id:mid(),itemId:l.itemId,data:vopAzi(),tip:"iesire",doc,cant:-l.cant,obs:"",comandaId:id}))]);
+    setCmdNoua(false);
+  };
+  const stareCmd=(id,stare)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(c=>c.id===id?{...c,stare,dataFin:stare==="finalizata"?vopAzi():""}:c));
+  const stergeCmd=(c)=>{ if(!window.confirm("Ștergi comanda nr. "+c.numar+" ("+c.client+")? Cantitățile se întorc în stoc.")) return; setComenzi(p=>(Array.isArray(p)?p:[]).filter(z=>z.id!==c.id)); setMiscari(p=>(Array.isArray(p)?p:[]).filter(m=>m.comandaId!==c.id)); };
+  const CardCmd=({c})=>{
+    const fin=c.stare==="finalizata";
+    return <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:10,opacity:fin?0.85:1}}>
+      <div style={{display:"flex",gap:10,alignItems:"baseline",flexWrap:"wrap"}}>
+        <div style={{fontSize:16,fontWeight:600,color:C.text}}>Nr. {c.numar} · {c.client}</div>
+        <div style={{fontSize:12,color:C.textMuted}}>{vopFmtData(c.data)}{fin&&c.dataFin?" · finalizată "+vopFmtData(c.dataFin):""}</div>
+        <div style={{flex:1}}/>
+      </div>
+      <div style={{margin:"8px 0",fontSize:13,color:C.text}}>
+        {c.linii.map((l,i)=>{const x=lista.find(z=>z.id===l.itemId);return <div key={i} style={{padding:"3px 0",borderTop:i?`1px solid ${C.border}`:"none"}}><b>{l.cant} ×</b> {x?`${x.cod} ${x.den}${x.baza?" "+x.baza:""} · ${x.fin} · ${fmtAmb(x.amb)}`:"(produs șters)"}{l.codCuloare&&<span> · culoare <b>{l.codCuloare}</b></span>}</div>;})}
+      </div>
+      {c.obs&&<div style={{fontSize:12,color:C.textSub,marginBottom:8}}>Observații: {c.obs}</div>}
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <button onClick={()=>vopTiparesteComanda(c,lista)} style={btn(true)}>Printează</button>
+        {!fin&&<label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.text,cursor:"pointer",padding:"6px 10px",border:`1px solid ${C.border}`}}><input type="checkbox" checked={false} onChange={()=>stareCmd(c.id,"finalizata")} style={{width:20,height:20}}/>Comandă finalizată (pigmentată)</label>}
+        {fin&&<button onClick={()=>stareCmd(c.id,"activa")} style={btn(false)}>Redeschide</button>}
+        {!rolRadu&&<button onClick={()=>stergeCmd(c)} style={{...btn(false),color:"#A04030"}}>Șterge</button>}
+      </div>
+    </div>;
+  };
+  const lblS={fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted};
   return <div>
     <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
-      {[["inventar","Inventar ("+nrInv+")"],["nomenclator","Nomenclator ("+lista.length+")"]].map(([id,l])=>
+      {[["comenzi","Comenzi active ("+cmdActive.length+")"],["finalizate","Comenzi finalizate ("+cmdFin.length+")"],["inventar","Inventar ("+nrInv+")"],["nomenclator","Nomenclator ("+lista.length+")"]].map(([id,l])=>
         <button key={id} onClick={()=>setView(id)} style={{padding:"7px 14px",border:`1px solid ${view===id?C.accent:C.border}`,background:view===id?C.accentLight:"transparent",color:view===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:view===id?500:400}}>{l}</button>)}
       <div style={{flex:1}}/>
-      <div style={{fontSize:12,color:C.textSub}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}</div>
+      <button onClick={()=>{setPanou(panou==="factura"?null:"factura");setFact(null);setFactMsg("");}} style={btn(panou==="factura")}>+ Intrare din factură Murali</button>
+      <button onClick={()=>setPanou(panou==="manual"?null:"manual")} style={btn(panou==="manual")}>+ Intrare / ieșire manuală</button>
+      {!esteCmd&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}</div>}
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:6,marginBottom:10}}>
-      <input value={fCod} onChange={e=>setFCod(e.target.value)} placeholder="Cod produs" style={inpS}/>
-      <input value={fTxt} onChange={e=>setFTxt(e.target.value)} placeholder="Denumire" style={inpS}/>
-      <select value={fFin} onChange={e=>setFFin(e.target.value)} style={inpS}><option value="">Finisaj: toate</option>{finOpt.map(o=><option key={o} value={o}>{o}</option>)}</select>
-      <select value={fBaza} onChange={e=>setFBaza(e.target.value)} style={inpS}><option value="">Bază (X): toate</option>{bazaOpt.map(o=><option key={o} value={o}>{o}</option>)}<option value="__fara">fără bază</option></select>
-      <select value={fAmb} onChange={e=>setFAmb(e.target.value)} style={inpS}><option value="">Ambalare: toate</option>{ambOpt.map(o=><option key={o} value={String(o)}>{fmtAmb(o)}</option>)}</select>
-      <button onClick={reset} style={btn(false)}>Resetează filtre</button>
-    </div>
+
+    {panou==="factura"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
+      <div style={lblS}>Intrare din factură Murali (PDF)</div>
+      <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Alege factura. Aplicația citește produsele și cantitățile, tu verifici și confirmi. Nu se adaugă nimic în stoc până nu apeși „Adaugă în stoc”.</div>
+      <input type="file" accept="application/pdf,.pdf" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarcaFactura(f); e.target.value="";}} style={{fontSize:12}}/>
+      {factMsg&&<div style={{fontSize:12,color:C.textSub,marginTop:8}}>{factMsg}</div>}
+      {fact&&<div style={{marginTop:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:6,marginBottom:10}}>
+          <div><div style={lblS}>Document</div><input value={fact.doc} onChange={e=>setFact(p=>({...p,doc:e.target.value}))} style={inpS}/></div>
+          <div><div style={lblS}>Data intrării</div><input type="date" value={fact.data} onChange={e=>setFact(p=>({...p,data:e.target.value}))} style={inpS}/></div>
+        </div>
+        <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
+        {fact.linii.map((l,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"28px 1fr 70px 1fr",gap:8,alignItems:"center",padding:"6px 0",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.text}}>
+          <input type="checkbox" checked={l.inc} onChange={e=>setFact(p=>({...p,linii:p.linii.map((z,j)=>j===i?{...z,inc:e.target.checked}:z)}))}/>
+          <div>{l.den}</div>
+          <input type="number" value={l.cant} onChange={e=>setFact(p=>({...p,linii:p.linii.map((z,j)=>j===i?{...z,cant:parseFloat(e.target.value)||0}:z)}))} style={inpS}/>
+          <select value={l.itemId} onChange={e=>setFact(p=>({...p,linii:p.linii.map((z,j)=>j===i?{...z,itemId:e.target.value,inc:!!e.target.value}:z)}))} style={{...inpS,borderColor:l.itemId?C.border:"#C0604A"}}>
+            <option value="">— nepotrivit, alege produsul —</option>
+            {lista.slice().sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})).map(x=><option key={x.id} value={x.id}>{numeProd(x)}</option>)}
+          </select>
+        </div>)}
+        </div></div>
+        <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
+          <button onClick={confirmaFactura} style={btn(true)}>Adaugă în stoc ({fact.linii.filter(l=>l.inc&&l.itemId&&l.cant>0).length} linii · {fact.linii.filter(l=>l.inc&&l.itemId&&l.cant>0).reduce((s,l)=>s+l.cant,0)} buc)</button>
+          <button onClick={()=>{setFact(null);}} style={btn(false)}>Renunță</button>
+          <span style={{fontSize:11,color:C.textMuted}}>Transportul și discountul din factură sunt ignorate.</span>
+        </div>
+      </div>}
+    </div>}
+
+    {panou==="manual"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
+      <div style={lblS}>Intrare / ieșire manuală</div>
+      <input value={mf.q} onChange={e=>setMf(p=>({...p,q:e.target.value}))} placeholder="Caută produs (cod, denumire, bază...)" style={{...inpS,marginTop:8}}/>
+      <select value={mf.itemId} onChange={e=>setMf(p=>({...p,itemId:e.target.value}))} style={{...inpS,marginTop:6}}>
+        <option value="">— alege produsul —</option>
+        {prodCautare.map(x=><option key={x.id} value={x.id}>{numeProd(x)} (stoc {x.stoc})</option>)}
+      </select>
+      {mf.itemId&&<FormMiscare itemId={mf.itemId} onDone={()=>setMf(p=>({...p,itemId:"",q:""}))}/>}
+    </div>}
+
+    {esteCmd&&<div>
+      {view==="comenzi"&&!rolRadu&&!cmdNoua&&<button onClick={()=>setCmdNoua(true)} style={{...btn(true),marginBottom:12}}>+ Comandă nouă pentru Radu</button>}
+      {view==="comenzi"&&cmdNoua&&<VopComandaNoua lista={lista} C={C} inpS={inpS} btn={btn} onSave={salveazaComanda} onCancel={()=>setCmdNoua(false)}/>}
+      {(view==="comenzi"?cmdActive:cmdFin).map(c=><CardCmd key={c.id} c={c}/>)}
+      {(view==="comenzi"?cmdActive:cmdFin).length===0&&!cmdNoua&&<div style={{padding:"24px 0",fontSize:13,color:C.textMuted}}>{view==="comenzi"?"Nicio comandă activă.":"Nicio comandă finalizată."}</div>}
+    </div>}
+    {!esteCmd&&<div>
     <div style={{overflowX:"auto"}}>
-    <div style={{minWidth:760,width:"fit-content",maxWidth:"100%"}}>
-      <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"6px 8px",fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,borderBottom:`1px solid ${C.border}`}}>
+    <div style={{minWidth:790,width:"fit-content",maxWidth:"100%"}}>
+      <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"6px 8px 2px",...lblS}}>
         <div>Cod</div><div>Denumire</div><div>Bază</div><div>Finisaj</div><div>Ambalare</div><div style={{textAlign:"center"}}>Stoc</div>
       </div>
+      <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"2px 8px 8px",borderBottom:`1px solid ${C.border}`}}>
+        <input value={fCod} onChange={e=>setFCod(e.target.value)} placeholder="filtru" style={inpS}/>
+        <div><input list="vop-den-list" value={fDen} onChange={e=>setFDen(e.target.value)} placeholder="filtru (scrie sau alege)" style={inpS}/><datalist id="vop-den-list">{denOpt.map(o=><option key={o} value={o}/>)}</datalist></div>
+        <select value={fBaza} onChange={e=>setFBaza(e.target.value)} style={inpS}><option value="">toate</option>{bazaOpt.map(o=><option key={o} value={o}>{o}</option>)}<option value="__fara">fără</option></select>
+        <select value={fFin} onChange={e=>setFFin(e.target.value)} style={inpS}><option value="">toate</option>{finOpt.map(o=><option key={o} value={o}>{o}</option>)}</select>
+        <select value={fAmb} onChange={e=>setFAmb(e.target.value)} style={inpS}><option value="">toate</option>{ambOpt.map(o=><option key={o} value={String(o)}>{fmtAmb(o)}</option>)}</select>
+        <button onClick={reset} style={{...btn(false),padding:"6px 8px",fontSize:11}}>Resetează filtre</button>
+      </div>
       {filtrat.length===0&&<div style={{padding:"24px 8px",fontSize:13,color:C.textMuted}}>{view==="inventar"?"Niciun produs cu stoc pentru filtrele alese.":"Niciun produs găsit."}</div>}
-      {filtrat.map(x=><div key={x.id} style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:`1px solid ${C.border}`,background:x.stoc<0?"#F6E3DF":"transparent"}}>
-        <div style={{fontWeight:600}}>{x.cod}</div>
-        <div>{x.den}{view==="nomenclator"&&x.pret!=null&&<span style={{color:C.textMuted,fontSize:11}}> · {x.pret} lei</span>}{x.extra&&<span style={{color:C.textMuted,fontSize:11}}> · în stoc, lipsă din lista Murali</span>}</div>
-        <div>{x.baza||"—"}</div>
-        <div>{x.fin||"—"}</div>
-        <div>{fmtAmb(x.amb)}</div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
-          <button onClick={()=>adj(x.id,-1)} style={{width:30,height:30,border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:16,color:C.textSub}}>−</button>
-          <input type="number" value={x.stoc||0} onChange={e=>setStoc(x.id,e.target.value)} style={{...inpS,width:46,padding:"5px 2px",textAlign:"center"}}/>
-          <button onClick={()=>adj(x.id,1)} style={{width:30,height:30,border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:16,color:C.textSub}}>+</button>
+      {filtrat.map(x=><React.Fragment key={x.id}>
+        <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:fisaId===x.id?"none":`1px solid ${C.border}`,background:x.stoc<0?"#F6E3DF":fisaId===x.id?C.bg:"transparent"}}>
+          <div style={{fontWeight:600}}>{x.cod}</div>
+          <div>{x.den}{view==="nomenclator"&&x.pret!=null&&<span style={{color:C.textMuted,fontSize:11}}> · {x.pret} lei</span>}{x.extra&&<span style={{color:C.textMuted,fontSize:11}}> · lipsă din lista Murali</span>}</div>
+          <div style={{whiteSpace:"nowrap"}}>{x.baza||"—"}</div>
+          <div>{x.fin||"—"}</div>
+          <div style={{whiteSpace:"nowrap"}}>{fmtAmb(x.amb)}</div>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <span style={{fontSize:15,fontWeight:600,minWidth:24,textAlign:"right"}}>{x.stoc}</span>
+            <button onClick={()=>setFisaId(fisaId===x.id?null:x.id)} style={{...btn(false),padding:"4px 10px",fontSize:11,background:fisaId===x.id?C.accentLight:"transparent"}}>Fișă</button>
+          </div>
         </div>
-      </div>)}
+        {fisaId===x.id&&<Fisa x={x}/>}
+      </React.Fragment>)}
     </div>
     </div>
     {view==="nomenclator"&&<div style={{marginTop:14}}>
@@ -5293,7 +5568,8 @@ function VopseleStoc({items,setItems,C}){
         <button onClick={()=>setAdding(false)} style={btn(false)}>✕</button>
       </div>:<button onClick={()=>setAdding(true)} style={btn(false)}>+ produs nou în nomenclator</button>}
     </div>}
-    <div style={{marginTop:14,fontSize:11,color:C.textMuted}}>Stocul inițial vine din Excelul lui Radu (4.09.2026). Modifică stocul cu − / + sau tastează cifra; se salvează automat.</div>
+    </div>}
+    <div style={{marginTop:14,fontSize:11,color:C.textMuted}}>Stocul = suma mișcărilor din fișa de magazie (stoc inițial 4.09.2026 din Excelul lui Radu, apoi intrări și ieșiri cu dată și document). Apasă „Fișă” pe un produs ca să vezi istoricul.</div>
   </div>;
 }
 
@@ -9364,6 +9640,8 @@ function App() {
   const [comandaExecutieCounter,setComandaExecutieCounter]=useState(1);
   const [comenziFurnizori,setComenziFurnizori]=useState([]);
   const [vopseleStoc,setVopseleStoc]=useState([]);
+  const [vopseleMiscari,setVopseleMiscari]=useState([]);
+  const [vopseleComenzi,setVopseleComenzi]=useState([]);
   const [raduModul,setRaduModul]=useState("vopsele");
   const [achizSub,setAchizSub]=useState("lista");
   const [catalogSine,setCatalogSine]=useState([]);
@@ -9558,7 +9836,9 @@ function App() {
             [CSSK,(d)=>{setCatalogSinaSimpla(Array.isArray(d)?d:[]);}],
             [CSRE,(d)=>{setCatalogStorRomanElectric(Array.isArray(d)?d:[]);}],
             [CFK,(d)=>{setComenziFurnizori(Array.isArray(d)?d:[]);}],
-            [CVS,(d)=>{setVopseleStoc(Array.isArray(d)&&d.length?d.map(x=>x&&x.fin==="Grund"?{...x,fin:"Primer"}:x):vopseleSeed());}],
+            [CVS,(d)=>{setVopseleStoc(Array.isArray(d)&&d.length?vopNormFin(d):vopseleSeed());}],
+            [CVM,(d)=>{setVopseleMiscari(Array.isArray(d)?d:[]);}],
+            [CVC,(d)=>{setVopseleComenzi(Array.isArray(d)?d:[]);}],
           ];
           // Toate cheile în paralel — nu una câte una — ca o singură cerere lentă (sau multe cereri, chiar dacă fiecare e rapidă)
           // să nu epuizeze singură bugetul de timp și să arunce toată aplicația fals în modul „offline · date locale".
@@ -9570,8 +9850,8 @@ function App() {
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK,CVS];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori,(v)=>setVopseleStoc(Array.isArray(v)&&v.length?v.map(x=>x&&x.fin==="Grund"?{...x,fin:"Primer"}:x):vopseleSeed())];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK,CVS,CVM,CVC];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori,(v)=>setVopseleStoc(Array.isArray(v)&&v.length?vopNormFin(v):vopseleSeed()),(v)=>setVopseleMiscari(Array.isArray(v)?v:[]),(v)=>setVopseleComenzi(Array.isArray(v)?v:[])];
         keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -9611,6 +9891,15 @@ function App() {
   useEffect(()=>{if(loaded) sbSave(CFK,comenziFurnizori);},[comenziFurnizori,loaded]);
   useEffect(()=>{if(loaded&&vopseleStoc.length===0) setVopseleStoc(vopseleSeed());},[loaded]);
   useEffect(()=>{if(loaded&&vopseleStoc.length) sbSave(CVS,vopseleStoc);},[vopseleStoc,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CVM,vopseleMiscari);},[vopseleMiscari,loaded]);
+  useEffect(()=>{if(loaded) sbSave(CVC,vopseleComenzi);},[vopseleComenzi,loaded]);
+  useEffect(()=>{
+    // Migrare unică: stocul de până acum devine „Stoc inițial” în fișa de magazie
+    if(loaded&&vopseleMiscari.length===0&&vopseleStoc.some(x=>x.stoc)){
+      setVopseleMiscari(vopseleStoc.filter(x=>x.stoc).map(x=>({id:"mi"+x.id,itemId:x.id,data:"2026-09-04",tip:"initial",doc:"Stoc inițial (Excel Radu 4.09.2026)",cant:x.stoc,obs:""})));
+      setVopseleStoc(p=>p.map(x=>x.stoc?{...x,stoc:0}:x));
+    }
+  },[loaded,vopseleStoc,vopseleMiscari]);
   useEffect(()=>{
     const onMsg=(e)=>{
       const d=e.data;
@@ -9793,7 +10082,7 @@ function App() {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -9850,7 +10139,7 @@ function App() {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi
         }
       };
       // Un fișier nou pe zi (kreativo_backup_2026-09-30.json) — nu se mai suprascrie fișierul de ieri.
@@ -9934,7 +10223,9 @@ function App() {
         if(d[CSSK]) setCatalogSinaSimpla(Array.isArray(d[CSSK])?d[CSSK]:[]);
         if(d[CSRE]) setCatalogStorRomanElectric(Array.isArray(d[CSRE])?d[CSRE]:[]);
         if(d[CFK]) setComenziFurnizori(Array.isArray(d[CFK])?d[CFK]:[]);
-        if(d[CVS]) setVopseleStoc(Array.isArray(d[CVS])?d[CVS].map(x=>x&&x.fin==="Grund"?{...x,fin:"Primer"}:x):[]);
+        if(d[CVM]) setVopseleMiscari(Array.isArray(d[CVM])?d[CVM]:[]);
+        if(d[CVC]) setVopseleComenzi(Array.isArray(d[CVC])?d[CVC]:[]);
+        if(d[CVS]) setVopseleStoc(Array.isArray(d[CVS])?vopNormFin(d[CVS]):[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
       } catch(err) { alert("Eroare import: fișier invalid sau corupt."); }
@@ -10026,6 +10317,17 @@ function App() {
     {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
+
+  const raduOnly=new URLSearchParams(window.location.search).get("radu")==="1";
+  if(raduOnly){
+    return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px"}}>
+      <div style={{marginBottom:20}}>
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Radu</div>
+        <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Vopsele · Kreativo Studio</div>
+      </div>
+      <VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} rolRadu={true} C={C}/>
+    </div>;
+  }
 
   const nicoOnly=new URLSearchParams(window.location.search).get("nico")==="1";
   if(nicoOnly){
@@ -10758,7 +11060,7 @@ function App() {
         {[["vopsele","Vopsele"],["tudor","Arhivă Tudor"]].map(([id,l])=>
           <button key={id} onClick={()=>setRaduModul(id)} style={{padding:"8px 18px",border:`1px solid ${raduModul===id?C.accent:C.border}`,background:raduModul===id?C.accent:"transparent",color:raduModul===id?"#FAF8F4":C.textSub,cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>{l}</button>)}
       </div>
-      {raduModul==="vopsele"&&<VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} C={C}/>}
+      {raduModul==="vopsele"&&<VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C}/>}
       {raduModul==="tudor"&&<>
       <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
         {[["taskuri","Task-uri"],["designeri","Designeri"],["arhitecti","Arhitecți"],["perdele","Firme perdele/draperii"],["smarthome","Smart home"],["calendar","Calendar"]].map(([id,l])=>
