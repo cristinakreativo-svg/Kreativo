@@ -5273,8 +5273,8 @@ function citesteFacturaMurali(file){
 function vopTiparesteComanda(cmd,lista){
   const byId={}; lista.forEach(x=>{byId[x.id]=x;});
   const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const rows=(cmd.linii||[]).map(l=>{const x=byId[l.itemId]||{};
-    return `<tr><td class="c">${esc(x.cod)}</td><td>${esc(x.den)}</td><td class="c">${esc(x.baza||"—")}</td><td class="c">${esc(x.fin||"")}</td><td class="c">${esc(fmtAmb(x.amb))}</td><td class="c"><b>${esc(l.cant)}</b></td><td class="c"><b>${esc(l.codCuloare||"")}</b></td><td class="pic"></td></tr>`;}).join("");
+  const rows=(cmd.linii||[]).map(l=>{const x=byId[l.itemId]||{};const alt=!l.itemId;
+    return `<tr><td class="c">${alt?"—":esc(x.cod)}</td><td>${esc(alt?l.altDen:x.den)}</td><td class="c">${alt?"":esc(x.baza||"—")}</td><td class="c">${alt?"":esc(x.fin||"")}</td><td class="c">${alt?"":esc(fmtAmb(x.amb))}</td><td class="c"><b>${esc(l.cant)}</b></td><td class="c"><b>${esc(l.codCuloare||"")}</b></td>${alt?'<td style="background:#f3f3f3"></td>':'<td class="pic"></td>'}</tr>`;}).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Comandă vopsele ${esc(cmd.numar)}</title><style>
   @page{size:A4;margin:12mm}
   body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
@@ -5290,22 +5290,128 @@ function vopTiparesteComanda(cmd,lista){
   .obs{margin-top:12px;border:1px solid #888;padding:8px;min-height:40px;font-size:12px}
   </style></head><body>
   <h1>Comandă vopsele nr. ${esc(cmd.numar)}</h1>
-  <div class="meta"><div><b>Client:</b> ${esc(cmd.client)}</div><div><b>Data:</b> ${esc(vopFmtData(cmd.data))}</div></div>
-  <table><thead><tr><th>Cod</th><th>Denumire</th><th>Bază</th><th>Finisaj</th><th>Ambalare</th><th>Buc</th><th>Cod culoare</th><th>Picătură de culoare (2 cm)</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="meta"><div><b>Client:</b> ${esc(cmd.client)}</div><div><b>Data:</b> ${esc(vopFmtData(cmd.data))}</div>${cmd.oferta?`<div><b>Ofertă:</b> ${esc(cmd.oferta)}</div>`:""}</div>
+  <table><thead><tr><th>Cod</th><th>Denumire</th><th>Bază</th><th>Finisaj</th><th>Ambalare</th><th>Buc</th><th>Cod culoare / observații</th><th>Picătură de culoare (2 cm)</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="obs"><b>Observații:</b> ${esc(cmd.obs||"")}</div>
   </body></html>`;
   printHtmlDoc(html);
+}
+
+function vopCitestePdfLinii(file){
+  return new Promise((resolve,reject)=>{
+    if(!window.pdfjsLib){ reject(new Error("Motorul de citire PDF nu s-a încărcat.")); return; }
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error("Fișierul nu poate fi citit."));
+    reader.onload=async(ev)=>{
+      try{
+        const pdf=await pdfjsLib.getDocument({data:new Uint8Array(ev.target.result)}).promise;
+        const texte=[];
+        for(let p=1;p<=pdf.numPages;p++){
+          const page=await pdf.getPage(p);
+          const content=await page.getTextContent();
+          const its=content.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5]})).filter(i=>i.str.trim());
+          its.sort((a,b)=>b.y-a.y||a.x-b.x);
+          const lines=[];
+          for(const it of its){ let l=lines.find(z=>Math.abs(z.y-it.y)<=3); if(!l){l={y:it.y,items:[]};lines.push(l);} l.items.push(it); }
+          lines.sort((a,b)=>b.y-a.y);
+          for(const l of lines){ l.items.sort((a,b)=>a.x-b.x); texte.push(l.items.map(i=>i.str.trim()).filter(Boolean).join(" ")); }
+        }
+        resolve(texte);
+      }catch(e){ reject(e); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+// Citește oferta din programul de contabilitate → {nr, data, client, linii:[{den,cant,obs}]}
+async function citesteOfertaContabilitate(file){
+  const texte=await vopCitestePdfLinii(file);
+  let nr="",data="",client="";const linii=[];let inTab=false;
+  const num=(t)=>parseFloat(String(t).replace(/\./g,"").replace(",","."));
+  for(const t of texte){
+    let m=t.match(/Nr\.\s*intern\s+(\d+)/i); if(m&&!nr) nr=m[1];
+    m=t.match(/Data \(ziua, luna, anul\)\s+(\d{2})\/(\d{2})\/(\d{4})/i); if(m&&!data) data=m[3]+"-"+m[2]+"-"+m[1];
+    m=t.match(/Cumparator\s+(.+)$/i); if(m&&!client) client=m[1].replace(/\s+/g," ").trim();
+    if(/^Acest document contine/i.test(t)||/^Prezenta oferta/i.test(t)){ inTab=false; continue; }
+    m=t.match(/^\s*(\d+)\s+(.+?)\s+(?:Buc|BUC|buc|Set|SET|Kg|KG|Ml|ML|Mp|MP|Ore|Ora)\s+(\d+(?:\.\d{3})*(?:,\d+)?)\s+(\d+(?:\.\d{3})*,\d{2})\s+(\d+(?:\.\d{3})*,\d{2})\s+(\d+(?:\.\d{3})*,\d{2})\s*(.*)$/);
+    if(m){ inTab=true; linii.push({den:m[2].replace(/\*+$/,"").replace(/\s+/g," ").trim(),cant:num(m[3]),obs:(m[7]||"").trim()}); continue; }
+    // continuarea observațiilor pe rândul următor
+    if(inTab&&linii.length&&!/^(LEI|Taxabila|Total|Emis|Nr\.|crt\.|Pretul|Observatii)/i.test(t)&&!/^\d+\s/.test(t)&&t.length<80){
+      const last=linii[linii.length-1]; last.obs=(last.obs+" "+t).trim();
+    }
+  }
+  return {nr,data,client,linii};
+}
+
+function VopImportOferta({lista,C,inpS,btn,onSave,onCancel}){
+  const [msg,setMsg]=React.useState("");
+  const [of,setOf]=React.useState(null);
+  const incarca=async(file)=>{
+    setMsg("Se citește oferta...");setOf(null);
+    try{
+      const r=await citesteOfertaContabilitate(file);
+      if(!r.linii.length){ setMsg("Nu am găsit produse în ofertă."); return; }
+      setOf({nr:r.nr,client:r.client,linii:r.linii.map(l=>{const it=vopPotrivire("BM SUA "+l.den,lista);return {den:l.den,cant:l.cant,obs:l.obs,itemId:it?it.id:""};})});
+      setMsg("");
+    }catch(e){ setMsg("Eroare la citire: "+(e&&e.message||e)); }
+  };
+  const nume=(x)=>`${x.cod} · ${x.den}${x.baza?" "+x.baza:""} · ${fmtAmb(x.amb)} (stoc ${x.stoc})`;
+  const sorted=lista.slice().sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})||String(a.baza).localeCompare(String(b.baza),"ro")||(a.amb||0)-(b.amb||0));
+  const upd=(i,p)=>setOf(o=>({...o,linii:o.linii.map((z,j)=>j===i?{...z,...p}:z)}));
+  const g="1fr 64px 1fr 1.3fr 28px";
+  return <div style={{border:`1px solid ${C.border}`,padding:14,background:C.surface,marginBottom:14}}>
+    <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,marginBottom:8}}>Comandă din ofertă (PDF din programul de contabilitate)</div>
+    <div style={{fontSize:12,color:C.textSub,marginBottom:10}}>Produsele din nomenclator scad din stoc. Celelalte (ex. trafaleți) intră în comandă ca „alte produse”, fără scădere din stoc. Nu se salvează nimic până nu apeși „Creează comanda”.</div>
+    <input type="file" accept="application/pdf,.pdf" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarca(f); e.target.value="";}} style={{fontSize:12}}/>
+    {msg&&<div style={{fontSize:12,color:C.textSub,marginTop:8}}>{msg}</div>}
+    {of&&<div style={{marginTop:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8,marginBottom:10}}>
+        <div><div style={{fontSize:10,textTransform:"uppercase",color:C.textMuted}}>Client</div><input value={of.client} onChange={e=>setOf(o=>({...o,client:e.target.value}))} style={{...inpS,fontSize:13,padding:"8px 10px"}}/></div>
+        <div><div style={{fontSize:10,textTransform:"uppercase",color:C.textMuted}}>Ofertă nr.</div><div style={{padding:"8px 0",fontSize:13,color:C.text}}>{of.nr||"—"}</div></div>
+      </div>
+      <div style={{overflowX:"auto"}}><div style={{minWidth:720}}>
+        <div style={{display:"grid",gridTemplateColumns:g,gap:8,fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,padding:"4px 0"}}><div>Din ofertă</div><div>Buc</div><div>Produs din inventar</div><div>Cod culoare / observații</div><div/></div>
+        {of.linii.map((l,i)=>{const it=lista.find(x=>x.id===l.itemId);const lipsa=it&&l.cant>it.stoc;return <div key={i} style={{display:"grid",gridTemplateColumns:g,gap:8,alignItems:"center",padding:"6px 0",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.text}}>
+          <div>{l.den}</div>
+          <input type="number" value={l.cant} onChange={e=>upd(i,{cant:parseFloat(e.target.value)||0})} style={inpS}/>
+          <div><select value={l.itemId} onChange={e=>upd(i,{itemId:e.target.value})} style={{...inpS,borderColor:l.itemId?C.border:"#B08A3A"}}><option value="">Alt produs (fără scădere din stoc)</option>{sorted.map(x=><option key={x.id} value={x.id}>{nume(x)}</option>)}</select>{lipsa&&<div style={{fontSize:11,color:"#A04030",marginTop:2}}>Stoc insuficient ({it.stoc}) — stocul va ieși negativ.</div>}</div>
+          <input value={l.obs} onChange={e=>upd(i,{obs:e.target.value})} placeholder="cod culoare / observații" style={inpS}/>
+          <button onClick={()=>setOf(o=>({...o,linii:o.linii.filter((_,j)=>j!==i)}))} title="Scoate rândul" style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:15}}>×</button>
+        </div>;})}
+      </div></div>
+      <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
+        <button onClick={()=>{ if(!of.client.trim()){alert("Scrie numele clientului.");return;} const ln=of.linii.filter(l=>l.cant>0); if(!ln.length) return; onSave({client:of.client.trim(),oferta:of.nr,obs:"",linii:ln.map(l=>l.itemId?{itemId:l.itemId,cant:l.cant,codCuloare:l.obs}:{itemId:"",altDen:l.den,cant:l.cant,codCuloare:l.obs})}); }} style={btn(true)}>Creează comanda ({of.linii.filter(l=>l.itemId).length} din inventar · {of.linii.filter(l=>!l.itemId).length} alte produse)</button>
+        <button onClick={onCancel} style={btn(false)}>Renunță</button>
+      </div>
+    </div>}
+  </div>;
 }
 
 function VopComandaNoua({lista,C,inpS,btn,onSave,onCancel}){
   const [client,setClient]=React.useState("");
   const [codC,setCodC]=React.useState({});
   const [obs,setObs]=React.useState("");
-  const [q,setQ]=React.useState("");
+  const [fCod,setFCod]=React.useState("");
+  const [fDen,setFDen]=React.useState("");
+  const [fBaza,setFBaza]=React.useState("");
+  const [fFin,setFFin]=React.useState("");
+  const [fAmb,setFAmb]=React.useState("");
   const [cant,setCant]=React.useState({});
   const norm=(t)=>String(t||"").toLowerCase();
   const disp=lista.filter(x=>x.stoc>0).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})||String(a.baza).localeCompare(String(b.baza),"ro")||(a.amb||0)-(b.amb||0));
-  const vis=disp.filter(x=>!q||norm(x.cod+" "+x.den+" "+x.baza+" "+x.fin+" "+fmtAmb(x.amb)).includes(norm(q)));
+  const optU=(f)=>Array.from(new Set(disp.map(f).filter(v=>v!==""&&v!=null)));
+  const denO=optU(x=>x.den).sort((a,b)=>a.localeCompare(b,"ro"));
+  const bazaO=optU(x=>x.baza).sort((a,b)=>a.localeCompare(b,"ro"));
+  const finO=optU(x=>x.fin).sort((a,b)=>a.localeCompare(b,"ro"));
+  const ambO=optU(x=>x.amb).sort((a,b)=>a-b);
+  const vis=disp.filter(x=>{
+    if(fCod&&!norm(x.cod).includes(norm(fCod.trim()))) return false;
+    if(fDen&&!norm(x.den).includes(norm(fDen.trim()))) return false;
+    if(fBaza){ if(fBaza==="__fara"){ if(x.baza) return false; } else if(x.baza!==fBaza) return false; }
+    if(fFin&&x.fin!==fFin) return false;
+    if(fAmb&&String(x.amb)!==fAmb) return false;
+    return true;
+  });
+  const resetF=()=>{setFCod("");setFDen("");setFBaza("");setFFin("");setFAmb("");};
   const linii=disp.map(x=>({itemId:x.id,cant:Math.min(parseInt(cant[x.id],10)||0,x.stoc),codCuloare:(codC[x.id]||"").trim()})).filter(l=>l.cant>0);
   const total=linii.reduce((s,l)=>s+l.cant,0);
   const g="60px 1fr 80px 90px 76px 92px 130px";
@@ -5314,15 +5420,23 @@ function VopComandaNoua({lista,C,inpS,btn,onSave,onCancel}){
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:8,marginBottom:10}}>
       <input value={client} onChange={e=>setClient(e.target.value)} placeholder="Nume client" style={{...inpS,fontSize:13,padding:"9px 10px"}}/>
     </div>
-    <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Caută în inventar (cod, denumire, bază, finisaj...)" style={{...inpS,marginBottom:6}}/>
     <div style={{overflowX:"auto",maxHeight:420,overflowY:"auto",border:`1px solid ${C.border}`}}><div style={{minWidth:700}}>
       <div style={{display:"grid",gridTemplateColumns:g,gap:8,padding:"6px 8px",fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,position:"sticky",top:0,background:C.surface,borderBottom:`1px solid ${C.border}`}}><div>Cod</div><div>Denumire</div><div>Bază</div><div>Finisaj</div><div>Ambalare</div><div style={{textAlign:"center"}}>Buc (stoc)</div><div>Cod culoare</div></div>
+      <div style={{display:"grid",gridTemplateColumns:g,gap:8,padding:"4px 8px 8px",position:"sticky",top:28,background:C.surface,borderBottom:`1px solid ${C.border}`,zIndex:1}}>
+        <input value={fCod} onChange={e=>setFCod(e.target.value)} placeholder="filtru" style={inpS}/>
+        <div><input list="vop-cmd-den" value={fDen} onChange={e=>setFDen(e.target.value)} placeholder="filtru (scrie sau alege)" style={inpS}/><datalist id="vop-cmd-den">{denO.map(o=><option key={o} value={o}/>)}</datalist></div>
+        <select value={fBaza} onChange={e=>setFBaza(e.target.value)} style={inpS}><option value="">toate</option>{bazaO.map(o=><option key={o} value={o}>{o}</option>)}<option value="__fara">fără</option></select>
+        <select value={fFin} onChange={e=>setFFin(e.target.value)} style={inpS}><option value="">toate</option>{finO.map(o=><option key={o} value={o}>{o}</option>)}</select>
+        <select value={fAmb} onChange={e=>setFAmb(e.target.value)} style={inpS}><option value="">toate</option>{ambO.map(o=><option key={o} value={String(o)}>{fmtAmb(o)}</option>)}</select>
+        <div/>
+        <button onClick={resetF} style={{...btn(false),padding:"6px 8px",fontSize:11}}>Resetează filtre</button>
+      </div>
       {vis.map(x=><div key={x.id} style={{display:"grid",gridTemplateColumns:g,gap:8,padding:"6px 8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:`1px solid ${C.border}`,background:(parseInt(cant[x.id],10)||0)>0?C.accentLight:"transparent"}}>
         <div style={{fontWeight:600}}>{x.cod}</div><div>{x.den}</div><div style={{whiteSpace:"nowrap"}}>{x.baza||"—"}</div><div>{x.fin||"—"}</div><div style={{whiteSpace:"nowrap"}}>{fmtAmb(x.amb)}</div>
         <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"center"}}><input type="number" min="0" max={x.stoc} value={cant[x.id]||""} onChange={e=>setCant(p=>({...p,[x.id]:e.target.value}))} placeholder="0" style={{...inpS,width:46,padding:"5px 2px",textAlign:"center"}}/><span style={{fontSize:11,color:C.textMuted}}>/{x.stoc}</span></div>
         <input value={codC[x.id]||""} onChange={e=>setCodC(p=>({...p,[x.id]:e.target.value}))} placeholder="cod culoare" style={inpS}/>
       </div>)}
-      {vis.length===0&&<div style={{padding:16,fontSize:13,color:C.textMuted}}>Niciun produs în inventar pentru căutarea aceasta.</div>}
+      {vis.length===0&&<div style={{padding:16,fontSize:13,color:C.textMuted}}>Niciun produs pentru filtrele alese.</div>}
     </div></div>
     <textarea value={obs} onChange={e=>setObs(e.target.value)} placeholder="Observații" rows={2} style={{...inpS,marginTop:10,fontSize:13,padding:"9px 10px",resize:"vertical"}}/>
     <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
@@ -5336,6 +5450,7 @@ function VopComandaNoua({lista,C,inpS,btn,onSave,onCancel}){
 function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRadu,C}){
   const [view,setView]=React.useState(rolRadu?"comenzi":"inventar");
   const [cmdNoua,setCmdNoua]=React.useState(false);
+  const [cmdOferta,setCmdOferta]=React.useState(false);
   const [fCod,setFCod]=React.useState("");
   const [fDen,setFDen]=React.useState("");
   const [fFin,setFFin]=React.useState("");
@@ -5444,9 +5559,10 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
     const numar=cmds.reduce((m,c)=>Math.max(m,c.numar||0),0)+1;
     const id="c"+Date.now().toString(36);
     const doc="Comandă vopsele nr. "+numar+" – "+d.client;
-    setComenzi(p=>[...(Array.isArray(p)?p:[]),{id,numar,data:vopAzi(),client:d.client,obs:d.obs,linii:d.linii,stare:"activa",dataFin:""}]);
-    setMiscari(p=>[...(Array.isArray(p)?p:[]),...d.linii.map(l=>({id:mid(),itemId:l.itemId,data:vopAzi(),tip:"iesire",doc,cant:-l.cant,obs:"",comandaId:id}))]);
-    setCmdNoua(false);
+    setComenzi(p=>[...(Array.isArray(p)?p:[]),{id,numar,data:vopAzi(),client:d.client,obs:d.obs||"",oferta:d.oferta||"",linii:d.linii,stare:"activa",dataFin:""}]);
+    const dinStoc=d.linii.filter(l=>l.itemId);
+    if(dinStoc.length) setMiscari(p=>[...(Array.isArray(p)?p:[]),...dinStoc.map(l=>({id:mid(),itemId:l.itemId,data:vopAzi(),tip:"iesire",doc,cant:-l.cant,obs:"",comandaId:id}))]);
+    setCmdNoua(false);setCmdOferta(false);
   };
   const stareCmd=(id,stare)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(c=>c.id===id?{...c,stare,dataFin:stare==="finalizata"?vopAzi():""}:c));
   const stergeCmd=(c)=>{ if(!window.confirm("Ștergi comanda nr. "+c.numar+" ("+c.client+")? Cantitățile se întorc în stoc.")) return; setComenzi(p=>(Array.isArray(p)?p:[]).filter(z=>z.id!==c.id)); setMiscari(p=>(Array.isArray(p)?p:[]).filter(m=>m.comandaId!==c.id)); };
@@ -5455,11 +5571,11 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
     return <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:10,opacity:fin?0.85:1}}>
       <div style={{display:"flex",gap:10,alignItems:"baseline",flexWrap:"wrap"}}>
         <div style={{fontSize:16,fontWeight:600,color:C.text}}>Nr. {c.numar} · {c.client}</div>
-        <div style={{fontSize:12,color:C.textMuted}}>{vopFmtData(c.data)}{fin&&c.dataFin?" · finalizată "+vopFmtData(c.dataFin):""}</div>
+        <div style={{fontSize:12,color:C.textMuted}}>{vopFmtData(c.data)}{c.oferta?" · ofertă "+c.oferta:""}{fin&&c.dataFin?" · finalizată "+vopFmtData(c.dataFin):""}</div>
         <div style={{flex:1}}/>
       </div>
       <div style={{margin:"8px 0",fontSize:13,color:C.text}}>
-        {c.linii.map((l,i)=>{const x=lista.find(z=>z.id===l.itemId);return <div key={i} style={{padding:"3px 0",borderTop:i?`1px solid ${C.border}`:"none"}}><b>{l.cant} ×</b> {x?`${x.cod} ${x.den}${x.baza?" "+x.baza:""} · ${x.fin} · ${fmtAmb(x.amb)}`:"(produs șters)"}{l.codCuloare&&<span> · culoare <b>{l.codCuloare}</b></span>}</div>;})}
+        {c.linii.map((l,i)=>{const x=lista.find(z=>z.id===l.itemId);if(!l.itemId) return <div key={i} style={{padding:"3px 0",borderTop:i?`1px solid ${C.border}`:"none",color:C.textSub}}><b>{l.cant} ×</b> {l.altDen} <span style={{fontSize:11,color:C.textMuted}}>(alt produs, fără stoc)</span>{l.codCuloare&&<span> · <b>{l.codCuloare}</b></span>}</div>;return <div key={i} style={{padding:"3px 0",borderTop:i?`1px solid ${C.border}`:"none"}}><b>{l.cant} ×</b> {x?`${x.cod} ${x.den}${x.baza?" "+x.baza:""} · ${x.fin} · ${fmtAmb(x.amb)}`:"(produs șters)"}{l.codCuloare&&<span> · culoare <b>{l.codCuloare}</b></span>}</div>;})}
       </div>
       {c.obs&&<div style={{fontSize:12,color:C.textSub,marginBottom:8}}>Observații: {c.obs}</div>}
       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
@@ -5521,10 +5637,11 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
     </div>}
 
     {esteCmd&&<div>
-      {view==="comenzi"&&!rolRadu&&!cmdNoua&&<button onClick={()=>setCmdNoua(true)} style={{...btn(true),marginBottom:12}}>+ Comandă nouă pentru Radu</button>}
+      {view==="comenzi"&&!rolRadu&&!cmdNoua&&!cmdOferta&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}><button onClick={()=>setCmdNoua(true)} style={btn(true)}>+ Comandă nouă pentru Radu</button><button onClick={()=>setCmdOferta(true)} style={btn(false)}>+ Comandă din ofertă (PDF)</button></div>}
+      {view==="comenzi"&&cmdOferta&&<VopImportOferta lista={lista} C={C} inpS={inpS} btn={btn} onSave={salveazaComanda} onCancel={()=>setCmdOferta(false)}/>}
       {view==="comenzi"&&cmdNoua&&<VopComandaNoua lista={lista} C={C} inpS={inpS} btn={btn} onSave={salveazaComanda} onCancel={()=>setCmdNoua(false)}/>}
       {(view==="comenzi"?cmdActive:cmdFin).map(c=><CardCmd key={c.id} c={c}/>)}
-      {(view==="comenzi"?cmdActive:cmdFin).length===0&&!cmdNoua&&<div style={{padding:"24px 0",fontSize:13,color:C.textMuted}}>{view==="comenzi"?"Nicio comandă activă.":"Nicio comandă finalizată."}</div>}
+      {(view==="comenzi"?cmdActive:cmdFin).length===0&&!cmdNoua&&!cmdOferta&&<div style={{padding:"24px 0",fontSize:13,color:C.textMuted}}>{view==="comenzi"?"Nicio comandă activă.":"Nicio comandă finalizată."}</div>}
     </div>}
     {!esteCmd&&<div>
     <div style={{overflowX:"auto"}}>
