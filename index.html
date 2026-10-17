@@ -5498,7 +5498,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   const denOpt=uniq(x=>x.den).sort((a,b)=>a.localeCompare(b,"ro"));
   const norm=(s)=>String(s||"").toLowerCase();
   const filtrat=lista.filter(x=>{
-    if(view==="inventar"&&!(x.stoc>0)) return false;
+    if(view==="inventar"&&x.stoc===0) return false;
     if(fCod&&!norm(x.cod).includes(norm(fCod.trim()))) return false;
     if(fDen&&!norm(x.den).includes(norm(fDen.trim()))) return false;
     if(fFin&&x.fin!==fFin) return false;
@@ -5507,7 +5507,8 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
     return true;
   }).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})||String(a.baza).localeCompare(String(b.baza),"ro")||(a.amb||0)-(b.amb||0));
   const totalBuc=filtrat.reduce((s,x)=>s+(x.stoc>0?x.stoc:0),0);
-  const nrInv=lista.filter(x=>x.stoc>0).length;
+  const nrInv=lista.filter(x=>x.stoc!==0).length;
+  const nrNeg=lista.filter(x=>x.stoc<0).length;
   const reset=()=>{setFCod("");setFDen("");setFFin("");setFBaza("");setFAmb("");};
   const numeProd=(x)=>x?`${x.cod} · ${x.den}${x.baza?" "+x.baza:""} · ${fmtAmb(x.amb)}`:"";
   const adauga=()=>{
@@ -5624,7 +5625,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
       <div style={{flex:1}}/>
       <button onClick={()=>{setPanou(panou==="factura"?null:"factura");setFact(null);setFactMsg("");}} style={btn(panou==="factura")}>+ Intrare din factură Murali</button>
       <button onClick={()=>setPanou(panou==="manual"?null:"manual")} style={btn(panou==="manual")}>+ Intrare / ieșire manuală</button>
-      {!esteCmd&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}</div>}
+      {!esteCmd&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}{nrNeg>0&&<span style={{color:"#B3261E",fontWeight:600}}> · {nrNeg} cu stoc negativ (roșu, în așteptare factură)</span>}</div>}
     </div>
 
     {panou==="factura"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
@@ -5692,14 +5693,14 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
       </div>
       {filtrat.length===0&&<div style={{padding:"24px 8px",fontSize:13,color:C.textMuted}}>{view==="inventar"?"Niciun produs cu stoc pentru filtrele alese.":"Niciun produs găsit."}</div>}
       {filtrat.map(x=><React.Fragment key={x.id}>
-        <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:fisaId===x.id?"none":`1px solid ${C.border}`,background:x.stoc<0?"#F6E3DF":fisaId===x.id?C.bg:"transparent"}}>
+        <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:fisaId===x.id?"none":`1px solid ${C.border}`,background:x.stoc<0?"#F6E3DF":fisaId===x.id?C.bg:"transparent",borderLeft:x.stoc<0?"3px solid #B3261E":"3px solid transparent"}}>
           <div style={{fontWeight:600}}>{x.cod}</div>
           <div>{x.den}{view==="nomenclator"&&x.pret!=null&&<span style={{color:C.textMuted,fontSize:11}}> · {x.pret} lei</span>}{x.extra&&<span style={{color:C.textMuted,fontSize:11}}> · lipsă din lista Murali</span>}</div>
           <div style={{whiteSpace:"nowrap"}}>{x.baza||"—"}</div>
           <div>{x.fin||"—"}</div>
           <div style={{whiteSpace:"nowrap"}}>{fmtAmb(x.amb)}</div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-            <span style={{fontSize:15,fontWeight:600,minWidth:24,textAlign:"right"}}>{x.stoc}</span>
+            <span style={{fontSize:15,fontWeight:700,minWidth:24,textAlign:"right",color:x.stoc<0?"#B3261E":C.text}}>{x.stoc}</span>
             <button onClick={()=>setFisaId(fisaId===x.id?null:x.id)} style={{...btn(false),padding:"4px 10px",fontSize:11,background:fisaId===x.id?C.accentLight:"transparent"}}>Fișă</button>
           </div>
         </div>
