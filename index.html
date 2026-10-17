@@ -63,6 +63,56 @@ const SUPA_URL = "https://ktaeonovsygwtsoorrdn.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0YWVvbm92c3lnd3Rzb29ycmRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2ODg4OTUsImV4cCI6MjA5ODI2NDg5NX0.pFC9iOB6xA0XrAYDVC0qG_VhakGaP_KfRxoffz5C6Ms";
 const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
+// ===== SINCRONIZARE MULTI-DISPOZITIV: îmbinare în 3 (bază / local / server) =====
+// "open" e doar stare de interfață (card deschis/închis) — nu o socotim modificare reală.
+const syncNorm=(x)=>JSON.stringify(x,(k,v)=>k==="open"?undefined:v);
+const syncEq=(a,b)=>syncNorm(a)===syncNorm(b);
+const syncIsObj=(x)=>x&&typeof x==="object"&&!Array.isArray(x);
+function syncMerge(base,mine,theirs){
+  if(syncEq(mine,theirs)) return mine;
+  if(base!==undefined&&syncEq(mine,base)) return theirs;
+  if(base!==undefined&&syncEq(theirs,base)) return mine;
+  if(typeof mine==="number"&&typeof theirs==="number") return Math.max(mine,theirs); // contoare: niciodată înapoi
+  if(Array.isArray(mine)&&Array.isArray(theirs)){
+    const okId=(x)=>x&&typeof x==="object"&&!Array.isArray(x)&&x.id!=null;
+    if(!mine.every(okId)||!theirs.every(okId)) return mine; // liste fără id: câștigă varianta locală
+    const bArr=Array.isArray(base)&&base.every(okId)?base:[];
+    const bm=new Map(bArr.map(x=>[String(x.id),x])), mm=new Map(mine.map(x=>[String(x.id),x])), tm=new Map(theirs.map(x=>[String(x.id),x]));
+    const ids=[...theirs.map(x=>String(x.id)),...mine.map(x=>String(x.id)).filter(i=>!tm.has(i))];
+    const out=[];
+    for(const i of ids){
+      const m=mm.get(i), t=tm.get(i), b=bm.get(i);
+      if(m&&t) out.push(syncEq(m,t)?m:syncMerge(b,m,t));
+      else if(m){ if(b&&syncEq(m,b)) continue; out.push(m); }   // șters de celălalt dispozitiv, nemodificat aici → dispare
+      else if(t){ if(b&&syncEq(t,b)) continue; out.push(t); }   // șters aici, nemodificat acolo → dispare
+    }
+    return out;
+  }
+  if(syncIsObj(mine)&&syncIsObj(theirs)){
+    const b=syncIsObj(base)?base:{};
+    const out={};
+    for(const k of new Set([...Object.keys(theirs),...Object.keys(mine)])){
+      const hm=k in mine, ht=k in theirs, hb=k in b;
+      if(hm&&ht) out[k]=syncMerge(hb?b[k]:undefined,mine[k],theirs[k]);
+      else if(hm){ if(hb&&syncEq(mine[k],b[k])) continue; out[k]=mine[k]; }
+      else { if(hb&&syncEq(theirs[k],b[k])) continue; out[k]=theirs[k]; }
+    }
+    return out;
+  }
+  return mine;
+}
+// păstrează starea locală "open" (carduri deschise) peste datele primite de la server
+function syncKeepOpen(cur,res){
+  if(!Array.isArray(cur)||!Array.isArray(res)) return res;
+  const cm=new Map(cur.filter(x=>x&&typeof x==="object"&&x.id!=null).map(x=>[String(x.id),x]));
+  return res.map(x=>{
+    if(!x||typeof x!=="object"||!("open" in x)) return x;
+    const c=cm.get(String(x.id));
+    return {...x,open:c&&"open" in c?c.open:false};
+  });
+}
+
+
 const SK = "asistenta_kreativo_v1";
 const CK = "asistenta_chat_v1";
 const CLK = "kreativo_clienti_v2";
@@ -9887,16 +9937,61 @@ function App() {
   const lsGet=(key)=>{try{const v=localStorage.getItem("kr_"+key);return v?JSON.parse(v):null;}catch{return null;}};
   const lsSet=(key,value)=>{try{localStorage.setItem("kr_"+key,JSON.stringify(value));}catch{}};
 
+  // Baza de comparație per cheie: ultima stare cunoscută de pe server (valoare + versiune).
+  const baseRef=useRef({});     // key -> {val, ver}
+  const applyRef=useRef({});    // key -> setter React (actualizat la fiecare randare)
+  const inflightRef=useRef({}); // key -> nr. de trimiteri în curs
+  const chainRef=useRef({});    // key -> lanț de promisiuni (trimiterile aceleiași chei merg pe rând)
+  const isBusy=(key)=>!!(saveTimer.current[key]||inflightRef.current[key]>0);
   const sbGet=async(key)=>{
-    try{const{data}=await sb.from("kreativo_data").select("value").eq("key",key).single();
-      if(data?.value){const parsed=JSON.parse(data.value);lsSet(key,parsed);return parsed;}
+    try{const{data}=await sb.from("kreativo_data").select("value,version").eq("key",key).single();
+      if(data?.value){const parsed=JSON.parse(data.value);baseRef.current[key]={val:parsed,ver:data.version};lsSet(key,parsed);return parsed;}
       return lsGet(key);
     }catch{return lsGet(key);}
   };
-  const sbSet=async(key,value)=>{
-    if(staleRef.current){ marcheazaGata(key); return; }
-    try{await sb.from("kreativo_data").upsert({key,value:JSON.stringify(value)},{onConflict:"key"});}catch(e){console.log("Supabase save error (date salvate local):",e);}
-    finally{ marcheazaGata(key); }
+  // Salvare cu verificare de versiune: scrie doar dacă nimeni n-a modificat între timp.
+  // Dacă altcineva a salvat, aducem varianta lui, o îmbinăm cu a noastră (pe id) și reîncercăm.
+  const sbSetInner=async(key,value)=>{
+    if(staleRef.current){ return; }
+    const orig=value; let mine=value; let merged=false;
+    try{
+      for(let attempt=0;attempt<6;attempt++){
+        const b=baseRef.current[key];
+        if(b&&syncEq(b.val,mine)) break; // nimic nou față de server
+        const raw=JSON.stringify(mine);
+        let ok=false;
+        if(b){
+          const{data,error}=await sb.from("kreativo_data").update({value:raw}).eq("key",key).eq("version",b.ver).select("version");
+          if(error) throw error;
+          if(data&&data.length){ baseRef.current[key]={val:mine,ver:data[0].version}; ok=true; }
+        }else{
+          const{data,error}=await sb.from("kreativo_data").insert({key,value:raw}).select("version");
+          if(!error&&data&&data.length){ baseRef.current[key]={val:mine,ver:data[0].version}; ok=true; }
+          else if(error&&error.code!=="23505") throw error;
+        }
+        if(ok) break;
+        // conflict → aducem varianta de pe server și îmbinăm
+        const{data:row,error:e2}=await sb.from("kreativo_data").select("value,version").eq("key",key).single();
+        if(e2||!row) throw (e2||new Error("rând lipsă"));
+        const theirs=JSON.parse(row.value);
+        const oldBase=b?b.val:undefined;
+        mine=syncMerge(oldBase,mine,theirs);
+        merged=true;
+        baseRef.current[key]={val:theirs,ver:row.version};
+        if(attempt===5) throw new Error("conflict persistent");
+      }
+      if(merged){
+        const set=applyRef.current[key];
+        const snap=orig, res=mine;
+        if(set) set(cur=>syncKeepOpen(cur,syncMerge(snap,cur,res)));
+      }
+    }catch(e){console.log("Supabase save error (date salvate local):",e);}
+  };
+  const sbSet=(key,value)=>{
+    inflightRef.current[key]=(inflightRef.current[key]||0)+1;
+    const run=()=>sbSetInner(key,value).finally(()=>{ inflightRef.current[key]--; if(!isBusy(key)) marcheazaGata(key); });
+    chainRef.current[key]=(chainRef.current[key]||Promise.resolve()).then(run,run);
+    return chainRef.current[key];
   };
   // sbSave scrie ÎN LOCALSTORAGE IMEDIAT, sincron — nu așteaptă cele 800ms de debounce.
   // Debounce-ul rămâne doar pentru trimiterea către Supabase (ca să nu spamăm rețeaua la fiecare tastă).
@@ -10016,6 +10111,41 @@ function App() {
     }
     load();
   },[]);
+
+  // Setterii React per cheie — folosiți de sincronizare (îmbinare după salvare / reîmprospătare automată)
+  applyRef.current={[SK]:setData,[CLK]:setClients,[AK]:setAdmin,[PK]:setPerdele,[MIK]:setMit,[JK]:setJurnal,[PLK]:setPlanMaine,[RK]:setRecurente,[MOK]:setMotoare,[IEK]:setIesiri,[INK]:setIntrari,[BLK]:setBilete,[LGK]:setLog,[TRK]:setTrezorerie,[ENK]:setEnergie,[PRK]:setProiecte,[FLK]:setFurnizoriLista,[TDK]:setTudor,[OBK]:setObiective,[TCK]:setTudorContacte,[ZBK]:setZileBlocate,[OMK]:setObiectiveMari,[RMK]:setRulouMateriale,[CMK]:setCamereLista,[CTK]:setContractCounter,[PVK]:setPvCounter,[MTK]:setCatalogMateriale,[OFK2]:setOfertaCounter,[CEXK]:setComandaExecutieCounter,[CSK]:setCatalogSine,[CPK]:setCatalogPlisse,[CJK]:setCatalogJaluzele,[CCK]:setCatalogCostComponente,[CSSK]:setCatalogSinaSimpla,[CSRE]:setCatalogStorRomanElectric,[CFK]:setComenziFurnizori,[CVS]:setVopseleStoc,[CVM]:setVopseleMiscari,[CVC]:setVopseleComenzi};
+  // REÎMPROSPĂTARE AUTOMATĂ: la 30 s și când te întorci în filă, aducem ce au salvat alte dispozitive.
+  // Cheile la care ai modificări netrimise sunt sărite (se îmbină la salvare). Cardurile deschise rămân deschise.
+  const [ultimaSincro,setUltimaSincro]=useState(null);
+  useEffect(()=>{
+    if(!loaded||protectMode) return;
+    let ruleaza=false;
+    const poll=async()=>{
+      if(ruleaza||document.hidden||staleRef.current) return;
+      ruleaza=true;
+      try{
+        const{data}=await sb.from("kreativo_data").select("key,version");
+        if(!data) return;
+        for(const row of data){
+          const b=baseRef.current[row.key]; const set=applyRef.current[row.key];
+          if(!set||!b||b.ver===row.version||isBusy(row.key)) continue;
+          const{data:r}=await sb.from("kreativo_data").select("value,version").eq("key",row.key).single();
+          const b2=baseRef.current[row.key];
+          if(!r||!b2||isBusy(row.key)||r.version===b2.ver) continue;
+          const T=JSON.parse(r.value); const B=b2.val;
+          baseRef.current[row.key]={val:T,ver:r.version};
+          set(cur=>syncKeepOpen(cur,syncMerge(B,cur,T)));
+        }
+        setUltimaSincro(Date.now());
+      }catch(e){ console.log("Reîmprospătare automată eșuată:",e); }
+      finally{ ruleaza=false; }
+    };
+    const id=setInterval(poll,30000);
+    const onVis=()=>{ if(!document.hidden) poll(); };
+    document.addEventListener("visibilitychange",onVis);
+    window.addEventListener("focus",poll);
+    return ()=>{ clearInterval(id); document.removeEventListener("visibilitychange",onVis); window.removeEventListener("focus",poll); };
+  },[loaded,protectMode]);
 
   useEffect(()=>{if(loaded) sbSave(SK,data);},[data,loaded]);
   useEffect(()=>{if(loaded) sbSave(CLK,clients);},[clients,loaded]);
@@ -11207,170 +11337,7 @@ function App() {
     </div>}
 
     {tab==="tudor"&&<div>
-      <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap",paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
-        {[["vopsele","Vopsele"],["tudor","Arhivă Tudor"]].map(([id,l])=>
-          <button key={id} onClick={()=>setRaduModul(id)} style={{padding:"8px 18px",border:`1px solid ${raduModul===id?C.accent:C.border}`,background:raduModul===id?C.accent:"transparent",color:raduModul===id?"#FAF8F4":C.textSub,cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>{l}</button>)}
-      </div>
-      {raduModul==="vopsele"&&<VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C}/>}
-      {raduModul==="tudor"&&<>
-      <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
-        {[["taskuri","Task-uri"],["designeri","Designeri"],["arhitecti","Arhitecți"],["perdele","Firme perdele/draperii"],["smarthome","Smart home"],["calendar","Calendar"]].map(([id,l])=>
-          <button key={id} onClick={()=>setTudorSubtab(id)} style={{padding:"7px 14px",border:`1px solid ${tudorSubtab===id?C.accent:C.border}`,background:tudorSubtab===id?C.accentLight:"transparent",color:tudorSubtab===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:tudorSubtab===id?500:400}}>{l}</button>
-        )}
-      </div>
-
-      {tudorSubtab==="taskuri"&&<>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
-      {tudor.slice().sort((a,b)=>a.name.localeCompare(b.name,"ro")).map((t,fi)=>{
-        const ti_=tudor.indexOf(t);
-        const pending=t.done.filter(d=>!d).length;const allDone=t.tasks.length>0&&t.done.every(Boolean);
-        const activ=t.open;
-        return <div key={t.id} onClick={()=>setTudor(p=>p.map((x,i)=>({...x,open:i===ti_?!x.open:false})))} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,aspectRatio:"1 / 1",padding:"8px",cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:activ?"2px solid #2A2118":"1px solid transparent",transition:"border-color .1s"}}>
-          <span style={{fontSize:12,fontWeight:500,color:C.text,overflow:"hidden",wordBreak:"break-word",maxHeight:"3em",letterSpacing:"0.01em"}}>{t.name}</span>
-          {allDone?<span style={{fontSize:10,color:"#3A6A3A",flexShrink:0,fontWeight:600}}>✓</span>:
-           pending>0?<span style={{fontSize:10,fontWeight:600,color:C.text,flexShrink:0,background:"rgba(255,255,255,0.55)",padding:"1px 7px"}}>{pending}</span>:null}
-        </div>;
-      })}
-      </div>
-
-      {(()=>{
-        const t=tudor.find(x=>x.open);
-        if(!t) return null;
-        const ti_=tudor.indexOf(t);
-        const pending=t.done.filter(d=>!d).length;const allDone=t.tasks.length>0&&t.done.every(Boolean);
-        return <div style={{border:`1px solid ${C.border}`,background:C.surface}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"13px 16px",background:C.accentLight,borderBottom:`1px solid ${C.border}`}}>
-            <div style={{flex:1,fontSize:14,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>{t.name}</div>
-            {(t.tasks.length>0)&&<div style={{fontSize:10,background:"#FFFFFF",color:C.textSub,padding:"3px 10px"}}>{allDone?"✓ Gata":`${pending} de făcut`}</div>}
-            <button onClick={()=>setTudor(p=>p.map(x=>({...x,open:false})))} style={{background:"none",border:"none",cursor:"pointer",color:C.textSub,fontSize:15}}>×</button>
-          </div>
-          <div style={{padding:"12px 16px"}}>
-            {t.tasks.map((task,si)=>{
-              return <TudorTaskRow key={`${t.id}-${si}`} task={task} date={(t.dates||[])[si]||""} obs={(t.obs||[])[si]||""} done={t.done[si]} onToggle={()=>togTudor(ti_,si)} onDelete={()=>delTudorTask(ti_,si)} onDateChange={v=>updTudorDate(ti_,si,v)} onObsChange={v=>updTudorObs(ti_,si,v)}/>;
-            })}
-            {addingToTudor===ti_?<div style={{...row,marginTop:8}}>
-              <input autoFocus value={newTudorTask[ti_]||""} onChange={e=>setNewTudorTask(p=>({...p,[ti_]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addTudorTask(ti_);if(e.key==="Escape")setAddingToTudor(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
-              <button onClick={()=>addTudorTask(ti_)} style={btnP()}>OK</button>
-              <button onClick={()=>setAddingToTudor(null)} style={btnS}>✕</button>
-            </div>:<div style={{...row,justifyContent:"space-between",marginTop:8,marginBottom:8}}>
-              <button onClick={()=>setAddingToTudor(ti_)} style={{...btnS,fontSize:12,padding:"4px 12px"}}>+ sarcină</button>
-              <button onClick={()=>delTudor(ti_)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge task</button>
-            </div>}
-            <TudorDocumente t={t} ti_={ti_} setTudor={setTudor} C={C} sb={sb} tday={tday} fmtD={fmtD}/>
-          </div>
-        </div>;
-      })()}
-
-      <div style={{marginTop:12}}>
-        {addingTudor?<div style={row}>
-          <input autoFocus value={newTudorName} onChange={e=>setNewTudorName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addTudor();if(e.key==="Escape")setAddingTudor(false);}} placeholder="Nume task nou..." style={{...inp,flex:1}}/>
-          <button onClick={addTudor} style={btnP()}>Adaugă</button>
-          <button onClick={()=>setAddingTudor(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingTudor(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ task nou</button>}
-      </div>
-      </>}
-
-      {["designeri","arhitecti","perdele","smarthome"].includes(tudorSubtab)&&(()=>{
-        const contacteCateg=tudorContacte.filter(c=>c.categorie===tudorSubtab).sort((a,b)=>a.nume.localeCompare(b.nume,"ro"));
-        return <div>
-          <div style={{...row,marginBottom:14}}>
-            <input value={newContactName[tudorSubtab]||""} onChange={e=>setNewContactName(p=>({...p,[tudorSubtab]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){addContact(tudorSubtab,newContactName[tudorSubtab]);setNewContactName(p=>({...p,[tudorSubtab]:""}));}}} placeholder="Nume și prenume contact nou..." style={{...inp,flex:1}}/>
-            <button onClick={()=>{addContact(tudorSubtab,newContactName[tudorSubtab]);setNewContactName(p=>({...p,[tudorSubtab]:""}));}} style={btnP()}>+ Adaugă</button>
-          </div>
-          {contacteCateg.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"10px 0"}}>Niciun contact încă în această categorie.</div>}
-          {contacteCateg.map(c=>{
-            const isOpen=openContactId===c.id;
-            return <div key={c.id} style={{border:`1px solid ${C.border}`,marginBottom:8,background:C.surface,overflow:"hidden"}}>
-              <div onClick={()=>setOpenContactId(isOpen?null:c.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",cursor:"pointer",userSelect:"none",background:C.accentLight}}>
-                <div style={{flex:1}}>
-                  <span style={{fontSize:13,fontWeight:600,color:C.text}}>{c.nume}</span>
-                  {c.firma&&<span style={{fontSize:12,color:C.textSub,marginLeft:8}}>· {c.firma}</span>}
-                </div>
-                {(c.istoric||[]).filter(h=>h.termen&&!h.bifat).length>0&&<span style={{fontSize:10,fontWeight:600,color:C.accent,background:"#fff",padding:"2px 8px"}}>{(c.istoric||[]).filter(h=>h.termen&&!h.bifat).length} de urmărit</span>}
-                <span style={{fontSize:11,color:C.textSub}}>{isOpen?"▾":"▸"}</span>
-              </div>
-              {isOpen&&<div style={{padding:"14px 16px"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-                  <input value={c.nume} onChange={e=>updContact(c.id,"nume",e.target.value)} placeholder="Nume și prenume" style={{...inp}}/>
-                  <input value={c.firma} onChange={e=>updContact(c.id,"firma",e.target.value)} placeholder="Firmă" style={{...inp}}/>
-                  <input value={c.adresa} onChange={e=>updContact(c.id,"adresa",e.target.value)} placeholder="Adresă" style={{...inp}}/>
-                  <input type="tel" value={c.telefon} onChange={e=>updContact(c.id,"telefon",e.target.value)} placeholder="Telefon" style={{...inp}}/>
-                  <input value={c.website} onChange={e=>updContact(c.id,"website",e.target.value)} placeholder="Website" style={{...inp,gridColumn:"1 / -1"}}/>
-                </div>
-                <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-                  {c.telefon&&<a href={`tel:${c.telefon.replace(/\s+/g,"")}`} style={{fontSize:12,color:C.accent,textDecoration:"none"}}>Sună</a>}
-                  {c.website&&<a href={c.website.startsWith("http")?c.website:`https://${c.website}`} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:C.accent,textDecoration:"none"}}>Website</a>}
-                  <button onClick={()=>delContact(c.id)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",marginLeft:"auto"}}>șterge contact</button>
-                </div>
-                <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Istoric contacte</div>
-                <button onClick={()=>addIstoric(c.id)} style={{fontSize:12,color:"#2A2118",border:"none",padding:"6px 12px",background:"#5C6B65",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă contact nou</button>
-                {(c.istoric||[]).map(h=><div key={h.id} style={{background:C.bg,padding:"10px 12px",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <input type="checkbox" checked={h.bifat} onChange={e=>updIstoric(c.id,h.id,"bifat",e.target.checked)} style={{cursor:"pointer",width:14,height:14,flexShrink:0}}/>
-                    <span style={{fontSize:11,color:C.textMuted}}>Data:</span>
-                    <input type="date" value={h.data} onChange={e=>updIstoric(c.id,h.id,"data",e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 6px",background:C.surface,outline:"none"}}/>
-                    <button onClick={()=>delIstoric(c.id,h.id)} style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14}}>×</button>
-                  </div>
-                  <input value={h.continut} onChange={e=>updIstoric(c.id,h.id,"continut",e.target.value)} placeholder="Conținutul discuției..." style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none",marginBottom:6,boxSizing:"border-box"}}/>
-                  <div style={{display:"flex",gap:8}}>
-                    <input value={h.deFacut} onChange={e=>updIstoric(c.id,h.id,"deFacut",e.target.value)} placeholder="Ce e de făcut..." style={{flex:2,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none"}}/>
-                    <input type="date" value={h.termen} onChange={e=>updIstoric(c.id,h.id,"termen",e.target.value)} style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none"}}/>
-                  </div>
-                </div>)}
-              </div>}
-            </div>;
-          })}
-        </div>;
-      })()}
-
-      {tudorSubtab==="calendar"&&(()=>{
-        const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
-        const ZILE_SCURT=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
-        const daysInM=(y,m)=>new Date(y,m+1,0).getDate();
-        const keyFor=(y,m,day)=>`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-        const todayKey=tday();
-        const byDay={};
-        tudor.forEach(t=>{(t.tasks||[]).forEach((task,si)=>{const d=(t.dates||[])[si];if(d&&!t.done[si]) (byDay[d]=byDay[d]||[]).push(`${t.name}: ${task}`);});});
-        tudorContacte.forEach(c=>{(c.istoric||[]).forEach(h=>{if(h.termen&&!h.bifat) (byDay[h.termen]=byDay[h.termen]||[]).push(`${c.nume}${c.firma?" ("+c.firma+")":""}: ${h.deFacut||"follow-up"}`);});});
-        return <div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:10}}>
-            <button onClick={()=>setTudorCalMonth(p=>{const m=p.m-1;return m<0?{y:p.y-1,m:11}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
-            <div style={{fontSize:13,fontWeight:600,color:C.text}}>{LUNI[tudorCalMonth.m]} {tudorCalMonth.y}</div>
-            <button onClick={()=>setTudorCalMonth(p=>{const m=p.m+1;return m>11?{y:p.y+1,m:0}:{y:p.y,m};})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4,marginBottom:4}}>
-            {ZILE_SCURT.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:4}}>
-            {(()=>{
-              const first=new Date(tudorCalMonth.y,tudorCalMonth.m,1);
-              const offset=(first.getDay()+6)%7;
-              const total=daysInM(tudorCalMonth.y,tudorCalMonth.m);
-              const cells=[];
-              for(let i=0;i<offset;i++) cells.push(<div key={`e${i}`}/>);
-              for(let day=1;day<=total;day++){
-                const key=keyFor(tudorCalMonth.y,tudorCalMonth.m,day);
-                const isToday=key===todayKey;
-                const items=byDay[key]||[];
-                const dow=new Date(tudorCalMonth.y,tudorCalMonth.m,day).getDay();
-                const isWeekend=dow===0||dow===6;
-                const blocat=(zileBlocate.tudor||[]).find(z=>key>=z.dataStart&&key<=(z.dataEnd||z.dataStart));
-                let bg=items.length?"#5C6B65":C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
-                if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
-                if(blocat){bg="#B8A88F";textCol="#fff";}
-                cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
-                  <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
-                  {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
-                   items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it}</div>)}
-                </div>);
-              }
-              return cells;
-            })()}
-          </div>
-          <BlocareZi blocate={zileBlocate.tudor} onAdd={(s,e,m)=>addZiBlocata("tudor",s,e,m)} onDel={id=>delZiBlocata("tudor",id)} C={C} fmtD={fmtD}/>
-        </div>;
-      })()}
-      </>}
+      <VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C}/>
     </div>}
 
     {tab==="motionblinds"&&<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}

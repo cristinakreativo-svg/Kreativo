@@ -1,0 +1,12 @@
+{
+  "name": "Radu · Kreativo Vopsele",
+  "short_name": "Radu",
+  "start_url": "./?radu=1",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2EFE9",
+  "theme_color": "#5C6B65",
+  "icons": [
+    {"src": "icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any"}
+  ]
+}
