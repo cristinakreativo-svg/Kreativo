@@ -93,6 +93,7 @@ function syncMerge(base,mine,theirs){
     const out={};
     for(const k of new Set([...Object.keys(theirs),...Object.keys(mine)])){
       const hm=k in mine, ht=k in theirs, hb=k in b;
+      if(k==="ciornaOferta"){ if(hm&&mine[k]!==undefined) out[k]=mine[k]; continue; } // ciorna unui dispozitiv nu se amestecă cu a altuia
       if(hm&&ht) out[k]=syncMerge(hb?b[k]:undefined,mine[k],theirs[k]);
       else if(hm){ if(hb&&syncEq(mine[k],b[k])) continue; out[k]=mine[k]; }
       else { if(hb&&syncEq(theirs[k],b[k])) continue; out[k]=theirs[k]; }
@@ -6858,6 +6859,15 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     <button onClick={()=>{
       // Se șterge DOAR o ciornă goală (ca să pornească curat). O ciornă cu conținut rămâne neatinsă —
       // o continui de unde ai rămas, sau o ștergi explicit din butonul din formular.
+      // Dacă formularul era în modul „Modifici oferta…" și a fost doar ascuns, „+ Adaugă ofertă" înseamnă ofertă NOUĂ:
+      // ieșim din modul de modificare (altfel salvarea ar rescrie oferta veche).
+      if(!formOpen && editingId){
+        setEditingId(null);
+        setNumeClient(client.name||"");
+        setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+        setObservatii("");
+        setDiscountTip("lei"); setDiscountVal("");
+      } else
       if(!formOpen && !editingId && !ciornaAreContinut){
         setNumeClient(client.name||"");
         setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
