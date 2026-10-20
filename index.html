@@ -10058,6 +10058,7 @@ function bancaConstruieste(tx,reguli,ovr){
   for(const t of tx){
     const o=ovr&&ovr[t.key];
     if(o&&o.split){ o.split.forEach((l,i)=>note.set("split|"+t.key+"|"+i,{date:t.date,debit:l.debit,credit:l.credit,expl:l.expl||"",suma:Math.round(Number(l.suma)*100)/100,tx:[t],fix:true})); continue; }
+    if(rataRule&&t.text.includes("Rata Credit")&&!(o&&o.debit)){(rataZi[t.date]=rataZi[t.date]||[]).push(t);continue;} // ratele au prioritate peste regulile utilizatorului
     let c=bancaClasifica(t,reguli);
     if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:false};
     if(c.kind==="gestiune"){gestiune.push({t,sectiune:c.sectiune});continue;}
@@ -10366,7 +10367,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
       <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
       <div style={{textAlign:"right",color:t.amount<0?"#A04030":C.text}}>{bancaSuma(t.amount)}</div>
       <div style={{color:C.textSub,fontSize:11}}>{extra}</div>
-      {butonReclas&&<button onClick={()=>{setEdit(edit===t.key?null:t.key);setEf({debit:"",credit:"5121.000",expl:t.who,regula:true});}} style={{...btn(false),padding:"4px 10px",fontSize:11}}>Reclasifică</button>}
+      {butonReclas&&<button onClick={()=>{setEdit(edit===t.key?null:t.key);setEf({debit:"",credit:"5121.000",expl:t.who,regula:!/^\d+$/.test(String(t.who||"").trim())});}} style={{...btn(false),padding:"4px 10px",fontSize:11}}>Reclasifică</button>}
       {butonSplit&&<button onClick={()=>deschideSplit(t)} style={{...btn(false),padding:"4px 10px",fontSize:11,marginLeft:6}}>Împarte</button>}
       {butonRezolva&&<button onClick={()=>rezolva(t)} style={{...btn(false),padding:"4px 10px",fontSize:11,marginLeft:6}}>Rezolvat</button>}
     </div>
@@ -10436,9 +10437,14 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
               const dOk=d112&&!d112.eroare;
               return <div>
                 {!dOk&&<div style={{fontSize:12,color:"#8A5A00",margin:"8px 0"}}>Încarcă D112 (câmpul de sus) ca să se împartă automat. Până atunci plățile rămân de operat manual.</div>}
-                <div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
-                  {toate.map(t=>{const o=ovrEff[t.key];return <LinieTx key={t.key} t={t} butonSplit={true} extra={o&&o.split?o.split.map(l=>l.debit+" = "+bancaSuma(l.suma)).join(" · "):"nu s-a putut împărți din D112"}/>;})}
-                </div></div>
+                {(()=>{
+                  const rows=<div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
+                    {toate.map(t=>{const o=ovrEff[t.key];return <LinieTx key={t.key} t={t} butonSplit={true} extra={o&&o.split?o.split.map(l=>l.debit+" = "+bancaSuma(l.suma)).join(" · "):"nu s-a putut împărți din D112"}/>;})}
+                  </div></div>;
+                  const toateOk=toate.length>0&&toate.every(t=>ovrEff[t.key]&&ovrEff[t.key].split);
+                  return toateOk?<div style={{fontSize:12,color:C.textSub,margin:"8px 0"}}>Plățile sunt împărțite automat; notele sunt deja în „Note generate” de mai sus. Nu ai nimic de făcut aici.
+                    <details style={{marginTop:6}}><summary style={{fontSize:11,color:C.textMuted,cursor:"pointer"}}>arată plățile ({toate.length}) — doar dacă vrei să corectezi o sumă</summary>{rows}</details></div>:rows;
+                })()}
                 {dOk&&<div style={{marginTop:10,fontSize:12,lineHeight:1.7}}>
                   <div style={{fontWeight:600,color:C.text}}>Verificare față de D112{d112.luna?" luna "+d112.luna+"/"+d112.an:""}:</div>
                   {Object.entries(BANCA_D112_CONT).map(([cod,[cont,expl]])=>{const dv=d112.sume[cod]||0;const al=Math.round(alocat(cont)*100)/100;const ok=Math.abs(dv-al)<0.005;
