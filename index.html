@@ -10013,6 +10013,11 @@ function bancaVerifica(p){
   if(suma!==asteptat) return {ok:false,msg:"Verificare eșuată: suma tranzacțiilor citite ("+(suma/100).toFixed(2)+") nu bate cu soldul final − soldul inițial ("+(asteptat/100).toFixed(2)+"). Parsarea a ratat ceva — nu export."};
   return {ok:true,msg:""};
 }
+const BANCA_RATA_SEED={id:"rata",ordine:90,conditie_tip:"rata_credit",conditie_text:"Rata Credit",debit:"1621.001",credit:"5121.000",debit2:"666.G.04",principal:2923.73,explicatie:"Rata credit",explicatie2:"Dobanda credit",agregare:"zi",activ:true};
+function bancaReguliEfective(reguli){
+  const base=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
+  return base.some(r=>r.conditie_tip==="rata_credit")?base:[...base,BANCA_RATA_SEED];
+}
 function bancaPotrivire(r,t){
   const s=t.text,a=t.amount;
   if(r.conditie_tip==="contains") return s.includes(r.conditie_text);
@@ -10035,15 +10040,24 @@ function bancaClasifica(t,reguli){
 // tx: doar cele noi; ovr: {key:{debit,credit,expl}} reclasificări manuale din UI
 function bancaConstruieste(tx,reguli,ovr){
   const note=new Map(),manual=[],gestiune=[];
+  const rataRule=(reguli||[]).find(r=>r.conditie_tip==="rata_credit"&&r.activ!==false&&Number(r.principal)>0);
+  const rataZi={};
   for(const t of tx){
     let c=bancaClasifica(t,reguli);
     const o=ovr&&ovr[t.key];
     if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:false};
     if(c.kind==="gestiune"){gestiune.push({t,sectiune:c.sectiune});continue;}
+    if(c.kind==="manual"&&!(o&&o.debit)&&rataRule&&/^Rată credit/.test(c.reason)){(rataZi[t.date]=rataZi[t.date]||[]).push(t);continue;}
     if(c.kind==="manual"){manual.push({t,reason:c.reason});continue;}
     const k=c.agg?[t.date,c.debit,c.credit,c.expl].join("\u0001"):[t.date,c.debit,c.credit,c.expl,t.ref].join("\u0001");
     if(!note.has(k)) note.set(k,{date:t.date,debit:c.debit,credit:c.credit,expl:c.expl,suma:0,tx:[]});
     const n=note.get(k); n.suma+=Math.abs(t.amount); n.tx.push(t);
+  }
+  for(const dt of Object.keys(rataZi)){
+    const arr=rataZi[dt], total=Math.round(arr.reduce((s,t)=>s+Math.abs(t.amount),0)*100)/100, P=Math.round(Number(rataRule.principal)*100)/100;
+    if(total<=P+0.004){ arr.forEach(t=>manual.push({t,reason:"Rată credit — suma e mai mică decât principalul setat ("+P+")"})); continue; }
+    note.set("rata1|"+dt,{date:dt,debit:rataRule.debit,credit:rataRule.credit,expl:rataRule.explicatie||"Rata credit",suma:P,tx:arr,fix:true});
+    note.set("rata2|"+dt,{date:dt,debit:rataRule.debit2||"666.G.04",credit:rataRule.credit,expl:rataRule.explicatie2||"Dobanda credit",suma:Math.round((total-P)*100)/100,tx:arr,fix:true});
   }
   return {note:Array.from(note.values()).map(n=>({...n,suma:Math.round(n.suma*100)/100})),manual,gestiune};
 }
@@ -10098,13 +10112,14 @@ function bancaExclude(built,rows){
   for(const n of built.note){
     const dir=n.debit==="5121.000"?1:-1;
     if(bancaPotrivesteT(pool,bancaIso(n.date),dir,n.suma)){ n.tx.forEach(t=>excluded.push(t)); continue; }
-    if(n.tx.length>1){
+    if(n.tx.length>1&&!n.fix){
       const ramase=[]; for(const t of n.tx){ if(bancaPotrivesteT(pool,bancaIso(t.date),dirT(t),Math.abs(t.amount))) excluded.push(t); else ramase.push(t); }
-      if(ramase.length){ note.push({...n,tx:ramase,suma:Math.round(ramase.reduce((s,t)=>s+Math.abs(t.amount),0)*100)/100}); }
+      if(ramase.length===n.tx.length) note.push(n); else if(ramase.length) note.push({...n,tx:ramase,suma:Math.round(ramase.reduce((s,t)=>s+Math.abs(t.amount),0)*100)/100});
     } else note.push(n);
   }
   const keep=(arr,getT)=>arr.filter(x=>{const t=getT(x); if(bancaPotrivesteT(pool,bancaIso(t.date),dirT(t),Math.abs(t.amount))){excluded.push(t);return false;} return true;});
-  return {note,manual:keep(built.manual,m=>m.t),gestiune:keep(built.gestiune,g=>g.t),excluded};
+  const vazut=new Set(); const ex2=excluded.filter(t=>!vazut.has(t.key)&&vazut.add(t.key));
+  return {note,manual:keep(built.manual,m=>m.t),gestiune:keep(built.gestiune,g=>g.t),excluded:ex2};
 }
 
 // ============ MODUL BANCĂ — interfață ============
@@ -10164,7 +10179,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   const [tr,setTr]=React.useState(null);
   const [ef,setEf]=React.useState({debit:"",credit:"",expl:"",regula:true});
   const [nr,setNr]=React.useState({conditie_tip:"contains",conditie_text:"",debit:"",credit:"",explicatie:"",agregare:"tranzactie"});
-  const efRules=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
+  const efRules=bancaReguliEfective(reguli);
   const proc=Array.isArray(procesate)?procesate:[];
   const procSet=new Set(proc.map(p=>p.ref+"|"+p.data+"|"+Number(p.suma).toFixed(2)));
   const inpS={padding:"7px 8px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:12,boxSizing:"border-box",fontFamily:"inherit",outline:"none",width:"100%"};
@@ -10215,10 +10230,10 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     let id=d1+"_"+d2; const existente=new Set(proc.map(p=>p.exportId)); let k=2; while(existente.has(id)) id=d1+"_"+d2+"_"+(k++);
     const acum=new Date().toISOString();
     const rec=(t,tip,c)=>({ref:t.ref,data:bancaIso(t.date),suma:Math.round(t.amount*100)/100,tip,debit:c?c.debit:"",credit:c?c.credit:"",explicatie:c?c.expl:"",exportId:id,procesatLa:acum,procesatDe:authEmail||""});
-    const recs=[];
-    built.note.forEach(n=>n.tx.forEach(t=>recs.push(rec(t,"nota",{debit:n.debit,credit:n.credit,expl:n.expl}))));
-    built.gestiune.forEach(g=>recs.push(rec(g.t,"gestiune")));
-    built.excluded.forEach(t=>recs.push(rec(t,"in_transart")));
+    const recs=[]; const vz=new Set();
+    built.note.forEach(n=>n.tx.forEach(t=>{ if(vz.has(t.key)) return; vz.add(t.key); recs.push(rec(t,"nota",{debit:n.debit,credit:n.credit,expl:n.expl})); }));
+    built.gestiune.forEach(g=>{ if(!vz.has(g.t.key)){ vz.add(g.t.key); recs.push(rec(g.t,"gestiune")); }});
+    built.excluded.forEach(t=>{ if(!vz.has(t.key)){ vz.add(t.key); recs.push(rec(t,"in_transart")); }});
     const sufix=d1+"_"+d2;
     let fisiere=[];
     if(built.note.length){ bancaDescarca("note_banca_"+sufix+".tsv",bancaTsv(built.note),"text/tab-separated-values;charset=utf-8"); fisiere.push("note_banca_"+sufix+".tsv"); }
@@ -10356,6 +10371,13 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
           <button onClick={()=>{if(window.confirm("Ștergi regula „"+r.conditie_text+"”?")) setReguli(efRules.filter(z=>z.id!==r.id));}} title="Șterge" style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:15}}>×</button>
         </div>)}
       </div></div>
+      <div style={{marginTop:14,padding:10,border:`1px solid ${C.border}`,background:C.bg}}>
+        <div style={lbl}>Rată credit (15 ale lunii)</div>
+        <div style={{fontSize:12,color:C.textSub,margin:"4px 0 8px"}}>Cele 2 rate (Rata Credit) din aceeași zi se adună. Din total: principalul → 1621.001 = 5121.000, diferența (dobânda) → 666.G.04 = 5121.000.</div>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12,color:C.text}}>Principal lunar (lei):
+          <input type="number" step="0.01" defaultValue={(efRules.find(r=>r.conditie_tip==="rata_credit")||{}).principal} onBlur={e=>{const v=parseFloat(e.target.value); if(!(v>0)) return; setReguli(efRules.map(z=>z.conditie_tip==="rata_credit"?{...z,principal:v}:z));}} style={{...inpS,width:120}}/>
+        </div>
+      </div>
       <div style={{marginTop:14,...lbl}}>Regulă nouă</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginTop:6,alignItems:"end"}}>
         <select value={nr.conditie_tip} onChange={e=>setNr(p=>({...p,conditie_tip:e.target.value}))} style={inpS}><option value="contains">conține text</option><option value="iban_debit">IBAN (plată)</option><option value="iban_credit">IBAN (încasare)</option></select>
