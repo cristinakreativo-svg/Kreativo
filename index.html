@@ -141,6 +141,8 @@ const CFK = "kreativo_comenzi_furnizori_v1";
 const CVS = "kreativo_vopsele_stoc_v1";
 const CVM = "kreativo_vopsele_miscari_v1";
 const CVC = "kreativo_vopsele_comenzi_v1";
+const BKP = "kreativo_banca_procesate_v1";
+const BKR = "kreativo_banca_reguli_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -9955,6 +9957,348 @@ function EnergieCard({energie,setEnergie,C,card,tday}){
   </div>;
 }
 
+// ============ MODUL BANCĂ — logică pură (parser extras ING, reguli, agregare, TSV) ============
+const BANCA_SKIP=['Extras de cont','ING Bank','Acest document','www.ing.ro','BIC code','Tel:','RC:','Str. Aviator'];
+const BANCA_REGULI_SEED=[
+  {id:"r1",ordine:1,conditie_tip:"contains",conditie_text:"Suma transferata din linia de credit",debit:"5121.000",credit:"5191.001",explicatie:"Acordare  din linie",agregare:"zi",activ:true},
+  {id:"r2",ordine:2,conditie_tip:"contains",conditie_text:"Rambursare Extra'ROL",debit:"5191.001",credit:"5121.000",explicatie:"RESTITUIRE LINIE DE CREDIT",agregare:"zi",activ:true},
+  {id:"r3",ordine:3,conditie_tip:"contains",conditie_text:"Retragere numerar",debit:"581.001",credit:"5121.000",explicatie:"Scos din banca",agregare:"zi",activ:true},
+  {id:"r4",ordine:4,conditie_tip:"contains",conditie_text:"Depunere numerar",debit:"5121.000",credit:"581.001",explicatie:"DEPNERE BANCA",agregare:"zi",activ:true},
+  {id:"r5",ordine:5,conditie_tip:"contains",conditie_text:"Comision pe operatiune",debit:"627.G.01",credit:"5121.000",explicatie:"Comision",agregare:"zi",activ:true},
+  {id:"r6",ordine:6,conditie_tip:"contains",conditie_text:"Schimb valutar ING Business",debit:"581.002",credit:"5121.000",explicatie:"Cumparare euro",agregare:"zi",activ:true},
+  {id:"r7",ordine:7,conditie_tip:"iban_debit",conditie_text:"RO85INGB0000999912068800",debit:"4551",credit:"5121.000",explicatie:"RESTITUIRE CREDITARE",agregare:"tranzactie",activ:true},
+  {id:"r8",ordine:8,conditie_tip:"iban_credit",conditie_text:"RO77INGB0000999915448521",debit:"5121.000",credit:"581.003",explicatie:"Transfer din POS",agregare:"tranzactie",activ:true}
+];
+const bancaIso=(s)=>{const m=String(s).match(/^(\d{2})\.(\d{2})\.(\d{4})$/);return m?m[3]+"-"+m[2]+"-"+m[1]:s;};
+const bancaFmtD=(iso)=>{const m=String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+"."+m[2]+"."+m[1]:iso;};
+const bancaKey=(t)=>t.ref+"|"+bancaIso(t.date)+"|"+(Math.round(t.amount*100)/100).toFixed(2);
+
+// lines: array de linii text (în ordinea din document) → {tx, soldInitial, soldFinal}
+function bancaParseLines(lines){
+  const datere=/^\s*(\d{2}\.\d{2}\.\d{4})\s+(.*)$/, refre=/^\s*(\d{5})\s*(.*)$/, amtre=/(-?[\d,]+\.\d{2})/g;
+  let tx=[],cur=null,soldInitial=null,soldFinal=null;
+  for(const ln of lines){
+    if(BANCA_SKIP.some(s=>ln.includes(s))) continue;
+    let mi=ln.match(/Sold initial:\s*(-?[\d,]+\.\d{2})/); if(mi&&soldInitial===null) soldInitial=parseFloat(mi[1].replace(/,/g,""));
+    let mf=ln.match(/Sold final:\s*(-?[\d,]+\.\d{2})/); if(mf) soldFinal=parseFloat(mf[1].replace(/,/g,""));
+    let m=ln.match(datere);
+    if(m&&!ln.trim().startsWith("Data:")){
+      if(cur) tx.push(cur);
+      cur={date:m[1],ref:null,lines:[],amounts:[]};
+      const rest=m[2];
+      cur.amounts=(rest.match(amtre)||[]).map(x=>parseFloat(x.replace(/,/g,"")));
+      const t=rest.replace(amtre,"").trim();
+      if(t) cur.lines.push(t);
+      continue;
+    }
+    if(cur===null) continue;
+    m=ln.match(refre);
+    if(m&&cur.ref===null){
+      cur.ref=m[1]; const rest=m[2].trim();
+      if(rest) cur.lines.push(rest);
+      continue;
+    }
+    const s=ln.trim();
+    if(s) cur.lines.push(s);
+  }
+  if(cur) tx.push(cur);
+  tx=tx.filter(t=>t.ref);
+  tx.forEach(t=>{t.amount=t.amounts.length?t.amounts[0]:null;t.text=t.lines.join(" | ");t.who=t.lines[0]||"";t.key=bancaKey(t);});
+  return {tx,soldInitial,soldFinal};
+}
+function bancaVerifica(p){
+  if(p.soldInitial===null||p.soldFinal===null) return {ok:false,msg:"Nu am găsit soldul inițial / final în extras."};
+  const suma=Math.round(p.tx.reduce((s,t)=>s+Math.round((t.amount||0)*100),0));
+  const asteptat=Math.round(p.soldFinal*100)-Math.round(p.soldInitial*100);
+  if(suma!==asteptat) return {ok:false,msg:"Verificare eșuată: suma tranzacțiilor citite ("+(suma/100).toFixed(2)+") nu bate cu soldul final − soldul inițial ("+(asteptat/100).toFixed(2)+"). Parsarea a ratat ceva — nu export."};
+  return {ok:true,msg:""};
+}
+function bancaPotrivire(r,t){
+  const s=t.text,a=t.amount;
+  if(r.conditie_tip==="contains") return s.includes(r.conditie_text);
+  if(r.conditie_tip==="iban_debit") return a<0&&s.includes(r.conditie_text);
+  if(r.conditie_tip==="iban_credit") return a>0&&s.includes(r.conditie_text);
+  return false;
+}
+// → {kind:'nota',debit,credit,expl,agg} | {kind:'manual',reason} | {kind:'gestiune',sectiune}
+function bancaClasifica(t,reguli){
+  const rs=(reguli||[]).filter(r=>r.activ!==false).slice().sort((a,b)=>(a.ordine||0)-(b.ordine||0));
+  for(const r of rs) if(bancaPotrivire(r,t)) return {kind:"nota",debit:r.debit,credit:r.credit,expl:r.explicatie,agg:r.agregare==="zi"};
+  const s=t.text;
+  if(s.includes("Rata Credit")) return {kind:"manual",reason:"Rată credit (split principal 1621.001 + dobândă 666.G.04 din scadențar)"};
+  if(s.includes("TREZ")) return {kind:"manual",reason:"Trezorerie (split 4315/4316/444/436/4423 din salarizare / decont TVA)"};
+  if(s.includes("Incasare")) return {kind:"gestiune",sectiune:"incasari"};
+  if(s.includes("Transfer ING Business")||s.includes("Plata bilet la ordin")) return {kind:"gestiune",sectiune:"plati"};
+  if(s.includes("Cumparare POS")) return {kind:"gestiune",sectiune:"card"};
+  return {kind:"manual",reason:"UNKNOWN — nu se potrivește cu nicio regulă"};
+}
+// tx: doar cele noi; ovr: {key:{debit,credit,expl}} reclasificări manuale din UI
+function bancaConstruieste(tx,reguli,ovr){
+  const note=new Map(),manual=[],gestiune=[];
+  for(const t of tx){
+    let c=bancaClasifica(t,reguli);
+    const o=ovr&&ovr[t.key];
+    if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:false};
+    if(c.kind==="gestiune"){gestiune.push({t,sectiune:c.sectiune});continue;}
+    if(c.kind==="manual"){manual.push({t,reason:c.reason});continue;}
+    const k=c.agg?[t.date,c.debit,c.credit,c.expl].join("\u0001"):[t.date,c.debit,c.credit,c.expl,t.ref].join("\u0001");
+    if(!note.has(k)) note.set(k,{date:t.date,debit:c.debit,credit:c.credit,expl:c.expl,suma:0,tx:[]});
+    const n=note.get(k); n.suma+=Math.abs(t.amount); n.tx.push(t);
+  }
+  return {note:Array.from(note.values()).map(n=>({...n,suma:Math.round(n.suma*100)/100})),manual,gestiune};
+}
+const bancaNum=(x)=>{const s=String(x);return /^-?\d+$/.test(s)?s+".0":s;}; // ca în exportul de referință (4700.0, 34.5, 1.02)
+const BANCA_COLS=['NrNota','NrIC','Valuta','TipDoc','NrDoc','Data','DataDoc','Debit','Credit','Curs','Suma_V','Suma','ExplIC','TipJC','TVA','DenDebit','DenCredit','CFDebit','CFCredit','TipNC','ExplNC'];
+function bancaTsv(note){
+  const rows=[BANCA_COLS.join("\t")];
+  note.forEach((n,i)=>{
+    const d=bancaIso(n.date),s=bancaNum(n.suma);
+    rows.push([i+1,i+1,"LEI","EC","1",d,d,n.debit,n.credit,"1",s,s,n.expl,"","","","","","","1","Extras de cont ING "+n.date].join("\t"));
+  });
+  return rows.join("\n")+"\n";
+}
+
+// ============ MODUL BANCĂ — interfață ============
+async function bancaLiniiDinPdf(file){
+  if(!window.pdfjsLib) throw new Error("Motorul de citire PDF nu s-a încărcat. Reîncarcă pagina (Ctrl+F5) și încearcă din nou.");
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+  const texte=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+    const its=content.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5]})).filter(i=>i.str.trim());
+    its.sort((a,b)=>b.y-a.y||a.x-b.x);
+    const lines=[];
+    for(const it of its){ let l=lines.find(z=>Math.abs(z.y-it.y)<=3); if(!l){l={y:it.y,items:[]};lines.push(l);} l.items.push(it); }
+    lines.sort((a,b)=>b.y-a.y);
+    for(const l of lines){ l.items.sort((a,b)=>a.x-b.x); texte.push(l.items.map(i=>i.str.trim()).filter(Boolean).join(" ")); }
+  }
+  return texte;
+}
+function bancaDescarca(nume,continut,tip){
+  const b=new Blob([continut],{type:tip});const u=URL.createObjectURL(b);
+  const a=document.createElement("a");a.href=u;a.download=nume;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(u);a.remove();},500);
+}
+const bancaSuma=(x)=>(Number(x)||0).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2});
+// text liber din descriere, fără liniile standard ale băncii
+function bancaDetalii(t,eticheteStandard){
+  return t.lines.slice(1).filter(l=>!eticheteStandard.includes(l)&&!/^Referinta bancii/i.test(l)&&!/^[0-9a-f]{4,}(-[0-9a-f]{2,})+$/i.test(l)&&!/^RO\d{2}[A-Z]{4}\d+$/.test(l)&&!/^Nr\. Card:/i.test(l)&&!/^Data:\s*\d{2}-\d{2}-\d{4}/.test(l)).join(" ");
+}
+function bancaXlsxGestiune(gest,nume){
+  if(typeof XLSX==="undefined"){ alert("Modulul Excel nu s-a încărcat (verifică conexiunea) — fișierul de gestiune nu s-a generat."); return false; }
+  const aoa=[];
+  const sectiuni=[
+    ["incasari","ÎNCASĂRI CLIENȚI",["Data","Client","Sumă (lei)","Referință factură / proformă","Ref. bancă"],(t)=>[bancaFmtD(bancaIso(t.date)),t.who,t.amount,bancaDetalii(t,["Incasare"]),t.ref]],
+    ["plati","PLĂȚI FURNIZORI (transfer)",["Data","Furnizor","Sumă (lei)","Explicație","Ref. bancă"],(t)=>[bancaFmtD(bancaIso(t.date)),t.who,t.amount,bancaDetalii(t,["Transfer ING Business","Plata bilet la ordin"]),t.ref]],
+    ["card","PLĂȚI CU CARDUL",["Data","Comerciant","Sumă (lei)","Card (ultimele 4)","Valută / curs","Ref. bancă"],(t)=>{
+      const c=t.text.match(/Nr\. Card:\s*\*+\s*(\d{4})/); const v=t.text.match(/Suma:\s*([\d.,]+\s*[A-Z]{3})/); const r=t.text.match(/Rata:\s*([\d.]+)/);
+      return [bancaFmtD(bancaIso(t.date)),t.who,t.amount,c?c[1]:"",v?(v[1]+(r?" × "+r[1]:"")):"",t.ref];}]
+  ];
+  for(const [id,titlu,antet,fn] of sectiuni){
+    const L=gest.filter(g=>g.sectiune===id).map(g=>g.t);
+    aoa.push([titlu+" — "+L.length+" tranzacții"]); aoa.push(antet);
+    L.forEach(t=>aoa.push(fn(t)));
+    aoa.push(["","TOTAL",Math.round(L.reduce((s,t)=>s+(t.amount||0),0)*100)/100]); aoa.push([]);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws["!cols"]=[{wch:12},{wch:34},{wch:14},{wch:46},{wch:18},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Gestiune"); XLSX.writeFile(wb,nume);
+  return true;
+}
+function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
+  const [tab,setTab]=React.useState("incarcare");
+  const [parsed,setParsed]=React.useState(null);
+  const [msg,setMsg]=React.useState("");
+  const [ovr,setOvr]=React.useState({});
+  const [edit,setEdit]=React.useState(null);
+  const [ef,setEf]=React.useState({debit:"",credit:"",expl:"",regula:true});
+  const [nr,setNr]=React.useState({conditie_tip:"contains",conditie_text:"",debit:"",credit:"",explicatie:"",agregare:"tranzactie"});
+  const efRules=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
+  const proc=Array.isArray(procesate)?procesate:[];
+  const procSet=new Set(proc.map(p=>p.ref+"|"+p.data+"|"+Number(p.suma).toFixed(2)));
+  const inpS={padding:"7px 8px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:12,boxSizing:"border-box",fontFamily:"inherit",outline:"none",width:"100%"};
+  const btn=(primary)=>({padding:"8px 16px",border:primary?"none":`1px solid ${C.border}`,background:primary?C.accent:"transparent",color:primary?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:primary?600:400});
+  const lbl={fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted};
+  const card={border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:14};
+
+  const incarca=async(file)=>{
+    setMsg("Se citește extrasul...");setParsed(null);setOvr({});setEdit(null);
+    try{
+      const lines=await bancaLiniiDinPdf(file);
+      const p=bancaParseLines(lines);
+      if(!p.tx.length){ setMsg("Nu am găsit tranzacții în fișier. E extrasul ING în PDF?"); return; }
+      const v=bancaVerifica(p);
+      setParsed({nume:file.name,...p,verif:v}); setMsg("");
+    }catch(e){ setMsg("Eroare la citire: "+(e&&e.message||e)); }
+  };
+  const noi=parsed?parsed.tx.filter(t=>!procSet.has(t.key)):[];
+  const sarite=parsed?parsed.tx.length-noi.length:0;
+  const built=parsed?bancaConstruieste(noi,efRules,ovr):null;
+  const isoDates=noi.map(t=>bancaIso(t.date)).sort();
+  const d1=isoDates[0],d2=isoDates[isoDates.length-1];
+  const perioadaExtras=parsed&&parsed.tx.length?(()=>{const a=parsed.tx.map(t=>bancaIso(t.date)).sort();return bancaFmtD(a[0])+" – "+bancaFmtD(a[a.length-1]);})():"";
+
+  const aplicaReclas=(t)=>{
+    if(!ef.debit.trim()||!ef.credit.trim()){ alert("Completează contul de debit și cel de credit."); return; }
+    setOvr(o=>({...o,[t.key]:{debit:ef.debit.trim(),credit:ef.credit.trim(),expl:ef.expl.trim()}}));
+    if(ef.regula&&t.who){
+      const max=efRules.reduce((m,r)=>Math.max(m,r.ordine||0),0);
+      setReguli([...efRules,{id:"u"+Date.now().toString(36),ordine:max+1,conditie_tip:"contains",conditie_text:t.who,debit:ef.debit.trim(),credit:ef.credit.trim(),explicatie:ef.expl.trim(),agregare:"tranzactie",activ:true}]);
+    }
+    setEdit(null);
+  };
+  const exporta=()=>{
+    if(!parsed||!parsed.verif.ok||!noi.length) return;
+    let id=d1+"_"+d2; const existente=new Set(proc.map(p=>p.exportId)); let k=2; while(existente.has(id)) id=d1+"_"+d2+"_"+(k++);
+    const acum=new Date().toISOString();
+    const rec=(t,tip,c)=>({ref:t.ref,data:bancaIso(t.date),suma:Math.round(t.amount*100)/100,tip,debit:c?c.debit:"",credit:c?c.credit:"",explicatie:c?c.expl:"",exportId:id,procesatLa:acum,procesatDe:authEmail||""});
+    const recs=[];
+    built.note.forEach(n=>n.tx.forEach(t=>recs.push(rec(t,"nota",{debit:n.debit,credit:n.credit,expl:n.expl}))));
+    built.manual.forEach(m=>recs.push(rec(m.t,"manual")));
+    built.gestiune.forEach(g=>recs.push(rec(g.t,"gestiune")));
+    const sufix=d1+"_"+d2;
+    let fisiere=[];
+    if(built.note.length){ bancaDescarca("note_banca_"+sufix+".tsv",bancaTsv(built.note),"text/tab-separated-values;charset=utf-8"); fisiere.push("note_banca_"+sufix+".tsv"); }
+    if(built.gestiune.length){ if(bancaXlsxGestiune(built.gestiune,"gestiune_"+sufix+".xlsx")) fisiere.push("gestiune_"+sufix+".xlsx"); }
+    setProcesate([...proc,...recs]);
+    setParsed(null);setOvr({});setEdit(null);
+    setMsg("Gata. Am marcat "+recs.length+" tranzacții ca procesate (export "+id+"). Fișiere descărcate: "+(fisiere.join(", ")||"niciunul")+".");
+  };
+  const anuleazaExport=(id)=>{
+    const n=proc.filter(p=>p.exportId===id).length;
+    if(!window.confirm("Anulezi exportul "+id+"? Cele "+n+" tranzacții redevin neprocesate și vor apărea din nou la următoarea încărcare de extras.")) return;
+    setProcesate(proc.filter(p=>p.exportId!==id));
+  };
+  const exporturi=Object.values(proc.reduce((a,p)=>{(a[p.exportId]=a[p.exportId]||{id:p.exportId,la:p.procesatLa,de:p.procesatDe,nota:0,manual:0,gestiune:0})[p.tip]++;return a;},{})).sort((a,b)=>String(b.la).localeCompare(String(a.la)));
+
+  const RowReclas=({t})=>edit===t.key?<div style={{padding:"10px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,alignItems:"end"}}>
+      <div><div style={lbl}>Debit</div><input value={ef.debit} onChange={e=>setEf(p=>({...p,debit:e.target.value}))} placeholder="ex. 6021.G.01" style={inpS}/></div>
+      <div><div style={lbl}>Credit</div><input value={ef.credit} onChange={e=>setEf(p=>({...p,credit:e.target.value}))} placeholder="ex. 5121.000" style={inpS}/></div>
+      <div><div style={lbl}>Explicație</div><input value={ef.expl} onChange={e=>setEf(p=>({...p,expl:e.target.value}))} style={inpS}/></div>
+      <button onClick={()=>aplicaReclas(t)} style={btn(true)}>Aplică</button>
+      <button onClick={()=>setEdit(null)} style={btn(false)}>Renunță</button>
+    </div>
+    <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,color:C.textSub,marginTop:8,cursor:"pointer"}}><input type="checkbox" checked={ef.regula} onChange={e=>setEf(p=>({...p,regula:e.target.checked}))}/>Salvează ca regulă nouă: tot ce conține „{t.who}” se contează la fel (pe tranzacție)</label>
+  </div>:null;
+  const LinieTx=({t,extra,butonReclas})=><React.Fragment>
+    <div style={{display:"grid",gridTemplateColumns:"84px 1.4fr 100px 1.6fr auto",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:edit===t.key?"none":`1px solid ${C.border}`}}>
+      <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
+      <div style={{textAlign:"right",color:t.amount<0?"#A04030":C.text}}>{bancaSuma(t.amount)}</div>
+      <div style={{color:C.textSub,fontSize:11}}>{extra}</div>
+      {butonReclas&&<button onClick={()=>{setEdit(edit===t.key?null:t.key);setEf({debit:"",credit:"5121.000",expl:t.who,regula:true});}} style={{...btn(false),padding:"4px 10px",fontSize:11}}>Reclasifică</button>}
+    </div>
+    <RowReclas t={t}/>
+  </React.Fragment>;
+
+  const tabBtn=(id,l)=><button key={id} onClick={()=>setTab(id)} style={{padding:"7px 14px",border:`1px solid ${tab===id?C.accent:C.border}`,background:tab===id?C.accentLight:"transparent",color:tab===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:tab===id?500:400}}>{l}</button>;
+  const gS={incasari:"Încasări clienți",plati:"Plăți furnizori (transfer)",card:"Plăți cu cardul"};
+
+  return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:12,fontWeight:600}}>Bancă — extras ING → note contabile</div>
+    <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}}>
+      {tabBtn("incarcare","Încarcă extras")}{tabBtn("istoric","Exporturi făcute ("+exporturi.length+")")}{tabBtn("reguli","Reguli de contare ("+efRules.length+")")}
+    </div>
+
+    {tab==="incarcare"&&<div>
+      <div style={card}>
+        <div style={lbl}>Extras de cont ING (PDF)</div>
+        <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Aplicația citește extrasul, sare peste tranzacțiile deja procesate și generează notele recurente. Nimic nu se marchează ca procesat până nu apeși „Confirmă și exportă”.</div>
+        <input type="file" accept="application/pdf,.pdf" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarca(f); e.target.value="";}} style={{fontSize:12}}/>
+        {msg&&<div style={{fontSize:12,color:msg.startsWith("Gata")?"#2F6B2F":C.textSub,marginTop:10,lineHeight:1.5}}>{msg}</div>}
+      </div>
+
+      {parsed&&<div>
+        <div style={card}>
+          <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:13,color:C.text}}>
+            <div><b>{parsed.nume}</b></div><div>Perioada: {perioadaExtras}</div><div>{parsed.tx.length} tranzacții în extras</div>
+            <div style={{color:sarite?"#8A5A00":C.textMuted}}>{sarite} deja procesate, sărite</div><div><b>{noi.length}</b> noi</div>
+          </div>
+          {!parsed.verif.ok&&<div style={{marginTop:10,padding:"10px 12px",background:"#F6E3DF",color:"#8A2A1C",fontSize:13,fontWeight:600}}>{parsed.verif.msg}</div>}
+          {parsed.verif.ok&&<div style={{marginTop:8,fontSize:12,color:"#2F6B2F"}}>✓ Verificare trecută: suma tranzacțiilor = sold final − sold inițial ({bancaSuma(parsed.soldInitial)} → {bancaSuma(parsed.soldFinal)}).</div>}
+        </div>
+
+        {noi.length===0&&<div style={{padding:"16px 0",fontSize:13,color:C.textMuted}}>Toate tranzacțiile din acest extras au fost deja procesate. Nu e nimic de exportat.</div>}
+
+        {noi.length>0&&built&&<div>
+          <div style={card}>
+            <div style={lbl}>Note generate ({built.note.length}) — {bancaSuma(built.note.reduce((s,n)=>s+n.suma,0))} lei</div>
+            {built.note.length===0?<div style={{fontSize:12,color:C.textMuted,marginTop:8}}>Nicio notă automată din tranzacțiile noi.</div>:
+            <div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
+              <div style={{display:"grid",gridTemplateColumns:"84px 90px 90px 100px 1fr 60px",gap:8,padding:"4px 8px",...lbl}}><div>Data</div><div>Debit</div><div>Credit</div><div style={{textAlign:"right"}}>Sumă</div><div>Explicație</div><div style={{textAlign:"center"}}>Tranz.</div></div>
+              {built.note.map((n,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"84px 90px 90px 100px 1fr 60px",gap:8,padding:"6px 8px",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.text,alignItems:"center"}}>
+                <div>{n.date}</div><div>{n.debit}</div><div>{n.credit}</div><div style={{textAlign:"right",fontWeight:600}}>{bancaSuma(n.suma)}</div>
+                <div>{n.expl}{n.tx.length===1&&ovr[n.tx[0].key]&&<span style={{marginLeft:8,fontSize:10,color:"#8A5A00"}}>reclasificat · <a onClick={()=>setOvr(o=>{const c={...o};delete c[n.tx[0].key];return c;})} style={{cursor:"pointer",textDecoration:"underline"}}>anulează</a></span>}</div>
+                <div style={{textAlign:"center",color:C.textMuted}}>{n.tx.length}</div>
+              </div>)}
+            </div></div>}
+          </div>
+
+          <div style={card}>
+            <div style={lbl}>Operare manuală ({built.manual.length}) — nu se exportă ca note</div>
+            {built.manual.length===0?<div style={{fontSize:12,color:C.textMuted,marginTop:8}}>Nimic de operat manual.</div>:
+            <div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
+              {built.manual.map(m=><LinieTx key={m.t.key} t={m.t} extra={m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):"")} butonReclas={true}/>)}
+            </div></div>}
+          </div>
+
+          <div style={card}>
+            <div style={lbl}>Gestiune ({built.gestiune.length}) — informativ, se operează din gestiune; merge în Excel</div>
+            {["incasari","plati","card"].map(sec=>{const L=built.gestiune.filter(g=>g.sectiune===sec);return <div key={sec} style={{marginTop:10}}>
+              <div style={{fontSize:12,fontWeight:600,color:C.text}}>{gS[sec]} · {L.length} · total {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei</div>
+              {L.length>0&&<details style={{marginTop:4}}><summary style={{fontSize:11,color:C.textMuted,cursor:"pointer"}}>arată tranzacțiile</summary>
+                <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>{L.map(g=><LinieTx key={g.t.key} t={g.t} extra={bancaDetalii(g.t,["Incasare","Transfer ING Business","Plata bilet la ordin","Cumparare POS"])} butonReclas={true}/>)}</div></div></details>}
+            </div>;})}
+          </div>
+
+          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+            <button onClick={exporta} disabled={!parsed.verif.ok} style={{...btn(true),opacity:parsed.verif.ok?1:0.45,cursor:parsed.verif.ok?"pointer":"not-allowed"}}>Confirmă și exportă ({built.note.length} note · {built.manual.length} manuale · {built.gestiune.length} gestiune)</button>
+            <button onClick={()=>{setParsed(null);setOvr({});}} style={btn(false)}>Renunță</button>
+            <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul de gestiune și marchează toate cele {noi.length} tranzacții ca procesate.</span>
+          </div>
+        </div>}
+      </div>}
+    </div>}
+
+    {tab==="istoric"&&<div style={card}>
+      <div style={lbl}>Exporturi făcute</div>
+      <div style={{fontSize:12,color:C.textSub,margin:"6px 0 8px"}}>Dacă fișierul .mdb nu s-a importat până la urmă, anulează exportul ca tranzacțiile să redevină neprocesate.</div>
+      {exporturi.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"10px 0"}}>Niciun export încă.</div>}
+      {exporturi.map(e=><div key={e.id} style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",padding:"8px 0",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.text}}>
+        <div style={{fontWeight:600,minWidth:200}}>{e.id.replace(/(\d{4})-(\d{2})-(\d{2})/g,"$3.$2.$1").replace("_"," – ")}</div>
+        <div>{e.nota} în note · {e.manual} manuale · {e.gestiune} gestiune</div>
+        <div style={{color:C.textMuted}}>{e.la?new Date(e.la).toLocaleString("ro-RO"):""} {e.de?"· "+e.de:""}</div>
+        <div style={{flex:1}}/>
+        <button onClick={()=>anuleazaExport(e.id)} style={{...btn(false),color:"#A04030",padding:"4px 10px",fontSize:11}}>Anulează exportul</button>
+      </div>)}
+    </div>}
+
+    {tab==="reguli"&&<div style={card}>
+      <div style={lbl}>Reguli de contare (se evaluează în ordine; prima potrivită câștigă)</div>
+      <div style={{fontSize:12,color:C.textSub,margin:"6px 0 8px"}}>Cont bancă: 5121.000. Analiticul e obligatoriu. „Pe zi” = o singură notă pe zi pentru toate tranzacțiile potrivite; „pe tranzacție” = o notă pentru fiecare.</div>
+      <div style={{overflowX:"auto"}}><div style={{minWidth:760}}>
+        <div style={{display:"grid",gridTemplateColumns:"34px 90px 1.4fr 80px 80px 1.2fr 80px 50px 30px",gap:8,padding:"4px 0",...lbl}}><div>#</div><div>Tip</div><div>Text</div><div>Debit</div><div>Credit</div><div>Explicație</div><div>Agregare</div><div>Activ</div><div/></div>
+        {efRules.slice().sort((a,b)=>(a.ordine||0)-(b.ordine||0)).map(r=><div key={r.id} style={{display:"grid",gridTemplateColumns:"34px 90px 1.4fr 80px 80px 1.2fr 80px 50px 30px",gap:8,padding:"6px 0",borderTop:`1px solid ${C.border}`,fontSize:12,color:r.activ===false?C.textMuted:C.text,alignItems:"center"}}>
+          <div>{r.ordine}</div><div>{r.conditie_tip}</div><div style={{wordBreak:"break-word"}}>{r.conditie_text}</div><div>{r.debit}</div><div>{r.credit}</div><div style={{wordBreak:"break-word"}}>{r.explicatie}</div><div>{r.agregare==="zi"?"pe zi":"pe tranz."}</div>
+          <input type="checkbox" checked={r.activ!==false} onChange={e=>setReguli(efRules.map(z=>z.id===r.id?{...z,activ:e.target.checked}:z))}/>
+          <button onClick={()=>{if(window.confirm("Ștergi regula „"+r.conditie_text+"”?")) setReguli(efRules.filter(z=>z.id!==r.id));}} title="Șterge" style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:15}}>×</button>
+        </div>)}
+      </div></div>
+      <div style={{marginTop:14,...lbl}}>Regulă nouă</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,marginTop:6,alignItems:"end"}}>
+        <select value={nr.conditie_tip} onChange={e=>setNr(p=>({...p,conditie_tip:e.target.value}))} style={inpS}><option value="contains">conține text</option><option value="iban_debit">IBAN (plată)</option><option value="iban_credit">IBAN (încasare)</option></select>
+        <input value={nr.conditie_text} onChange={e=>setNr(p=>({...p,conditie_text:e.target.value}))} placeholder="text / IBAN" style={inpS}/>
+        <input value={nr.debit} onChange={e=>setNr(p=>({...p,debit:e.target.value}))} placeholder="Debit" style={inpS}/>
+        <input value={nr.credit} onChange={e=>setNr(p=>({...p,credit:e.target.value}))} placeholder="Credit" style={inpS}/>
+        <input value={nr.explicatie} onChange={e=>setNr(p=>({...p,explicatie:e.target.value}))} placeholder="Explicație" style={inpS}/>
+        <select value={nr.agregare} onChange={e=>setNr(p=>({...p,agregare:e.target.value}))} style={inpS}><option value="tranzactie">pe tranzacție</option><option value="zi">pe zi</option></select>
+        <button onClick={()=>{ if(!nr.conditie_text.trim()||!nr.debit.trim()||!nr.credit.trim()){alert("Completează textul, debitul și creditul.");return;} const max=efRules.reduce((m,r)=>Math.max(m,r.ordine||0),0); setReguli([...efRules,{id:"u"+Date.now().toString(36),ordine:max+1,...nr,conditie_text:nr.conditie_text.trim(),debit:nr.debit.trim(),credit:nr.credit.trim(),activ:true}]); setNr({conditie_tip:"contains",conditie_text:"",debit:"",credit:"",explicatie:"",agregare:"tranzactie"}); }} style={btn(true)}>Adaugă regula</button>
+      </div>
+    </div>}
+  </div>;
+}
+
 function AppInner({authRole,authEmail,onLogout}) {
   const [tab,_setTab]=useState("focus");
   const [data,setData]=useState({tasks:[],notes:[],events:[]});
@@ -9984,6 +10328,8 @@ function AppInner({authRole,authEmail,onLogout}) {
   const [vopseleStoc,setVopseleStoc]=useState([]);
   const [vopseleMiscari,setVopseleMiscari]=useState([]);
   const [vopseleComenzi,setVopseleComenzi]=useState([]);
+  const [bancaProc,setBancaProc]=useState([]);
+  const [bancaReguli,setBancaReguli]=useState([]);
   const [raduModul,setRaduModul]=useState("vopsele");
   const [achizSub,setAchizSub]=useState("lista");
   const [catalogSine,setCatalogSine]=useState([]);
@@ -10232,6 +10578,8 @@ function AppInner({authRole,authEmail,onLogout}) {
             [CVS,(d)=>{setVopseleStoc(Array.isArray(d)&&d.length?vopNormFin(d):vopseleSeed());}],
             [CVM,(d)=>{setVopseleMiscari(Array.isArray(d)?d:[]);}],
             [CVC,(d)=>{setVopseleComenzi(Array.isArray(d)?d:[]);}],
+            [BKP,(d)=>{setBancaProc(Array.isArray(d)?d:[]);}],
+            [BKR,(d)=>{setBancaReguli(Array.isArray(d)?d:[]);}],
           ];
           // Toate cheile în paralel — nu una câte una — ca o singură cerere lentă (sau multe cereri, chiar dacă fiecare e rapidă)
           // să nu epuizeze singură bugetul de timp și să arunce toată aplicația fals în modul „offline · date locale".
@@ -10243,8 +10591,8 @@ function AppInner({authRole,authEmail,onLogout}) {
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK,CVS,CVM,CVC];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori,(v)=>setVopseleStoc(Array.isArray(v)&&v.length?vopNormFin(v):vopseleSeed()),(v)=>setVopseleMiscari(Array.isArray(v)?v:[]),(v)=>setVopseleComenzi(Array.isArray(v)?v:[])];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK,CVS,CVM,CVC,BKP,BKR];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori,(v)=>setVopseleStoc(Array.isArray(v)&&v.length?vopNormFin(v):vopseleSeed()),(v)=>setVopseleMiscari(Array.isArray(v)?v:[]),(v)=>setVopseleComenzi(Array.isArray(v)?v:[]),(v)=>setBancaProc(Array.isArray(v)?v:[]),(v)=>setBancaReguli(Array.isArray(v)?v:[])];
         keys.forEach((k,i)=>{if(!keyAllowed(k)) return;const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -10260,7 +10608,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   },[]);
 
   // Setterii React per cheie — folosiți de sincronizare (îmbinare după salvare / reîmprospătare automată)
-  applyRef.current={[SK]:setData,[CLK]:setClients,[AK]:setAdmin,[PK]:setPerdele,[MIK]:setMit,[JK]:setJurnal,[PLK]:setPlanMaine,[RK]:setRecurente,[MOK]:setMotoare,[IEK]:setIesiri,[INK]:setIntrari,[BLK]:setBilete,[LGK]:setLog,[TRK]:setTrezorerie,[ENK]:setEnergie,[PRK]:setProiecte,[FLK]:setFurnizoriLista,[TDK]:setTudor,[OBK]:setObiective,[TCK]:setTudorContacte,[ZBK]:setZileBlocate,[OMK]:setObiectiveMari,[RMK]:setRulouMateriale,[CMK]:setCamereLista,[CTK]:setContractCounter,[PVK]:setPvCounter,[MTK]:setCatalogMateriale,[OFK2]:setOfertaCounter,[CEXK]:setComandaExecutieCounter,[CSK]:setCatalogSine,[CPK]:setCatalogPlisse,[CJK]:setCatalogJaluzele,[CCK]:setCatalogCostComponente,[CSSK]:setCatalogSinaSimpla,[CSRE]:setCatalogStorRomanElectric,[CFK]:setComenziFurnizori,[CVS]:setVopseleStoc,[CVM]:setVopseleMiscari,[CVC]:setVopseleComenzi};
+  applyRef.current={[SK]:setData,[CLK]:setClients,[AK]:setAdmin,[PK]:setPerdele,[MIK]:setMit,[JK]:setJurnal,[PLK]:setPlanMaine,[RK]:setRecurente,[MOK]:setMotoare,[IEK]:setIesiri,[INK]:setIntrari,[BLK]:setBilete,[LGK]:setLog,[TRK]:setTrezorerie,[ENK]:setEnergie,[PRK]:setProiecte,[FLK]:setFurnizoriLista,[TDK]:setTudor,[OBK]:setObiective,[TCK]:setTudorContacte,[ZBK]:setZileBlocate,[OMK]:setObiectiveMari,[RMK]:setRulouMateriale,[CMK]:setCamereLista,[CTK]:setContractCounter,[PVK]:setPvCounter,[MTK]:setCatalogMateriale,[OFK2]:setOfertaCounter,[CEXK]:setComandaExecutieCounter,[CSK]:setCatalogSine,[CPK]:setCatalogPlisse,[CJK]:setCatalogJaluzele,[CCK]:setCatalogCostComponente,[CSSK]:setCatalogSinaSimpla,[CSRE]:setCatalogStorRomanElectric,[CFK]:setComenziFurnizori,[CVS]:setVopseleStoc,[CVM]:setVopseleMiscari,[CVC]:setVopseleComenzi,[BKP]:setBancaProc,[BKR]:setBancaReguli};
   // REÎMPROSPĂTARE AUTOMATĂ: la 30 s și când te întorci în filă, aducem ce au salvat alte dispozitive.
   // Cheile la care ai modificări netrimise sunt sărite (se îmbină la salvare). Cardurile deschise rămân deschise.
   const [ultimaSincro,setUltimaSincro]=useState(null);
@@ -10321,6 +10669,8 @@ function AppInner({authRole,authEmail,onLogout}) {
   useEffect(()=>{if(loaded&&vopseleStoc.length) sbSave(CVS,vopseleStoc);},[vopseleStoc,loaded]);
   useEffect(()=>{if(loaded) sbSave(CVM,vopseleMiscari);},[vopseleMiscari,loaded]);
   useEffect(()=>{if(loaded) sbSave(CVC,vopseleComenzi);},[vopseleComenzi,loaded]);
+  useEffect(()=>{if(loaded) sbSave(BKP,bancaProc);},[bancaProc,loaded]);
+  useEffect(()=>{if(loaded) sbSave(BKR,bancaReguli);},[bancaReguli,loaded]);
   useEffect(()=>{
     // Migrare unică: stocul de până acum devine „Stoc inițial” în fișa de magazie
     if(loaded&&vopseleMiscari.length===0&&vopseleStoc.some(x=>x.stoc)){
@@ -10510,7 +10860,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi,[BKP]:bancaProc,[BKR]:bancaReguli
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -10567,7 +10917,7 @@ function AppInner({authRole,authEmail,onLogout}) {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi,[BKP]:bancaProc,[BKR]:bancaReguli
         }
       };
       // Un fișier nou pe zi (kreativo_backup_2026-09-30.json) — nu se mai suprascrie fișierul de ieri.
@@ -10653,6 +11003,8 @@ function AppInner({authRole,authEmail,onLogout}) {
         if(d[CFK]) setComenziFurnizori(Array.isArray(d[CFK])?d[CFK]:[]);
         if(d[CVM]) setVopseleMiscari(Array.isArray(d[CVM])?d[CVM]:[]);
         if(d[CVC]) setVopseleComenzi(Array.isArray(d[CVC])?d[CVC]:[]);
+        if(d[BKP]) setBancaProc(Array.isArray(d[BKP])?d[BKP]:[]);
+        if(d[BKR]) setBancaReguli(Array.isArray(d[BKR])?d[BKR]:[]);
         if(d[CVS]) setVopseleStoc(Array.isArray(d[CVS])?vopNormFin(d[CVS]):[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
@@ -10742,7 +11094,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
     {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu"},{id:"recurente",l:"Recurente"}]},
-    {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}]},
+    {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}].concat(authRole==="admin"?[{id:"banca",l:"Bancă"}]:[])},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
 
@@ -11603,6 +11955,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       <div style={{fontSize:13,color:C.textMuted,maxWidth:360,margin:"0 auto",lineHeight:1.7}}>Planul pentru Benjamin Moore — sesiune dedicată.</div>
     </div>}
 
+    {tab==="banca"&&authRole==="admin"&&<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>}
     {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
 
 
