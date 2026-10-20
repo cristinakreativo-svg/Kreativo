@@ -10014,10 +10014,23 @@ function bancaVerifica(p){
   return {ok:true,msg:""};
 }
 const BANCA_RATA_SEED={id:"rata",ordine:90,conditie_tip:"rata_credit",conditie_text:"Rata Credit",debit:"1621.001",credit:"5121.000",debit2:"666.G.04",principal:2923.73,explicatie:"Rata credit",explicatie2:"Dobanda credit",agregare:"zi",activ:true};
+const BANCA_TVA_SEED={id:"r9",ordine:9,conditie_tip:"contains",conditie_text:"BUGETUL DE STAT-TVA LUNAR",debit:"4423",credit:"5121.000",explicatie:"BUGETUL DE STAT-TVA LUNAR",agregare:"tranzactie",activ:true};
 function bancaReguliEfective(reguli){
-  const base=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
+  let base=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
+  if(!base.some(r=>r.id==="r9"||r.conditie_text===BANCA_TVA_SEED.conditie_text)) base=[...base,BANCA_TVA_SEED];
   return base.some(r=>r.conditie_tip==="rata_credit")?base:[...base,BANCA_RATA_SEED];
 }
+// D112: sumele de plată pe creanță fiscală: 602 impozit salarii, 412 CAS, 432 CASS, 480 CAM
+function bancaParseD112(lines){
+  const sume={}; let cod=null, luna="", an="";
+  for(const l of lines){
+    let m=l.match(/Luna\s+(\d{1,2})\s+An\s+(\d{4})/); if(m){luna=m[1];an=m[2];}
+    m=l.match(/^\s*(?:Denumire creanta fiscala\s+)?\d+\.\s*\((\d{3})\)\s*-/); if(m){cod=m[1];continue;}
+    m=l.match(/^\s*Suma de plata\s+([\d.,]+)/); if(m&&cod){ sume[cod]=(sume[cod]||0)+(parseFloat(m[1].replace(/\./g,"").replace(",","."))||0); cod=null; }
+  }
+  return Object.keys(sume).length?{sume,luna,an}:null;
+}
+const BANCA_D112_CONT={"412":["4315","CAS retinut"],"432":["4316","CASS retinut"],"602":["444","Impozit salarii"],"480":["436","CAM"]};
 function bancaPotrivire(r,t){
   const s=t.text,a=t.amount;
   if(r.conditie_tip==="contains") return s.includes(r.conditie_text);
@@ -10043,8 +10056,9 @@ function bancaConstruieste(tx,reguli,ovr){
   const rataRule=(reguli||[]).find(r=>r.conditie_tip==="rata_credit"&&r.activ!==false&&Number(r.principal)>0);
   const rataZi={};
   for(const t of tx){
-    let c=bancaClasifica(t,reguli);
     const o=ovr&&ovr[t.key];
+    if(o&&o.split){ o.split.forEach((l,i)=>note.set("split|"+t.key+"|"+i,{date:t.date,debit:l.debit,credit:l.credit,expl:l.expl||"",suma:Math.round(Number(l.suma)*100)/100,tx:[t],fix:true})); continue; }
+    let c=bancaClasifica(t,reguli);
     if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:false};
     if(c.kind==="gestiune"){gestiune.push({t,sectiune:c.sectiune});continue;}
     if(c.kind==="manual"&&!(o&&o.debit)&&rataRule&&/^Rată credit/.test(c.reason)){(rataZi[t.date]=rataZi[t.date]||[]).push(t);continue;}
@@ -10132,6 +10146,7 @@ async function bancaLiniiDinPdf(file){
     const page=await pdf.getPage(p);
     const content=await page.getTextContent();
     const its=content.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5]})).filter(i=>i.str.trim());
+    try{ const an=await page.getAnnotations(); for(const a of an){ const v=Array.isArray(a.fieldValue)?a.fieldValue.join(" "):a.fieldValue; if(v!=null&&String(v).trim()&&a.rect) its.push({str:String(v),x:a.rect[0],y:a.rect[1]+2}); } }catch(e){}
     its.sort((a,b)=>b.y-a.y||a.x-b.x);
     const lines=[];
     for(const it of its){ let l=lines.find(z=>Math.abs(z.y-it.y)<=3); if(!l){l={y:it.y,items:[]};lines.push(l);} l.items.push(it); }
@@ -10198,6 +10213,9 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   const [ovr,setOvr]=React.useState({});
   const [edit,setEdit]=React.useState(null);
   const [tr,setTr]=React.useState(null);
+  const [d112,setD112]=React.useState(null);
+  const [splitKey,setSplitKey]=React.useState(null);
+  const [spl,setSpl]=React.useState([]);
   const [ef,setEf]=React.useState({debit:"",credit:"",expl:"",regula:true});
   const [nr,setNr]=React.useState({conditie_tip:"contains",conditie_text:"",debit:"",credit:"",explicatie:"",agregare:"tranzactie"});
   const efRules=bancaReguliEfective(reguli);
@@ -10228,6 +10246,36 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
       const dts=rows.map(r=>r.iso).sort();
       setTr({nume:file.name,rows,nr:rows.length,de:dts[0],pana:dts[dts.length-1],eroare:""});
     }catch(e){ setTr({nume:file.name,rows:[],nr:0,eroare:(e&&e.message)||String(e)}); }
+  };
+  const incarcaD112=async(file)=>{
+    try{
+      const d=bancaParseD112(await bancaLiniiDinPdf(file));
+      if(!d) throw new Error("Nu am găsit sumele de plată în fișier. E declarația D112 (PDF semnat)?");
+      setD112({nume:file.name,...d,eroare:""});
+    }catch(e){ setD112({nume:file.name,sume:{},eroare:(e&&e.message)||String(e)}); }
+  };
+  // cât din D112 e deja alocat în împărțirile din ecran (pe cont)
+  const alocat=(cont,exceptKey)=>Object.keys(ovr).reduce((s,k)=>k===exceptKey||!ovr[k].split?s:s+ovr[k].split.filter(l=>l.debit===cont).reduce((x,l)=>x+(Number(l.suma)||0),0),0);
+  const deschideSplit=(t)=>{
+    setEdit(null); setSplitKey(t.key);
+    const ex=ovr[t.key]&&ovr[t.key].split;
+    const lines=Object.entries(BANCA_D112_CONT).map(([cod,[cont,expl]])=>{const l=ex&&ex.find(z=>z.debit===cont);return {cod,debit:cont,credit:"5121.000",expl:l?l.expl:expl,suma:l?String(l.suma):""};});
+    setSpl(lines);
+  };
+  const completeazaD112=(t)=>{
+    if(!d112||!Object.keys(d112.sume).length) return;
+    let ramas=Math.abs(t.amount);
+    setSpl(spl.map(l=>{
+      const disp=Math.max(0,Math.round(((d112.sume[l.cod]||0)-alocat(l.debit,t.key))*100)/100);
+      const v=Math.min(disp,ramas); ramas=Math.round((ramas-v)*100)/100;
+      return {...l,suma:v>0?String(v):""};
+    }));
+  };
+  const aplicaSplit=(t)=>{
+    const lin=spl.filter(l=>parseFloat(l.suma)>0).map(l=>({debit:l.debit.trim(),credit:l.credit.trim(),expl:l.expl.trim(),suma:Math.round(parseFloat(l.suma)*100)/100}));
+    const tot=Math.round(lin.reduce((s,l)=>s+l.suma,0)*100)/100;
+    if(!lin.length||Math.abs(tot-Math.abs(t.amount))>0.004){ alert("Suma liniilor ("+bancaSuma(tot)+") trebuie să fie egală cu plata ("+bancaSuma(Math.abs(t.amount))+")."); return; }
+    setOvr(o=>({...o,[t.key]:{split:lin}})); setSplitKey(null);
   };
   const noi=parsed?parsed.tx.filter(t=>!procSet.has(t.key)):[];
   const sarite=parsed?parsed.tx.length-noi.length:0;
@@ -10283,15 +10331,32 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     </div>
     <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,color:C.textSub,marginTop:8,cursor:"pointer"}}><input type="checkbox" checked={ef.regula} onChange={e=>setEf(p=>({...p,regula:e.target.checked}))}/>Salvează ca regulă nouă: tot ce conține „{t.who}” se contează la fel (pe tranzacție)</label>
   </div>:null;
-  const LinieTx=({t,extra,butonReclas,butonRezolva})=><React.Fragment>
+  const RowSplit=({t})=>splitKey===t.key?<div style={{padding:"10px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+    <div style={{fontSize:12,color:C.text,marginBottom:6}}>Împarte plata de <b>{bancaSuma(Math.abs(t.amount))}</b> lei pe note (debit = cont, credit 5121.000):</div>
+    {spl.map((l,i)=><div key={l.cod} style={{display:"grid",gridTemplateColumns:"80px 110px 1fr",gap:8,marginBottom:6,alignItems:"center"}}>
+      <input value={l.debit} onChange={e=>setSpl(spl.map((z,j)=>j===i?{...z,debit:e.target.value}:z))} style={inpS}/>
+      <input value={l.suma} placeholder="sumă" inputMode="decimal" onChange={e=>setSpl(spl.map((z,j)=>j===i?{...z,suma:e.target.value.replace(",",".")}:z))} style={{...inpS,textAlign:"right"}}/>
+      <input value={l.expl} onChange={e=>setSpl(spl.map((z,j)=>j===i?{...z,expl:e.target.value}:z))} style={inpS}/>
+    </div>)}
+    {(()=>{const tot=Math.round(spl.reduce((s,l)=>s+(parseFloat(l.suma)||0),0)*100)/100;const dif=Math.round((Math.abs(t.amount)-tot)*100)/100;return <div style={{fontSize:12,color:Math.abs(dif)<0.005?"#2F6B2F":"#8A2A1C",marginBottom:8}}>Total alocat {bancaSuma(tot)} · diferență {bancaSuma(dif)}</div>;})()}
+    {d112&&!d112.eroare&&<div style={{fontSize:11,color:C.textMuted,marginBottom:8}}>D112{d112.luna?" luna "+d112.luna+"/"+d112.an:""}: {Object.entries(BANCA_D112_CONT).map(([cod,[cont]])=>cont+" = "+bancaSuma(d112.sume[cod]||0)+" (alocat în alte plăți: "+bancaSuma(alocat(cont,t.key))+")").join(" · ")}</div>}
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      <button onClick={()=>completeazaD112(t)} disabled={!d112||!!d112.eroare} style={{...btn(false),opacity:d112&&!d112.eroare?1:0.45}}>Completează din D112</button>
+      <button onClick={()=>aplicaSplit(t)} style={btn(true)}>Aplică</button>
+      <button onClick={()=>setSplitKey(null)} style={btn(false)}>Renunță</button>
+    </div>
+  </div>:null;
+  const LinieTx=({t,extra,butonReclas,butonRezolva,butonSplit})=><React.Fragment>
     <div style={{display:"grid",gridTemplateColumns:"84px 1.4fr 100px 1.6fr auto",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:edit===t.key?"none":`1px solid ${C.border}`}}>
       <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
       <div style={{textAlign:"right",color:t.amount<0?"#A04030":C.text}}>{bancaSuma(t.amount)}</div>
       <div style={{color:C.textSub,fontSize:11}}>{extra}</div>
       {butonReclas&&<button onClick={()=>{setEdit(edit===t.key?null:t.key);setEf({debit:"",credit:"5121.000",expl:t.who,regula:true});}} style={{...btn(false),padding:"4px 10px",fontSize:11}}>Reclasifică</button>}
+      {butonSplit&&<button onClick={()=>deschideSplit(t)} style={{...btn(false),padding:"4px 10px",fontSize:11,marginLeft:6}}>Împarte</button>}
       {butonRezolva&&<button onClick={()=>rezolva(t)} style={{...btn(false),padding:"4px 10px",fontSize:11,marginLeft:6}}>Rezolvat</button>}
     </div>
     <RowReclas t={t}/>
+    <RowSplit t={t}/>
   </React.Fragment>;
 
   const tabBtn=(id,l)=><button key={id} onClick={()=>setTab(id)} style={{padding:"7px 14px",border:`1px solid ${tab===id?C.accent:C.border}`,background:tab===id?C.accentLight:"transparent",color:tab===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:tab===id?500:400}}>{l}</button>;
@@ -10311,6 +10376,11 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
         <div style={{...lbl,marginTop:16}}>Extras Transart (opțional — dacă ai deja operațiuni din luna asta în contabilitate)</div>
         <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Export din Transart cu mișcările contului 5121 (Excel). Ce există deja acolo (după dată și sumă) nu se mai generează. Dacă nu ai nimic operat, sari peste.</div>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarcaTransart(f); e.target.value="";}} style={{fontSize:12}}/>
+        <div style={{...lbl,marginTop:16}}>D112 (opțional — pentru împărțirea plăților către Trezorerie)</div>
+        <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Declarația D112 semnată (PDF). Din ea se iau sumele pentru 4315 (CAS), 4316 (CASS), 444 (impozit salarii), 436 (CAM). Apoi pe plata la Trezorerie apeși „Împarte”.</div>
+        <input type="file" accept="application/pdf,.pdf" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarcaD112(f); e.target.value="";}} style={{fontSize:12}}/>
+        {d112&&!d112.eroare&&<div style={{fontSize:12,color:"#2F6B2F",marginTop:8}}>✓ {d112.nume}{d112.luna?" · luna "+d112.luna+"/"+d112.an:""}: CAS {bancaSuma(d112.sume["412"]||0)} · CASS {bancaSuma(d112.sume["432"]||0)} · impozit {bancaSuma(d112.sume["602"]||0)} · CAM {bancaSuma(d112.sume["480"]||0)}</div>}
+        {d112&&d112.eroare&&<div style={{fontSize:12,color:"#8A2A1C",marginTop:8}}>{d112.eroare}</div>}
         {tr&&!tr.eroare&&<div style={{fontSize:12,color:"#2F6B2F",marginTop:8}}>✓ {tr.nume}: {tr.nr} rânduri pe contul 5121, între {bancaFmtD(tr.de)} și {bancaFmtD(tr.pana)}. <a onClick={()=>setTr(null)} style={{cursor:"pointer",textDecoration:"underline",color:C.textMuted}}>scoate</a></div>}
         {tr&&tr.eroare&&<div style={{fontSize:12,color:"#8A2A1C",marginTop:8}}>{tr.eroare}</div>}
         {msg&&<div style={{fontSize:12,color:msg.startsWith("Gata")?"#2F6B2F":C.textSub,marginTop:10,lineHeight:1.5}}>{msg}</div>}
@@ -10346,7 +10416,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
             <div style={lbl}>Operare manuală ({built.manual.length}) — nu se exportă; rămân aici la fiecare încărcare până apeși „Rezolvat”</div>
             {built.manual.length===0?<div style={{fontSize:12,color:C.textMuted,marginTop:8}}>Nimic de operat manual.</div>:
             <div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
-              {built.manual.map(m=><LinieTx key={m.t.key} t={m.t} extra={m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):"")} butonReclas={true} butonRezolva={true}/>)}
+              {built.manual.map(m=><LinieTx key={m.t.key} t={m.t} extra={m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):"")} butonReclas={true} butonRezolva={true} butonSplit={/^Trezorerie/.test(m.reason)}/>)}
             </div></div>}
           </div>
 
