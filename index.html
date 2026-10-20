@@ -10171,13 +10171,13 @@ function bancaTiparesteLista(built,perioada,nume){
   const f=(x)=>(Number(x)||0).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2});
   const man=built.manual.slice().sort((a,b)=>bancaIso(a.t.date).localeCompare(bancaIso(b.t.date)));
   const note=built.note.slice().sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date)));
-  const rM=man.map(m=>`<tr><td>${esc(m.t.date)}</td><td>${esc(m.t.who)}</td><td class="n">${f(m.t.amount)}</td><td>${esc(m.reason)}${m.t.lines[1]?" · "+esc(m.t.lines.slice(1,3).join(" ")):""}</td><td class="box"></td></tr>`).join("");
-  const rN=note.map(n=>`<tr><td>${esc(n.date)}</td><td>${esc(n.debit)}</td><td>${esc(n.credit)}</td><td class="n">${f(n.suma)}</td><td>${esc(n.expl)}</td><td class="box"></td></tr>`).join("");
+  const rM=man.map(m=>`<tr><td>${esc(m.t.date)}</td><td>${esc(m.t.who)}</td><td class="n">${f(m.t.amount)}</td><td>${esc(m.reason)}${m.t.lines[1]?" · "+esc(m.t.lines.slice(1,3).join(" ")):""}</td><td class="box"><span class="cb"></span></td></tr>`).join("");
+  const rN=note.map(n=>`<tr><td>${esc(n.date)}</td><td>${esc(n.debit)}</td><td>${esc(n.credit)}</td><td class="n">${f(n.suma)}</td><td>${esc(n.expl)}</td><td class="box"><span class="cb"></span></td></tr>`).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — de făcut</title><style>
-  @page{size:A4 landscape;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
-  h1{font-size:20px;margin:0 0 2px} h2{font-size:15px;margin:18px 0 6px} .meta{font-size:12px;color:#555;margin-bottom:6px}
-  table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:11px;padding:6px;border:1px solid #888}
-  td{border:1px solid #888;padding:6px;font-size:12px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.6cm;height:.9cm}
+  @page{size:A4 portrait;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px}
+  h1{font-size:22px;margin:0 0 2px} h2{font-size:17px;margin:18px 0 6px} .meta{font-size:13px;color:#555;margin-bottom:6px}
+  table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:12.5px;padding:7px;border:1px solid #888}
+  td{border:1px solid #888;padding:8px 7px;font-size:13.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.4cm;text-align:center} .cb{display:inline-block;width:.55cm;height:.55cm;border:2px solid #000;border-radius:2px}
   thead{display:table-header-group} tr{page-break-inside:avoid}</style></head><body>
   <h1>Bancă — ce am de făcut</h1><div class="meta">${esc(nume||"")} · perioada ${esc(perioada||"")} · tipărit ${new Date().toLocaleDateString("ro-RO")}</div>
   <h2>De rezolvat / operat manual (${man.length})</h2>
@@ -10196,14 +10196,14 @@ function bancaTiparesteGestiune(gest,perioada,nume){
   const corp=sect.map(([id,titlu,col,det])=>{
     const L=gest.filter(g=>g.sectiune===id).map(g=>g.t).sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date)));
     const tot=L.reduce((s,t)=>s+(t.amount||0),0);
-    const rows=L.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.who)}</td><td class="n">${f(t.amount)}</td><td>${esc(det(t))}</td><td class="box"></td></tr>`).join("");
+    const rows=L.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.who)}</td><td class="n">${f(t.amount)}</td><td>${esc(det(t))}</td><td class="box"><span class="cb"></span></td></tr>`).join("");
     return `<h2>${esc(titlu)} (${L.length}) — total ${f(tot)} lei</h2>`+(L.length?`<table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>Detalii</th><th>Introdus</th></tr></thead><tbody>${rows}</tbody></table>`:"<div>Nimic.</div>");
   }).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — gestiune</title><style>
-  @page{size:A4 landscape;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
-  h1{font-size:20px;margin:0 0 2px} h2{font-size:15px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:12px;color:#555;margin-bottom:6px}
-  table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:11px;padding:6px;border:1px solid #888}
-  td{border:1px solid #888;padding:5px 6px;font-size:11.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.8cm;height:.8cm}
+  @page{size:A4 portrait;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px}
+  h1{font-size:22px;margin:0 0 2px} h2{font-size:17px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:13px;color:#555;margin-bottom:6px}
+  table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:12.5px;padding:7px;border:1px solid #888}
+  td{border:1px solid #888;padding:8px 7px;font-size:13.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.4cm;text-align:center} .cb{display:inline-block;width:.55cm;height:.55cm;border:2px solid #000;border-radius:2px}
   thead{display:table-header-group} tr{page-break-inside:avoid}</style></head><body>
   <h1>Gestiune — de introdus</h1><div class="meta">${esc(nume||"")} · perioada ${esc(perioada||"")} · tipărit ${new Date().toLocaleDateString("ro-RO")}</div>${corp}</body></html>`;
   printHtmlDoc(html);
@@ -10215,14 +10215,14 @@ function bancaTiparesteRestante(items){
   const corp=sect.map(([id,titlu,col,det])=>{
     const L=items.filter(r=>r.sect===id).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
     if(!L.length) return "";
-    const rows=L.map(r=>`<tr><td>${esc(bancaFmtD(r.data))}</td><td>${esc(r.who)}</td><td class="n">${f(r.suma)}</td><td>${esc(r.detalii)}</td><td class="box"></td></tr>`).join("");
+    const rows=L.map(r=>`<tr><td>${esc(bancaFmtD(r.data))}</td><td>${esc(r.who)}</td><td class="n">${f(r.suma)}</td><td>${esc(r.detalii)}</td><td class="box"><span class="cb"></span></td></tr>`).join("");
     return `<h2>${esc(titlu)} (${L.length}) — total ${f(L.reduce((s,r)=>s+r.suma,0))} lei</h2><table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>${det}</th><th>Gata</th></tr></thead><tbody>${rows}</tbody></table>`;
   }).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — de făcut</title><style>
-  @page{size:A4 landscape;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
-  h1{font-size:20px;margin:0 0 2px} h2{font-size:15px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:12px;color:#555;margin-bottom:6px}
-  table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:11px;padding:6px;border:1px solid #888}
-  td{border:1px solid #888;padding:5px 6px;font-size:11.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.6cm;height:.8cm}
+  @page{size:A4 portrait;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px}
+  h1{font-size:22px;margin:0 0 2px} h2{font-size:17px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:13px;color:#555;margin-bottom:6px}
+  table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:12.5px;padding:7px;border:1px solid #888}
+  td{border:1px solid #888;padding:8px 7px;font-size:13.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.4cm;text-align:center} .cb{display:inline-block;width:.55cm;height:.55cm;border:2px solid #000;border-radius:2px}
   thead{display:table-header-group} tr{page-break-inside:avoid}</style></head><body>
   <h1>Bancă — ce am de făcut</h1><div class="meta">tipărit ${new Date().toLocaleDateString("ro-RO")}</div>${corp||"<div>Nimic de făcut.</div>"}</body></html>`;
   printHtmlDoc(html);
@@ -10367,7 +10367,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     built.manual.forEach(m=>{ if(!vz.has(m.t.key)){ vz.add(m.t.key); recs.push(restant(m.t,"manual",m.t.who,m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):""))); }});
     built.gestiune.forEach(g=>{ if(!vz.has(g.t.key)){ vz.add(g.t.key); recs.push(restant(g.t,g.sectiune,g.t.who,g.sectiune==="incasari"?bancaDetalii(g.t,["Incasare"]):g.sectiune==="plati"?bancaDetalii(g.t,["Transfer ING Business","Plata bilet la ordin"]):"")); }});
     setProcesate([...proc,...recs]);
-    setParsed(null);setOvr({});setEdit(null);
+    setParsed(null);setOvr({});setEdit(null);setTab("defacut");
     setMsg("Gata. Export "+id+": notele sunt în fișier, iar manualele și gestiunea (de operat) sunt acum în tab-ul „De făcut”, unde le bifezi și le poți tipări (export "+id+"). Fișiere descărcate: "+(fisiere.join(", ")||"niciunul")+".");
   };
   const gataRestant=(r)=>setProcesate(proc.map(p=>p===r?{...p,gata:!p.gata}:p));
@@ -10527,7 +10527,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
             <button onClick={()=>bancaTiparesteLista(built,perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește ce am de făcut</button>
             <button onClick={()=>bancaTiparesteGestiune(built.gestiune,perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește gestiune (clienți, furnizori, card)</button>
             <button onClick={()=>{setParsed(null);setOvr({});}} style={btn(false)}>Renunță</button>
-            <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul cu ce a rămas de operat în gestiune. Marchează ca procesate doar notele. Manualele („Rezolvat”) și gestiunea (bifa „Operat”) rămân până le bifezi.</span>
+            <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu notele. Manualele și gestiunea se mută în tab-ul „De făcut” (cu bife și tipărire), unde rămân până ștergi exportul.</span>
           </div>
         </div>}
       </div>}
@@ -10541,6 +10541,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
           <div style={lbl}>De făcut — rămâne aici până ștergi exportul din „Exporturi făcute”</div><div style={{flex:1}}/>
           <button onClick={()=>bancaTiparesteRestante(R.filter(r=>!r.gata))} disabled={!R.some(r=>!r.gata)} style={{...btn(true),opacity:R.some(r=>!r.gata)?1:0.45}}>Tipărește ce am de făcut</button>
         </div>
+        {msg&&msg.startsWith("Gata")&&<div style={{fontSize:12,color:"#2F6B2F",margin:"6px 0 10px",lineHeight:1.5}}>{msg}</div>}
         {R.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"10px 0"}}>Nimic de făcut. După „Confirmă și exportă”, aici apar operațiile manuale și gestiunea.</div>}
         {sect.map(([id,titlu])=>{
           const L=R.filter(r=>r.sect===id).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
