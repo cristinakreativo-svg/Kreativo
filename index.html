@@ -93,6 +93,7 @@ function syncMerge(base,mine,theirs){
     const out={};
     for(const k of new Set([...Object.keys(theirs),...Object.keys(mine)])){
       const hm=k in mine, ht=k in theirs, hb=k in b;
+      if(k==="ciornaOferta"){ if(hm&&mine[k]!==undefined) out[k]=mine[k]; continue; } // ciorna unui dispozitiv nu se amestecă cu a altuia
       if(hm&&ht) out[k]=syncMerge(hb?b[k]:undefined,mine[k],theirs[k]);
       else if(hm){ if(hb&&syncEq(mine[k],b[k])) continue; out[k]=mine[k]; }
       else { if(hb&&syncEq(theirs[k],b[k])) continue; out[k]=theirs[k]; }
@@ -6858,6 +6859,15 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     <button onClick={()=>{
       // Se șterge DOAR o ciornă goală (ca să pornească curat). O ciornă cu conținut rămâne neatinsă —
       // o continui de unde ai rămas, sau o ștergi explicit din butonul din formular.
+      // Dacă formularul era în modul „Modifici oferta…" și a fost doar ascuns, „+ Adaugă ofertă" înseamnă ofertă NOUĂ:
+      // ieșim din modul de modificare (altfel salvarea ar rescrie oferta veche).
+      if(!formOpen && editingId){
+        setEditingId(null);
+        setNumeClient(client.name||"");
+        setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
+        setObservatii("");
+        setDiscountTip("lei"); setDiscountVal("");
+      } else
       if(!formOpen && !editingId && !ciornaAreContinut){
         setNumeClient(client.name||"");
         setCamere([{id:gid(), numeCamera:"", nrGeamuri:1, geamuri:[golGeam(1)], produse:[golProdus()]}]);
@@ -9814,7 +9824,7 @@ function EnergieCard({energie,setEnergie,C,card,tday}){
   </div>;
 }
 
-function App() {
+function AppInner({authRole,authEmail,onLogout}) {
   const [tab,_setTab]=useState("focus");
   const [data,setData]=useState({tasks:[],notes:[],events:[]});
   const [admin,setAdmin]=useState({contabilitate:[],administrativ:[],marketing:[],personal:[]});
@@ -9938,12 +9948,17 @@ function App() {
   const lsSet=(key,value)=>{try{localStorage.setItem("kr_"+key,JSON.stringify(value));}catch{}};
 
   // Baza de comparație per cheie: ultima stare cunoscută de pe server (valoare + versiune).
+  // ACCES PE ROL: Radu lucrează doar pe cheile de vopsele; Nico și Dan nu ating cheile de vopsele; adminul are tot.
+  // Baza de date aplică aceeași regulă (RLS) — asta e doar ca aplicația să nu încerce ce nu are voie.
+  const RADU_KEYS=[CVS,CVM,CVC];
+  const keyAllowed=(key)=>authRole==="admin"||(authRole==="radu"?RADU_KEYS.includes(key):!RADU_KEYS.includes(key));
   const baseRef=useRef({});     // key -> {val, ver}
   const applyRef=useRef({});    // key -> setter React (actualizat la fiecare randare)
   const inflightRef=useRef({}); // key -> nr. de trimiteri în curs
   const chainRef=useRef({});    // key -> lanț de promisiuni (trimiterile aceleiași chei merg pe rând)
   const isBusy=(key)=>!!(saveTimer.current[key]||inflightRef.current[key]>0);
   const sbGet=async(key)=>{
+    if(!keyAllowed(key)) return null;
     try{const{data}=await sb.from("kreativo_data").select("value,version").eq("key",key).single();
       if(data?.value){const parsed=JSON.parse(data.value);baseRef.current[key]={val:parsed,ver:data.version};lsSet(key,parsed);return parsed;}
       return lsGet(key);
@@ -9952,7 +9967,7 @@ function App() {
   // Salvare cu verificare de versiune: scrie doar dacă nimeni n-a modificat între timp.
   // Dacă altcineva a salvat, aducem varianta lui, o îmbinăm cu a noastră (pe id) și reîncercăm.
   const sbSetInner=async(key,value)=>{
-    if(staleRef.current){ return; }
+    if(staleRef.current||!keyAllowed(key)){ return; }
     const orig=value; let mine=value; let merged=false;
     try{
       for(let attempt=0;attempt<6;attempt++){
@@ -9998,6 +10013,7 @@ function App() {
   // Cheia rămâne "ocupată" (nesalvată în cloud) din clipa în care e programată, până se termină trimiterea —
   // asta alimentează indicatorul "Se salvează..." și blocajul de mai jos la închiderea paginii.
   const sbSave=(key,value)=>{
+    if(!keyAllowed(key)) return;
     if(protectRef.current){console.warn("Salvare blocată (mod protejat):",key);return;}
     if(staleRef.current){console.warn("Salvare blocată (altă filă a modificat datele):",key);return;}
     let schimbat=true;
@@ -10098,7 +10114,7 @@ function App() {
         // Încarc din localStorage
         const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK,CVS,CVM,CVC];
         const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori,(v)=>setVopseleStoc(Array.isArray(v)&&v.length?vopNormFin(v):vopseleSeed()),(v)=>setVopseleMiscari(Array.isArray(v)?v:[]),(v)=>setVopseleComenzi(Array.isArray(v)?v:[])];
-        keys.forEach((k,i)=>{const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
+        keys.forEach((k,i)=>{if(!keyAllowed(k)) return;const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
       // blochez complet salvarea ca să nu suprascriu datele din cloud cu stări goale.
@@ -10409,7 +10425,7 @@ function App() {
   },[]);
   const scrieAutoBackup=async()=>{
     const dirHandle=autoBackupHandleRef.current;
-    if(!dirHandle) return;
+    if(!dirHandle||authRole!=="admin") return;
     try{
       const perm=await dirHandle.requestPermission({mode:"readwrite"});
       if(perm!=="granted") return;
@@ -10599,9 +10615,10 @@ function App() {
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
 
-  const raduOnly=new URLSearchParams(window.location.search).get("radu")==="1";
+  const raduOnly=authRole==="radu"||(authRole==="admin"&&new URLSearchParams(window.location.search).get("radu")==="1");
   if(raduOnly){
-    return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px"}}>
+    return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px",position:"relative"}}>
+      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C9B98F",background:"transparent",color:"#4A3F30",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Radu</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Vopsele · Kreativo Studio</div>
@@ -10610,9 +10627,10 @@ function App() {
     </div>;
   }
 
-  const nicoOnly=new URLSearchParams(window.location.search).get("nico")==="1";
+  const nicoOnly=authRole==="nico"||(authRole==="admin"&&new URLSearchParams(window.location.search).get("nico")==="1");
   if(nicoOnly){
-    return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px"}}>
+    return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px",position:"relative"}}>
+      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C9B98F",background:"transparent",color:"#4A3F30",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Nico</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Croitorie · Kreativo Studio</div>
@@ -10621,9 +10639,10 @@ function App() {
     </div>;
   }
 
-  const danOnly=new URLSearchParams(window.location.search).get("dan")==="1";
+  const danOnly=authRole==="dan"||(authRole==="admin"&&new URLSearchParams(window.location.search).get("dan")==="1");
   if(danOnly){
-    return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px"}}>
+    return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px",position:"relative"}}>
+      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C9B98F",background:"transparent",color:"#4A3F30",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Dan</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Montaj · Kreativo Studio</div>
@@ -10688,6 +10707,7 @@ function App() {
           <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
           <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
         </div>
+        <button onClick={onLogout} title={authEmail} style={{width:"100%",marginBottom:8,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
         <button onClick={configureazaAutoBackup} style={{width:"100%",padding:"7px 0",border:"1px solid #A89878",background:autoBackupStatus?"#5C6B65":"transparent",color:autoBackupStatus?"#fff":C.text,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{autoBackupStatus?"Backup automat activ":"Configurează backup automat"}</button>
         {autoBackupStatus&&<div style={{fontSize:9,color:C.textSub,marginTop:6,letterSpacing:"0.04em"}}>→ {autoBackupStatus}{autoBackupLast?` · ultima salvare: ${autoBackupLast}`:""}</div>}
         {autoBackupNeedsClick&&<button onClick={reactiveazaAutoBackup} style={{width:"100%",marginTop:6,padding:"6px 0",border:"1px solid #B5504A",background:"transparent",color:"#B5504A",cursor:"pointer",fontSize:9,letterSpacing:"0.05em",fontWeight:600}}>⚠ Reactivează backup automat (un click)</button>}
@@ -11475,6 +11495,116 @@ class ErrorBoundary extends React.Component {
     }
     return this.props.children;
   }
+}
+
+
+// ===== LOGIN + ROL (Supabase Auth) =====
+// Rolul vine din tabela kreativo_roles (email → admin/radu/nico/dan). Fără rol = fără acces.
+function LoginScreen({onDone,recovery}){
+  const [email,setEmail]=useState("");
+  const [parola,setParola]=useState("");
+  const [parola2,setParola2]=useState("");
+  const [mod,setMod]=useState(recovery?"nou":"intra"); // intra | cont | uitat | nou
+  const [msg,setMsg]=useState("");
+  const [eroare,setEroare]=useState("");
+  const [ocupat,setOcupat]=useState(false);
+  const tradu=(m)=>{
+    m=String(m||"");
+    if(/Invalid login credentials/i.test(m)) return "Email sau parolă greșite.";
+    if(/already registered|already been registered/i.test(m)) return "Contul există deja — apasă „Intră”.";
+    if(/at least 6|Password should/i.test(m)) return "Parola trebuie să aibă minimum 6 caractere.";
+    if(/rate limit|too many/i.test(m)) return "Prea multe încercări. Așteaptă câteva minute.";
+    if(/Email not confirmed/i.test(m)) return "Emailul nu e confirmat. Verifică mesajul primit.";
+    if(/valid email|invalid format/i.test(m)) return "Adresa de email nu e validă.";
+    return m||"Ceva n-a mers. Încearcă din nou.";
+  };
+  const trimite=async(e)=>{
+    e.preventDefault(); setEroare(""); setMsg(""); setOcupat(true);
+    try{
+      const em=email.trim().toLowerCase();
+      if(mod==="intra"){
+        const {error}=await sb.auth.signInWithPassword({email:em,password:parola});
+        if(error) throw error;
+        onDone&&onDone();
+      }else if(mod==="cont"){
+        if(parola!==parola2) throw new Error("Parolele nu sunt la fel.");
+        const {data,error}=await sb.auth.signUp({email:em,password:parola});
+        if(error) throw error;
+        if(!data.session) setMsg("Cont creat. Verifică emailul pentru confirmare, apoi apasă „Intră”.");
+        else onDone&&onDone();
+      }else if(mod==="uitat"){
+        const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:window.location.origin+window.location.pathname});
+        if(error) throw error;
+        setMsg("Dacă adresa are cont, ai primit un email cu link pentru parolă nouă.");
+      }else if(mod==="nou"){
+        if(parola!==parola2) throw new Error("Parolele nu sunt la fel.");
+        const {error}=await sb.auth.updateUser({password:parola});
+        if(error) throw error;
+        setMsg("Parola a fost schimbată."); onDone&&onDone();
+      }
+    }catch(err){ setEroare(tradu(err.message)); }
+    finally{ setOcupat(false); }
+  };
+  const inp={width:"100%",boxSizing:"border-box",fontSize:15,padding:"11px 12px",border:"1px solid #C9B98F",background:"#FAF8F4",color:"#2A2118",outline:"none",marginBottom:10};
+  const titlu={intra:"Intră în cont",cont:"Creează cont",uitat:"Parolă uitată",nou:"Alege o parolă nouă"}[mod];
+  return <div style={{fontFamily:"'Jost',sans-serif",background:"#F2EFE9",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
+    <form onSubmit={trimite} style={{width:"100%",maxWidth:360,background:"#fff",border:"1px solid #E0D8CC",padding:"28px 24px"}}>
+      <div style={{fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:"#2A2118"}}>KREATIVO</div>
+      <div style={{fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:"#4A3F30",marginBottom:22}}>STUDIO</div>
+      <div style={{fontSize:16,fontWeight:600,color:"#2A2118",marginBottom:14}}>{titlu}</div>
+      {mod!=="nou"&&<input type="email" required autoComplete="username" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} style={inp}/>}
+      {mod!=="uitat"&&<input type="password" required autoComplete={mod==="intra"?"current-password":"new-password"} placeholder={mod==="nou"?"Parola nouă":"Parolă"} value={parola} onChange={e=>setParola(e.target.value)} style={inp}/>}
+      {(mod==="cont"||mod==="nou")&&<input type="password" required autoComplete="new-password" placeholder="Repetă parola" value={parola2} onChange={e=>setParola2(e.target.value)} style={inp}/>}
+      {eroare&&<div style={{color:"#B3402F",fontSize:13,marginBottom:10}}>{eroare}</div>}
+      {msg&&<div style={{color:"#4A3F30",fontSize:13,marginBottom:10}}>{msg}</div>}
+      <button type="submit" disabled={ocupat} style={{width:"100%",padding:"12px 0",background:"#5C6B65",color:"#fff",border:"none",fontSize:14,fontWeight:600,cursor:ocupat?"default":"pointer",opacity:ocupat?0.6:1}}>{ocupat?"Un moment…":(mod==="intra"?"Intră":mod==="cont"?"Creează cont":mod==="uitat"?"Trimite linkul":"Salvează parola")}</button>
+      {mod!=="nou"&&<div style={{display:"flex",justifyContent:"space-between",marginTop:14,fontSize:12}}>
+        {mod==="intra"?<><a href="#" onClick={e=>{e.preventDefault();setMod("cont");setEroare("");setMsg("");}} style={{color:"#A0845C"}}>Prima dată? Creează cont</a>
+          <a href="#" onClick={e=>{e.preventDefault();setMod("uitat");setEroare("");setMsg("");}} style={{color:"#A0845C"}}>Ai uitat parola?</a></>
+        :<a href="#" onClick={e=>{e.preventDefault();setMod("intra");setEroare("");setMsg("");}} style={{color:"#A0845C"}}>← Înapoi la „Intră”</a>}
+      </div>}
+    </form>
+  </div>;
+}
+
+function App(){
+  const [st,setSt]=useState({loading:true,session:null,role:null,err:"",recovery:false});
+  const userRef=useRef(null);
+  const aflaRol=async(session)=>{
+    if(!session){ userRef.current=null; setSt(p=>({...p,loading:false,session:null,role:null,err:""})); return; }
+    try{
+      const em=(session.user.email||"").toLowerCase();
+      const {data,error}=await sb.from("kreativo_roles").select("role").eq("email",em).maybeSingle();
+      if(error) throw error;
+      userRef.current=session.user.id;
+      setSt(p=>({...p,loading:false,session,role:data?data.role:null,err:""}));
+    }catch(e){ setSt(p=>({...p,loading:false,session,role:null,err:"Nu am putut verifica rolul contului: "+(e&&e.message||e)})); }
+  };
+  useEffect(()=>{
+    sb.auth.getSession().then(({data})=>aflaRol(data.session));
+    const {data:sub}=sb.auth.onAuthStateChange((ev,session)=>{
+      if(ev==="PASSWORD_RECOVERY"){ setSt(p=>({...p,recovery:true,loading:false,session})); return; }
+      if(ev==="SIGNED_OUT"){ aflaRol(null); return; }
+      if(ev==="SIGNED_IN"&&session&&session.user.id!==userRef.current) aflaRol(session);
+    });
+    return ()=>sub.subscription.unsubscribe();
+  },[]);
+  const iesire=async()=>{
+    try{ Object.keys(localStorage).filter(k=>k.startsWith("kr_")).forEach(k=>localStorage.removeItem(k)); }catch{}
+    try{ await sb.auth.signOut(); }catch{}
+    window.location.reload();
+  };
+  if(st.loading) return <div style={{fontFamily:"'Jost',sans-serif",background:"#F2EFE9",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#7A6C5A",fontSize:14}}>Se încarcă…</div>;
+  if(st.recovery) return <LoginScreen recovery={true} onDone={()=>{setSt(p=>({...p,recovery:false}));window.location.reload();}}/>;
+  if(!st.session) return <LoginScreen onDone={()=>{}}/>;
+  if(!st.role) return <div style={{fontFamily:"'Jost',sans-serif",background:"#F2EFE9",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
+    <div style={{maxWidth:380,background:"#fff",border:"1px solid #E0D8CC",padding:"28px 24px",color:"#2A2118"}}>
+      <div style={{fontSize:16,fontWeight:600,marginBottom:10}}>Cont fără acces</div>
+      <div style={{fontSize:14,lineHeight:1.5,marginBottom:16}}>{st.err||("Adresa "+(st.session.user.email||"")+" nu are acces în aplicație. Contactează administratorul.")}</div>
+      <button onClick={iesire} style={{padding:"10px 18px",background:"#5C6B65",color:"#fff",border:"none",fontSize:13,fontWeight:600,cursor:"pointer"}}>Ieșire</button>
+    </div>
+  </div>;
+  return <AppInner key={st.session.user.id} authRole={st.role} authEmail={st.session.user.email} onLogout={iesire}/>;
 }
 
 const container = document.getElementById('root');
