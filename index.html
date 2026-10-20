@@ -5348,6 +5348,36 @@ function vopTiparesteComanda(cmd,lista){
   printHtmlDoc(html);
 }
 
+function vopTiparesteFactura(f,lista){
+  const byId={}; lista.forEach(x=>{byId[x.id]=x;});
+  const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const lin=(f.linii||[]).slice().sort((a,b)=>{const x=byId[a.itemId]||{},y=byId[b.itemId]||{};return String(x.cod||"~").localeCompare(String(y.cod||"~"),"ro",{numeric:true})||String(x.baza||"").localeCompare(String(y.baza||""),"ro")||(x.amb||0)-(y.amb||0);});
+  const rows=lin.map(l=>{const x=byId[l.itemId];
+    return `<tr><td class="c">${x?esc(x.cod):"—"}</td><td>${esc(x?x.den:l.den)}</td><td class="c">${x?esc(x.baza||"—"):""}</td><td class="c">${x?esc(x.fin||""):""}</td><td class="c">${x?esc(fmtAmb(x.amb)):""}</td><td class="c"><b>${esc(l.cant)}</b></td><td class="box"></td><td class="obs2"></td></tr>`;}).join("");
+  const tot=lin.reduce((s,l)=>s+(Number(l.cant)||0),0);
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Marfă de venit ${esc(f.doc)}</title><style>
+  @page{size:A4 landscape;margin:12mm}
+  body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
+  h1{font-size:20px;margin:0 0 4px}
+  .meta{margin:0 0 10px;font-size:13px;line-height:1.6}
+  .meta b{display:inline-block;min-width:92px}
+  table{border-collapse:collapse;width:100%}
+  th{background:#eee;text-align:left;font-size:11px;padding:6px;border:1px solid #888}
+  td{border:1px solid #888;padding:7px 6px;vertical-align:middle;font-size:12px}
+  td.c{text-align:center}
+  td.box{width:2.4cm;height:1cm}
+  td.obs2{width:6cm}
+  thead{display:table-header-group} tr{page-break-inside:avoid}
+  .sig{margin-top:18px;border:1px solid #888;padding:8px;min-height:44px;font-size:12px}
+  </style></head><body>
+  <h1>Marfă de venit — verificare fizică</h1>
+  <div class="meta"><div><b>Factură:</b> ${esc(f.doc||"")}</div><div><b>Data facturii:</b> ${esc(vopFmtData(f.data))}</div><div><b>Total facturat:</b> ${esc(tot)} buc (${lin.length} linii)</div></div>
+  <table><thead><tr><th>Cod</th><th>Denumire</th><th>Bază</th><th>Finisaj</th><th>Ambalare</th><th>Facturat</th><th>Primit</th><th>Observații (lipsă, defect...)</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="sig"><b>Verificat de / data:</b></div>
+  </body></html>`;
+  printHtmlDoc(html);
+}
+
 function vopCitestePdfLinii(file){
   return new Promise((resolve,reject)=>{
     if(!window.pdfjsLib){ reject(new Error("Motorul de citire PDF nu s-a încărcat.")); return; }
@@ -5652,6 +5682,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
         })}
       </div></div>
       <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
+        <button onClick={()=>vopTiparesteFactura(f,lista)} style={btn(false)}>Printează lista de verificare</button>
         {!val&&<button onClick={()=>valideazaFactura(f)} style={btn(true)}>Validează și adaugă în stoc ({totP} buc)</button>}
         {val&&<button onClick={()=>redeschideFactura(f)} style={btn(false)}>Redeschide pentru modificare</button>}
         {!val&&<button onClick={()=>stergeFactura(f)} style={{...btn(false),color:"#A04030"}}>Șterge factura</button>}
