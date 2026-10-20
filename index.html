@@ -10020,7 +10020,7 @@ function bancaReguliEfective(reguli){
   if(!base.some(r=>r.id==="r9"||r.conditie_text===BANCA_TVA_SEED.conditie_text)) base=[...base,BANCA_TVA_SEED];
   return base.some(r=>r.conditie_tip==="rata_credit")?base:[...base,BANCA_RATA_SEED];
 }
-// D112: sumele de plată pe creanță fiscală: 602 impozit salarii, 412 CAS, 432 CASS, 480 CAM
+// D112: sumele de plată pe creanță fiscală: 602 impozit salarii, 412 CAS, 432 CASS (CAM 480 se ignoră — alt cont, altă plată)
 function bancaParseD112(lines){
   const sume={}; let cod=null, luna="", an="";
   for(const l of lines){
@@ -10030,7 +10030,7 @@ function bancaParseD112(lines){
   }
   return Object.keys(sume).length?{sume,luna,an}:null;
 }
-const BANCA_D112_CONT={"412":["4315","CAS retinut"],"432":["4316","CASS retinut"],"602":["444","Impozit salarii"],"480":["436","CAM"]};
+const BANCA_D112_CONT={"412":["4315","CAS retinut"],"432":["4316","CASS retinut"],"602":["444","Impozit salarii"]};
 function bancaPotrivire(r,t){
   const s=t.text,a=t.amount;
   if(r.conditie_tip==="contains") return s.includes(r.conditie_text);
@@ -10172,17 +10172,15 @@ function bancaTiparesteLista(built,perioada,nume){
   const note=built.note.slice().sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date)));
   const rM=man.map(m=>`<tr><td>${esc(m.t.date)}</td><td>${esc(m.t.who)}</td><td class="n">${f(m.t.amount)}</td><td>${esc(m.reason)}${m.t.lines[1]?" · "+esc(m.t.lines.slice(1,3).join(" ")):""}</td><td class="box"></td></tr>`).join("");
   const rN=note.map(n=>`<tr><td>${esc(n.date)}</td><td>${esc(n.debit)}</td><td>${esc(n.credit)}</td><td class="n">${f(n.suma)}</td><td>${esc(n.expl)}</td><td class="box"></td></tr>`).join("");
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — listă de operat</title><style>
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — de făcut</title><style>
   @page{size:A4 landscape;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
   h1{font-size:20px;margin:0 0 2px} h2{font-size:15px;margin:18px 0 6px} .meta{font-size:12px;color:#555;margin-bottom:6px}
   table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:11px;padding:6px;border:1px solid #888}
   td{border:1px solid #888;padding:6px;font-size:12px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.6cm;height:.9cm}
   thead{display:table-header-group} tr{page-break-inside:avoid}</style></head><body>
-  <h1>Bancă — listă de operat</h1><div class="meta">${esc(nume||"")} · perioada ${esc(perioada||"")} · tipărit ${new Date().toLocaleDateString("ro-RO")}</div>
-  <h2>1. De rezolvat / operat manual (${man.length})</h2>
+  <h1>Bancă — ce am de făcut</h1><div class="meta">${esc(nume||"")} · perioada ${esc(perioada||"")} · tipărit ${new Date().toLocaleDateString("ro-RO")}</div>
+  <h2>De rezolvat / operat manual (${man.length})</h2>
   ${man.length?`<table><thead><tr><th>Data</th><th>Beneficiar / ordonator</th><th>Sumă (lei)</th><th>Ce trebuie făcut</th><th>Gata</th></tr></thead><tbody>${rM}</tbody></table>`:"<div>Nimic.</div>"}
-  <h2>2. Note contabile de introdus (${note.length})</h2>
-  ${note.length?`<table><thead><tr><th>Data</th><th>Debit</th><th>Credit</th><th>Sumă (lei)</th><th>Explicație</th><th>Gata</th></tr></thead><tbody>${rN}</tbody></table>`:"<div>Nimic.</div>"}
   </body></html>`;
   printHtmlDoc(html);
 }
@@ -10394,9 +10392,9 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
         <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Export din Transart cu mișcările contului 5121 (Excel). Ce există deja acolo (după dată și sumă) nu se mai generează. Dacă nu ai nimic operat, sari peste.</div>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarcaTransart(f); e.target.value="";}} style={{fontSize:12}}/>
         <div style={{...lbl,marginTop:16}}>D112 (opțional — pentru împărțirea plăților către Trezorerie)</div>
-        <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Declarația D112 semnată (PDF). Din ea se iau sumele pentru 4315 (CAS), 4316 (CASS), 444 (impozit salarii), 436 (CAM). Apoi pe plata la Trezorerie apeși „Împarte”.</div>
+        <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Declarația D112 semnată (PDF). Din ea se iau sumele pentru 4315 (CAS), 4316 (CASS) și 444 (impozit salarii). Contribuția asiguratorie pentru muncă (CAM) se ignoră. Plata mare se împarte pe CAS, CASS și restul pe 444; plata mică merge integral pe 444.</div>
         <input type="file" accept="application/pdf,.pdf" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarcaD112(f); e.target.value="";}} style={{fontSize:12}}/>
-        {d112&&!d112.eroare&&<div style={{fontSize:12,color:"#2F6B2F",marginTop:8}}>✓ {d112.nume}{d112.luna?" · luna "+d112.luna+"/"+d112.an:""}: CAS {bancaSuma(d112.sume["412"]||0)} · CASS {bancaSuma(d112.sume["432"]||0)} · impozit {bancaSuma(d112.sume["602"]||0)} · CAM {bancaSuma(d112.sume["480"]||0)}</div>}
+        {d112&&!d112.eroare&&<div style={{fontSize:12,color:"#2F6B2F",marginTop:8}}>✓ {d112.nume}{d112.luna?" · luna "+d112.luna+"/"+d112.an:""}: CAS {bancaSuma(d112.sume["412"]||0)} · CASS {bancaSuma(d112.sume["432"]||0)} · impozit {bancaSuma(d112.sume["602"]||0)}</div>}
         {d112&&d112.eroare&&<div style={{fontSize:12,color:"#8A2A1C",marginTop:8}}>{d112.eroare}</div>}
         {tr&&!tr.eroare&&<div style={{fontSize:12,color:"#2F6B2F",marginTop:8}}>✓ {tr.nume}: {tr.nr} rânduri pe contul 5121, între {bancaFmtD(tr.de)} și {bancaFmtD(tr.pana)}. <a onClick={()=>setTr(null)} style={{cursor:"pointer",textDecoration:"underline",color:C.textMuted}}>scoate</a></div>}
         {tr&&tr.eroare&&<div style={{fontSize:12,color:"#8A2A1C",marginTop:8}}>{tr.eroare}</div>}
@@ -10444,7 +10442,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
                 {dOk&&<div style={{marginTop:10,fontSize:12,lineHeight:1.7}}>
                   <div style={{fontWeight:600,color:C.text}}>Verificare față de D112{d112.luna?" luna "+d112.luna+"/"+d112.an:""}:</div>
                   {Object.entries(BANCA_D112_CONT).map(([cod,[cont,expl]])=>{const dv=d112.sume[cod]||0;const al=Math.round(alocat(cont)*100)/100;const ok=Math.abs(dv-al)<0.005;
-                    return <div key={cod} style={{color:ok?"#2F6B2F":"#8A2A1C"}}>{ok?"✓":"⚠"} {cont} {expl}: D112 {bancaSuma(dv)} · alocat {bancaSuma(al)}{ok?"":" · diferență "+bancaSuma(dv-al)+(cont==="436"?" (CAM probabil se plătește separat, nu e în acest extras)":"")}</div>;})}
+                    return <div key={cod} style={{color:ok?"#2F6B2F":"#8A2A1C"}}>{ok?"✓":"⚠"} {cont} {expl}: D112 {bancaSuma(dv)} · alocat {bancaSuma(al)}{ok?"":" · diferență "+bancaSuma(dv-al)}</div>;})}
                   <div style={{color:Math.abs(totPlati-totAloc)<0.005?"#2F6B2F":"#8A2A1C",fontWeight:600}}>{Math.abs(totPlati-totAloc)<0.005?"✓":"⚠"} Plăți în extras {bancaSuma(totPlati)} · împărțite pe note {bancaSuma(totAloc)}{Math.abs(totPlati-totAloc)<0.005?"":" · NEîmpărțit "+bancaSuma(totPlati-totAloc)+" — apasă „Împarte” pe plată și corectează manual"}</div>
                 </div>}
               </div>;})()}
@@ -10469,7 +10467,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
 
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
             <button onClick={exporta} disabled={!parsed.verif.ok} style={{...btn(true),opacity:parsed.verif.ok?1:0.45,cursor:parsed.verif.ok?"pointer":"not-allowed"}}>Confirmă și exportă ({built.note.length} note · {built.gestiune.length} gestiune; {built.manual.length} manuale rămân în listă)</button>
-            <button onClick={()=>bancaTiparesteLista(built,perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește lista (de rezolvat + note)</button>
+            <button onClick={()=>bancaTiparesteLista(built,perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește ce am de făcut</button>
             <button onClick={()=>{setParsed(null);setOvr({});}} style={btn(false)}>Renunță</button>
             <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul de gestiune și marchează ca procesate doar notele și gestiunea. Cele manuale rămân până le marchezi „Rezolvat”.</span>
           </div>
