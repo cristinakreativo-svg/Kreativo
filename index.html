@@ -10058,6 +10058,55 @@ function bancaTsv(note){
   return rows.join("\n")+"\n";
 }
 
+// ---- Comparare cu exportul din Transart (Export Interogari: Cont, DataIC, SumaD, SumaC) ----
+function bancaIsoAny(v){
+  if(v==null||v==="") return null;
+  if(typeof v==="number") return new Date(Math.round((v-25569)*86400000)).toISOString().slice(0,10);
+  if(v instanceof Date) return new Date(v.getTime()-v.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const s=String(v).trim(); let m=s.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m) return m[1]+"-"+m[2]+"-"+m[3];
+  m=s.match(/^(\d{2})[.\/](\d{2})[.\/](\d{4})/); return m?m[3]+"-"+m[2]+"-"+m[1]:null;
+}
+function bancaTransartRows(objs){
+  const g=(o,k)=>{const kk=Object.keys(o).find(x=>x.trim().toLowerCase()===k);return kk?o[kk]:undefined;};
+  if(!objs.length||g(objs[0],"dataic")===undefined||(g(objs[0],"sumad")===undefined&&g(objs[0],"sumac")===undefined)) return null;
+  const hasCont=g(objs[0],"cont")!==undefined;
+  const num=(x)=>{const n=typeof x==="number"?x:parseFloat(String(x||"0").replace(/\./g,"").replace(",","."));return isNaN(n)?0:n;};
+  const out=[];
+  for(const o of objs){
+    const iso=bancaIsoAny(g(o,"dataic")); if(!iso) continue;
+    if(hasCont&&!/^5121/.test(String(g(o,"cont")||"").trim())) continue; // rândurile-oglindă (cont 5191 etc.) se ignoră
+    out.push({iso,d:num(g(o,"sumad")),c:num(g(o,"sumac"))});
+  }
+  return out;
+}
+function bancaPotrivesteT(pool,iso,dir,amt){
+  const val=(x)=>dir>0?x.d:x.c;
+  const cand=pool.filter(x=>!x.used&&x.iso===iso&&val(x)>0);
+  const ex=cand.find(x=>Math.abs(val(x)-amt)<0.005); if(ex){ex.used=true;return true;}
+  // o plată împărțită de Transart în 2-3 rânduri (ex. 401 + 404)
+  const n=cand.length; if(n<2||n>14) return false;
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+    if(Math.abs(val(cand[i])+val(cand[j])-amt)<0.005){cand[i].used=cand[j].used=true;return true;}
+    for(let k=j+1;k<n;k++) if(Math.abs(val(cand[i])+val(cand[j])+val(cand[k])-amt)<0.005){cand[i].used=cand[j].used=cand[k].used=true;return true;}
+  }
+  return false;
+}
+function bancaExclude(built,rows){
+  const pool=rows.map(r=>({...r,used:false})); const excluded=[];
+  const dirT=(t)=>t.amount>0?1:-1;
+  const note=[];
+  for(const n of built.note){
+    const dir=n.debit==="5121.000"?1:-1;
+    if(bancaPotrivesteT(pool,bancaIso(n.date),dir,n.suma)){ n.tx.forEach(t=>excluded.push(t)); continue; }
+    if(n.tx.length>1){
+      const ramase=[]; for(const t of n.tx){ if(bancaPotrivesteT(pool,bancaIso(t.date),dirT(t),Math.abs(t.amount))) excluded.push(t); else ramase.push(t); }
+      if(ramase.length){ note.push({...n,tx:ramase,suma:Math.round(ramase.reduce((s,t)=>s+Math.abs(t.amount),0)*100)/100}); }
+    } else note.push(n);
+  }
+  const keep=(arr,getT)=>arr.filter(x=>{const t=getT(x); if(bancaPotrivesteT(pool,bancaIso(t.date),dirT(t),Math.abs(t.amount))){excluded.push(t);return false;} return true;});
+  return {note,manual:keep(built.manual,m=>m.t),gestiune:keep(built.gestiune,g=>g.t),excluded};
+}
+
 // ============ MODUL BANCĂ — interfață ============
 async function bancaLiniiDinPdf(file){
   if(!window.pdfjsLib) throw new Error("Motorul de citire PDF nu s-a încărcat. Reîncarcă pagina (Ctrl+F5) și încearcă din nou.");
@@ -10112,6 +10161,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   const [msg,setMsg]=React.useState("");
   const [ovr,setOvr]=React.useState({});
   const [edit,setEdit]=React.useState(null);
+  const [tr,setTr]=React.useState(null);
   const [ef,setEf]=React.useState({debit:"",credit:"",expl:"",regula:true});
   const [nr,setNr]=React.useState({conditie_tip:"contains",conditie_text:"",debit:"",credit:"",explicatie:"",agregare:"tranzactie"});
   const efRules=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
@@ -10132,9 +10182,21 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
       setParsed({nume:file.name,...p,verif:v}); setMsg("");
     }catch(e){ setMsg("Eroare la citire: "+(e&&e.message||e)); }
   };
+  const incarcaTransart=async(file)=>{
+    try{
+      if(typeof XLSX==="undefined") throw new Error("Modulul Excel nu s-a încărcat. Reîncarcă pagina (Ctrl+F5).");
+      const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
+      const objs=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{raw:true,defval:null});
+      const rows=bancaTransartRows(objs);
+      if(!rows) throw new Error("Fișierul nu seamănă cu exportul din Transart (lipsesc coloanele DataIC / SumaD / SumaC).");
+      const dts=rows.map(r=>r.iso).sort();
+      setTr({nume:file.name,rows,nr:rows.length,de:dts[0],pana:dts[dts.length-1],eroare:""});
+    }catch(e){ setTr({nume:file.name,rows:[],nr:0,eroare:(e&&e.message)||String(e)}); }
+  };
   const noi=parsed?parsed.tx.filter(t=>!procSet.has(t.key)):[];
   const sarite=parsed?parsed.tx.length-noi.length:0;
-  const built=parsed?bancaConstruieste(noi,efRules,ovr):null;
+  const built0=parsed?bancaConstruieste(noi,efRules,ovr):null;
+  const built=built0?(tr&&tr.rows.length?bancaExclude(built0,tr.rows):{...built0,excluded:[]}):null;
   const isoDates=noi.map(t=>bancaIso(t.date)).sort();
   const d1=isoDates[0],d2=isoDates[isoDates.length-1];
   const perioadaExtras=parsed&&parsed.tx.length?(()=>{const a=parsed.tx.map(t=>bancaIso(t.date)).sort();return bancaFmtD(a[0])+" – "+bancaFmtD(a[a.length-1]);})():"";
@@ -10156,6 +10218,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     const recs=[];
     built.note.forEach(n=>n.tx.forEach(t=>recs.push(rec(t,"nota",{debit:n.debit,credit:n.credit,expl:n.expl}))));
     built.gestiune.forEach(g=>recs.push(rec(g.t,"gestiune")));
+    built.excluded.forEach(t=>recs.push(rec(t,"in_transart")));
     const sufix=d1+"_"+d2;
     let fisiere=[];
     if(built.note.length){ bancaDescarca("note_banca_"+sufix+".tsv",bancaTsv(built.note),"text/tab-separated-values;charset=utf-8"); fisiere.push("note_banca_"+sufix+".tsv"); }
@@ -10209,6 +10272,11 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
         <div style={lbl}>Extras de cont ING (PDF)</div>
         <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Aplicația citește extrasul, sare peste tranzacțiile deja procesate și generează notele recurente. Nimic nu se marchează ca procesat până nu apeși „Confirmă și exportă”.</div>
         <input type="file" accept="application/pdf,.pdf" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarca(f); e.target.value="";}} style={{fontSize:12}}/>
+        <div style={{...lbl,marginTop:16}}>Extras Transart (opțional — dacă ai deja operațiuni din luna asta în contabilitate)</div>
+        <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Export din Transart cu mișcările contului 5121 (Excel). Ce există deja acolo (după dată și sumă) nu se mai generează. Dacă nu ai nimic operat, sari peste.</div>
+        <input type="file" accept=".xlsx,.xls,.csv" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarcaTransart(f); e.target.value="";}} style={{fontSize:12}}/>
+        {tr&&!tr.eroare&&<div style={{fontSize:12,color:"#2F6B2F",marginTop:8}}>✓ {tr.nume}: {tr.nr} rânduri pe contul 5121, între {bancaFmtD(tr.de)} și {bancaFmtD(tr.pana)}. <a onClick={()=>setTr(null)} style={{cursor:"pointer",textDecoration:"underline",color:C.textMuted}}>scoate</a></div>}
+        {tr&&tr.eroare&&<div style={{fontSize:12,color:"#8A2A1C",marginTop:8}}>{tr.eroare}</div>}
         {msg&&<div style={{fontSize:12,color:msg.startsWith("Gata")?"#2F6B2F":C.textSub,marginTop:10,lineHeight:1.5}}>{msg}</div>}
       </div>
 
@@ -10216,7 +10284,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
         <div style={card}>
           <div style={{display:"flex",gap:16,flexWrap:"wrap",fontSize:13,color:C.text}}>
             <div><b>{parsed.nume}</b></div><div>Perioada: {perioadaExtras}</div><div>{parsed.tx.length} tranzacții în extras</div>
-            <div style={{color:sarite?"#8A5A00":C.textMuted}}>{sarite} deja procesate, sărite</div><div><b>{noi.length}</b> noi</div>
+            <div style={{color:sarite?"#8A5A00":C.textMuted}}>{sarite} deja procesate, sărite</div><div><b>{noi.length}</b> noi</div>{built&&built.excluded.length>0&&<div style={{color:"#2F6B2F"}}>{built.excluded.length} deja în Transart, excluse</div>}
           </div>
           {!parsed.verif.ok&&<div style={{marginTop:10,padding:"10px 12px",background:"#F6E3DF",color:"#8A2A1C",fontSize:13,fontWeight:600}}>{parsed.verif.msg}</div>}
           {parsed.verif.ok&&<div style={{marginTop:8,fontSize:12,color:"#2F6B2F"}}>✓ Verificare trecută: suma tranzacțiilor = sold final − sold inițial ({bancaSuma(parsed.soldInitial)} → {bancaSuma(parsed.soldFinal)}).</div>}
