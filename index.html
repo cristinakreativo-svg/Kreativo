@@ -5536,11 +5536,14 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   const [mf,setMf]=React.useState({tip:"intrare",cant:"",data:vopAzi(),doc:"",obs:"",itemId:"",q:""});
   const [fact,setFact]=React.useState(null); // {doc,data,linii:[{den,cant,itemId,inc}]}
   const [factMsg,setFactMsg]=React.useState("");
+  const [afisEpuizate,setAfisEpuizate]=React.useState(true);
+  const [openFact,setOpenFact]=React.useState(null);
   const mis=Array.isArray(miscari)?miscari:[];
   const inpS={padding:"7px 8px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:12,boxSizing:"border-box",fontFamily:"inherit",outline:"none",width:"100%"};
   const btn=(primary)=>({padding:"7px 14px",border:primary?"none":`1px solid ${C.border}`,background:primary?C.accent:"transparent",color:primary?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:primary?600:400});
   const stocMap={};
-  for(const m of mis) stocMap[m.itemId]=(stocMap[m.itemId]||0)+(Number(m.cant)||0);
+  const areMis={};
+  for(const m of mis){ stocMap[m.itemId]=(stocMap[m.itemId]||0)+(Number(m.cant)||0); areMis[m.itemId]=true; }
   const lista=(Array.isArray(items)?items:[]).map(x=>({...x,stoc:stocMap[x.id]||0}));
   const uniq=(f)=>Array.from(new Set(lista.map(f).filter(x=>x!==""&&x!=null)));
   const finOpt=uniq(x=>x.fin).sort((a,b)=>a.localeCompare(b,"ro"));
@@ -5549,7 +5552,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   const denOpt=uniq(x=>x.den).sort((a,b)=>a.localeCompare(b,"ro"));
   const norm=(s)=>String(s||"").toLowerCase();
   const filtrat=lista.filter(x=>{
-    if(view==="inventar"&&x.stoc===0) return false;
+    if(view==="inventar"&&x.stoc===0&&!(afisEpuizate&&areMis[x.id])) return false;
     if(fCod&&!norm(x.cod).includes(norm(fCod.trim()))) return false;
     if(fDen&&!norm(x.den).includes(norm(fDen.trim()))) return false;
     if(fFin&&x.fin!==fFin) return false;
@@ -5559,6 +5562,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   }).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})||String(a.baza).localeCompare(String(b.baza),"ro")||(a.amb||0)-(b.amb||0));
   const totalBuc=filtrat.reduce((s,x)=>s+(x.stoc>0?x.stoc:0),0);
   const nrInv=lista.filter(x=>x.stoc!==0).length;
+  const nrEpuizate=lista.filter(x=>x.stoc===0&&areMis[x.id]).length;
   const nrNeg=lista.filter(x=>x.stoc<0).length;
   const reset=()=>{setFCod("");setFDen("");setFFin("");setFBaza("");setFAmb("");};
   const numeProd=(x)=>x?`${x.cod} · ${x.den}${x.baza?" "+x.baza:""} · ${fmtAmb(x.amb)}`:"";
@@ -5587,12 +5591,74 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
     }catch(e){ setFactMsg("Eroare la citire: "+(e&&e.message||e)); }
   };
   const confirmaFactura=()=>{
-    const bune=fact.linii.filter(l=>l.inc&&l.itemId&&l.cant>0);
-    if(!bune.length) return;
-    if(mis.some(m=>m.doc&&m.doc===fact.doc.trim())&&!window.confirm("Documentul „"+fact.doc+"” are deja intrări în stoc. Îl adaugi încă o dată?")) return;
-    const noi=bune.map(l=>({id:mid(),itemId:l.itemId,data:fact.data,tip:"intrare",doc:fact.doc.trim(),cant:l.cant,obs:""}));
+    const linii=fact.linii.filter(l=>l.cant>0);
+    if(!linii.length) return;
+    if(fact.doc.trim()&&facts.some(f=>f.doc&&f.doc.trim()===fact.doc.trim())&&!window.confirm("Factura „"+fact.doc+"” există deja în Marfă de venit. O adaugi încă o dată?")) return;
+    const id="f"+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    setComenzi(p=>[...(Array.isArray(p)?p:[]),{id,tip:"factura",doc:fact.doc.trim(),data:fact.data,dataIncarcare:vopAzi(),stare:"asteptare",dataValidare:"",obs:"",linii:linii.map((l,i)=>({id:"l"+i+Math.random().toString(36).slice(2,5),den:l.den,cant:l.cant,cantPrimita:l.cant,itemId:l.itemId||"",obs:""}))}]);
+    setFact(null);setPanou(null);setView("marfa");
+  };
+  const updFact=(id,patch)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(f=>f.id===id?{...f,...patch}:f));
+  const updLinF=(id,lid,patch)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(f=>f.id!==id?f:{...f,linii:f.linii.map(l=>l.id===lid?{...l,...patch}:l)}));
+  const valideazaFactura=(f)=>{
+    const cu=f.linii.filter(l=>(Number(l.cantPrimita)||0)>0);
+    const fara=cu.filter(l=>!l.itemId);
+    if(fara.length){ alert("Alege produsul din nomenclator la: "+fara.map(l=>l.den).join("; ")+"\n(sau pune cantitatea primită 0 dacă nu a venit)."); return; }
+    if(!cu.length){ alert("Nicio linie cu cantitate primită."); return; }
+    const dif=f.linii.filter(l=>(Number(l.cantPrimita)||0)!==(Number(l.cant)||0)).length;
+    if(!window.confirm("Validezi factura "+(f.doc||"")+"? Se adaugă în stoc "+cu.reduce((s,l)=>s+(Number(l.cantPrimita)||0),0)+" buc ("+cu.length+" linii)."+(dif?"\nAtenție: "+dif+" linii au cantitatea primită diferită de cea facturată.":""))) return;
+    const doc=f.doc?(/^factur/i.test(f.doc)?f.doc:"Factură Murali "+f.doc):"Factură Murali";
+    const noi=cu.map(l=>({id:mid(),itemId:l.itemId,data:vopAzi(),tip:"intrare",doc,cant:Number(l.cantPrimita),obs:(l.obs||"").trim(),facturaId:f.id}));
     setMiscari(p=>[...(Array.isArray(p)?p:[]),...noi]);
-    setFact(null);setPanou(null);
+    updFact(f.id,{stare:"validata",dataValidare:vopAzi()});
+  };
+  const redeschideFactura=(f)=>{
+    if(!window.confirm("Redeschizi factura "+(f.doc||"")+"? Cantitățile adăugate din ea se scot din stoc până o validezi din nou.")) return;
+    setMiscari(p=>(Array.isArray(p)?p:[]).filter(m=>m.facturaId!==f.id));
+    updFact(f.id,{stare:"asteptare",dataValidare:""});
+  };
+  const stergeFactura=(f)=>{ if(window.confirm("Ștergi factura "+(f.doc||"")+" din Marfă de venit? Nu se atinge stocul.")) setComenzi(p=>(Array.isArray(p)?p:[]).filter(z=>z.id!==f.id)); };
+  const renderFactura=(f)=>{
+    const val=f.stare==="validata";
+    const totF=f.linii.reduce((s,l)=>s+(Number(l.cant)||0),0);
+    const totP=f.linii.reduce((s,l)=>s+(Number(l.cantPrimita)||0),0);
+    const gr="1.7fr 62px 74px 1.5fr 1fr";
+    const desch=openFact===f.id;
+    return <div key={f.id} style={{border:`1px solid ${val?C.border:C.accent}`,background:C.surface,padding:desch?14:"10px 14px",marginBottom:8}}>
+      <div onClick={()=>setOpenFact(desch?null:f.id)} style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",cursor:"pointer"}}>
+        <div style={{fontSize:15,fontWeight:600,color:C.text}}>{f.doc||"Factură Murali"}</div>
+        <div style={{fontSize:12,color:C.textMuted}}>din {vopFmtData(f.data)} · {f.linii.length} linii · {totF} buc{val&&f.dataValidare?" · validată "+vopFmtData(f.dataValidare):""}</div>
+        <div style={{flex:1}}/>
+        <div style={{fontSize:11,fontWeight:600,padding:"3px 8px",background:val?"#E3F0E3":"#FBEFD5",color:val?"#2F6B2F":"#8A5A00"}}>{val?"VALIDATĂ":"DE VALIDAT"}</div>
+        <div style={{fontSize:12,color:C.accent,fontWeight:600,minWidth:60,textAlign:"right"}}>{desch?"Închide ▲":(val?"Deschide ▼":"Validează ▼")}</div>
+      </div>
+      {desch&&<div style={{marginTop:10}}>
+      <div style={{overflowX:"auto"}}><div style={{minWidth:680}}>
+        <div style={{display:"grid",gridTemplateColumns:gr,gap:8,...lblS,padding:"2px 0"}}><div>Produs din factură</div><div>Facturat</div><div>Primit</div><div>Produs în nomenclator</div><div>Observații</div></div>
+        {f.linii.map(l=>{
+          const dif=(Number(l.cantPrimita)||0)!==(Number(l.cant)||0);
+          const lipsa=!val&&!l.itemId&&(Number(l.cantPrimita)||0)>0;
+          const x=lista.find(z=>z.id===l.itemId);
+          return <div key={l.id} style={{display:"grid",gridTemplateColumns:gr,gap:8,alignItems:"center",padding:"6px 0",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.text,background:dif?"#FFF6E0":"transparent"}}>
+            <div>{l.den}</div>
+            <div>{l.cant}</div>
+            {val?<div style={{fontWeight:600,color:dif?"#A04030":C.text}}>{l.cantPrimita}</div>:<input type="number" min="0" value={l.cantPrimita} onChange={e=>updLinF(f.id,l.id,{cantPrimita:e.target.value===""?"":parseFloat(e.target.value)})} style={{...inpS,borderColor:dif?"#C08A2A":C.border}}/>}
+            {val?<div>{x?numeProd(x):"—"}</div>:<select value={l.itemId} onChange={e=>updLinF(f.id,l.id,{itemId:e.target.value})} style={{...inpS,borderColor:lipsa?"#C0604A":C.border}}>
+              <option value="">— alege produsul —</option>
+              {lista.slice().sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})).map(z=><option key={z.id} value={z.id}>{numeProd(z)}</option>)}
+            </select>}
+            {val?<div style={{color:C.textSub}}>{l.obs||""}</div>:<input value={l.obs||""} onChange={e=>updLinF(f.id,l.id,{obs:e.target.value})} placeholder={dif?"motiv diferență (lipsă, defect...)":"observații"} style={inpS}/>}
+          </div>;
+        })}
+      </div></div>
+      <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
+        {!val&&<button onClick={()=>valideazaFactura(f)} style={btn(true)}>Validează și adaugă în stoc ({totP} buc)</button>}
+        {val&&<button onClick={()=>redeschideFactura(f)} style={btn(false)}>Redeschide pentru modificare</button>}
+        {!val&&<button onClick={()=>stergeFactura(f)} style={{...btn(false),color:"#A04030"}}>Șterge factura</button>}
+        <span style={{fontSize:12,color:C.textMuted}}>Facturat {totF} buc · primit {totP} buc{totF!==totP?" · diferență "+(totP-totF):""}</span>
+      </div>
+      </div>}
+    </div>;
   };
   const grid="64px 270px 96px 100px 84px 150px";
   const FormMiscare=({itemId,onDone})=>{
@@ -5625,7 +5691,12 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   };
   const prodCautare=lista.filter(x=>!mf.q||norm(numeProd(x)+" "+x.fin).includes(norm(mf.q))).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),"ro",{numeric:true})).slice(0,60);
 
-  const cmds=Array.isArray(comenzi)?comenzi:[];
+  const toateC=Array.isArray(comenzi)?comenzi:[];
+  const cmds=toateC.filter(c=>c.tip!=="factura");
+  const facts=toateC.filter(c=>c.tip==="factura").sort((a,b)=>String(b.dataIncarcare||"").localeCompare(String(a.dataIncarcare||""))||String(b.id).localeCompare(String(a.id)));
+  const factAst=facts.filter(f=>f.stare!=="validata");
+  const factVal=facts.filter(f=>f.stare==="validata");
+  const esteMarfa=view==="marfa";
   const esteCmd=view==="comenzi"||view==="finalizate";
   const cmdActive=cmds.filter(c=>c.stare!=="finalizata").sort((a,b)=>(b.numar||0)-(a.numar||0));
   const cmdFin=cmds.filter(c=>c.stare==="finalizata").sort((a,b)=>String(b.dataFin||"").localeCompare(String(a.dataFin||""))||(b.numar||0)-(a.numar||0));
@@ -5671,17 +5742,17 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   const lblS={fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted};
   return <div>
     <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
-      {[["comenzi","Comenzi active ("+cmdActive.length+")"],["finalizate","Comenzi finalizate ("+cmdFin.length+")"],["inventar","Inventar ("+nrInv+")"],["nomenclator","Nomenclator ("+lista.length+")"]].map(([id,l])=>
-        <button key={id} onClick={()=>setView(id)} style={{padding:"7px 14px",border:`1px solid ${view===id?C.accent:C.border}`,background:view===id?C.accentLight:"transparent",color:view===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:view===id?500:400}}>{l}</button>)}
+      {[["marfa","Marfă de venit ("+factAst.length+")"],["comenzi","Comenzi active ("+cmdActive.length+")"],["finalizate","Comenzi finalizate ("+cmdFin.length+")"],["inventar","Inventar ("+nrInv+")"],["nomenclator","Nomenclator ("+lista.length+")"]].map(([id,l])=>
+        <button key={id} onClick={()=>{setView(id);setPanou(null);}} style={{padding:"7px 14px",border:`1px solid ${view===id?C.accent:(id==="marfa"&&factAst.length?"#C08A2A":C.border)}`,background:view===id?C.accentLight:(id==="marfa"&&factAst.length?"#FBEFD5":"transparent"),color:view===id?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:(view===id||(id==="marfa"&&factAst.length))?600:400}}>{l}</button>)}
       <div style={{flex:1}}/>
-      <button onClick={()=>{setPanou(panou==="factura"?null:"factura");setFact(null);setFactMsg("");}} style={btn(panou==="factura")}>+ Intrare din factură Murali</button>
-      <button onClick={()=>setPanou(panou==="manual"?null:"manual")} style={btn(panou==="manual")}>+ Intrare / ieșire manuală</button>
-      {!esteCmd&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}{nrNeg>0&&<span style={{color:"#B3261E",fontWeight:600}}> · {nrNeg} cu stoc negativ (roșu, în așteptare factură)</span>}</div>}
+      {view==="marfa"&&<button onClick={()=>{setPanou(panou==="factura"?null:"factura");setFact(null);setFactMsg("");}} style={btn(panou==="factura")}>+ Încarcă factură Murali</button>}
+      {view==="inventar"&&<button onClick={()=>setPanou(panou==="manual"?null:"manual")} style={btn(panou==="manual")}>+ Intrare / ieșire manuală</button>}
+      {!esteCmd&&!esteMarfa&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}{nrNeg>0&&<span style={{color:"#B3261E",fontWeight:600}}> · {nrNeg} cu stoc negativ (roșu, în așteptare factură)</span>}{view==="inventar"&&<label style={{marginLeft:14,cursor:"pointer",color:C.text}}><input type="checkbox" checked={afisEpuizate} onChange={e=>setAfisEpuizate(e.target.checked)} style={{marginRight:6,verticalAlign:"middle"}}/>Arată și produsele epuizate (stoc 0, cu istoric): {nrEpuizate}</label>}</div>}
     </div>
 
-    {panou==="factura"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
-      <div style={lblS}>Intrare din factură Murali (PDF)</div>
-      <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Alege factura. Aplicația citește produsele și cantitățile, tu verifici și confirmi. Nu se adaugă nimic în stoc până nu apeși „Adaugă în stoc”.</div>
+    {view==="marfa"&&panou==="factura"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
+      <div style={lblS}>Factură Murali (PDF) → Marfă de venit</div>
+      <div style={{fontSize:12,color:C.textSub,margin:"6px 0 10px"}}>Alege factura. Aplicația citește produsele și cantitățile, tu verifici potrivirea produselor. Factura merge în „Marfă de venit”; stocul se modifică abia după ce Radu o verifică și o validează.</div>
       <input type="file" accept="application/pdf,.pdf" onChange={e=>{const f=e.target.files&&e.target.files[0]; if(f) incarcaFactura(f); e.target.value="";}} style={{fontSize:12}}/>
       {factMsg&&<div style={{fontSize:12,color:C.textSub,marginTop:8}}>{factMsg}</div>}
       {fact&&<div style={{marginTop:12}}>
@@ -5691,7 +5762,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
         </div>
         <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
         {fact.linii.map((l,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"28px 1fr 70px 1fr",gap:8,alignItems:"center",padding:"6px 0",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.text}}>
-          <input type="checkbox" checked={l.inc} onChange={e=>setFact(p=>({...p,linii:p.linii.map((z,j)=>j===i?{...z,inc:e.target.checked}:z)}))}/>
+          <div title={l.itemId?"produs potrivit":"alege produsul"} style={{color:l.itemId?"#2F6B2F":"#C0604A",fontWeight:700,textAlign:"center"}}>{l.itemId?"✓":"!"}</div>
           <div>{l.den}</div>
           <input type="number" value={l.cant} onChange={e=>setFact(p=>({...p,linii:p.linii.map((z,j)=>j===i?{...z,cant:parseFloat(e.target.value)||0}:z)}))} style={inpS}/>
           <select value={l.itemId} onChange={e=>setFact(p=>({...p,linii:p.linii.map((z,j)=>j===i?{...z,itemId:e.target.value,inc:!!e.target.value}:z)}))} style={{...inpS,borderColor:l.itemId?C.border:"#C0604A"}}>
@@ -5701,14 +5772,14 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
         </div>)}
         </div></div>
         <div style={{display:"flex",gap:8,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
-          <button onClick={confirmaFactura} style={btn(true)}>Adaugă în stoc ({fact.linii.filter(l=>l.inc&&l.itemId&&l.cant>0).length} linii · {fact.linii.filter(l=>l.inc&&l.itemId&&l.cant>0).reduce((s,l)=>s+l.cant,0)} buc)</button>
+          <button onClick={confirmaFactura} style={btn(true)}>Trimite la validare ({fact.linii.filter(l=>l.cant>0).length} linii · {fact.linii.filter(l=>l.cant>0).reduce((s,l)=>s+l.cant,0)} buc)</button>
           <button onClick={()=>{setFact(null);}} style={btn(false)}>Renunță</button>
           <span style={{fontSize:11,color:C.textMuted}}>Transportul și discountul din factură sunt ignorate.</span>
         </div>
       </div>}
     </div>}
 
-    {panou==="manual"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
+    {view==="inventar"&&panou==="manual"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
       <div style={lblS}>Intrare / ieșire manuală</div>
       <input value={mf.q} onChange={e=>setMf(p=>({...p,q:e.target.value}))} placeholder="Caută produs (cod, denumire, bază...)" style={{...inpS,marginTop:8}}/>
       <select value={mf.itemId} onChange={e=>setMf(p=>({...p,itemId:e.target.value}))} style={{...inpS,marginTop:6}}>
@@ -5728,7 +5799,12 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
         return <CardCmd key={c.id} c={c}/>; })}
       {(view==="comenzi"?cmdActive:cmdFin).length===0&&!cmdNoua&&!cmdOferta&&<div style={{padding:"24px 0",fontSize:13,color:C.textMuted}}>{view==="comenzi"?"Nicio comandă activă.":"Nicio comandă finalizată."}</div>}
     </div>}
-    {!esteCmd&&<div>
+    {esteMarfa&&<div>
+      {factAst.length===0&&<div style={{padding:"18px 0",fontSize:13,color:C.textMuted}}>Nicio factură de validat. Facturile încărcate apar aici; stocul se modifică doar după validare.</div>}
+      {factAst.map(renderFactura)}
+      {factVal.length>0&&<div style={{marginTop:20}}><div style={{...lblS,marginBottom:8}}>Facturi validate ({factVal.length})</div>{factVal.map(renderFactura)}</div>}
+    </div>}
+    {!esteCmd&&!esteMarfa&&<div>
     <div style={{overflowX:"auto"}}>
     <div style={{minWidth:790,width:"fit-content",maxWidth:"100%"}}>
       <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"6px 8px 2px",...lblS}}>
@@ -5742,9 +5818,9 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
         <select value={fAmb} onChange={e=>setFAmb(e.target.value)} style={inpS}><option value="">toate</option>{ambOpt.map(o=><option key={o} value={String(o)}>{fmtAmb(o)}</option>)}</select>
         <button onClick={reset} style={{...btn(false),padding:"6px 8px",fontSize:11}}>Resetează filtre</button>
       </div>
-      {filtrat.length===0&&<div style={{padding:"24px 8px",fontSize:13,color:C.textMuted}}>{view==="inventar"?"Niciun produs cu stoc pentru filtrele alese.":"Niciun produs găsit."}</div>}
+      {filtrat.length===0&&<div style={{padding:"24px 8px",fontSize:13,color:C.textMuted}}>{view==="inventar"?"Niciun produs pentru filtrele alese.":"Niciun produs găsit."}</div>}
       {filtrat.map(x=><React.Fragment key={x.id}>
-        <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:fisaId===x.id?"none":`1px solid ${C.border}`,background:x.stoc<0?"#F6E3DF":fisaId===x.id?C.bg:"transparent",borderLeft:x.stoc<0?"3px solid #B3261E":"3px solid transparent"}}>
+        <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"8px",alignItems:"center",fontSize:13,color:C.text,borderBottom:fisaId===x.id?"none":`1px solid ${C.border}`,background:x.stoc<0?"#F6E3DF":fisaId===x.id?C.bg:"transparent",borderLeft:x.stoc<0?"3px solid #B3261E":"3px solid transparent",opacity:(view==="inventar"&&x.stoc===0)?0.6:1}}>
           <div style={{fontWeight:600}}>{x.cod}</div>
           <div>{x.den}{view==="nomenclator"&&x.pret!=null&&<span style={{color:C.textMuted,fontSize:11}}> · {x.pret} lei</span>}{x.extra&&<span style={{color:C.textMuted,fontSize:11}}> · lipsă din lista Murali</span>}</div>
           <div style={{whiteSpace:"nowrap"}}>{x.baza||"—"}</div>
