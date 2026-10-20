@@ -10236,6 +10236,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   const [edit,setEdit]=React.useState(null);
   const [tr,setTr]=React.useState(null);
   const [d112,setD112]=React.useState(null);
+  const [sesBif,setSesBif]=React.useState([]);
   const [splitKey,setSplitKey]=React.useState(null);
   const [spl,setSpl]=React.useState([]);
   const [ef,setEf]=React.useState({debit:"",credit:"",expl:"",regula:true});
@@ -10300,7 +10301,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     if(!lin.length||Math.abs(tot-Math.abs(t.amount))>0.004){ alert("Suma liniilor ("+bancaSuma(tot)+") trebuie să fie egală cu plata ("+bancaSuma(Math.abs(t.amount))+")."); return; }
     setOvr(o=>({...o,[t.key]:{split:lin}})); setSplitKey(null);
   };
-  const noi=parsed?parsed.tx.filter(t=>!procSet.has(t.key)):[];
+  const noi=parsed?parsed.tx.filter(t=>!procSet.has(t.key)||sesBif.includes(t.key)):[];
   const sarite=parsed?parsed.tx.length-noi.length:0;
   const trez=parsed?noi.filter(t=>/TREZ/.test(t.text)&&!/TVA LUNAR/.test(t.text)&&!(ovr[t.key]&&!ovr[t.key].split)).sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date))||Math.abs(b.amount)-Math.abs(a.amount)):[];
   const trezSet=new Set(trez.map(t=>t.key));
@@ -10340,15 +10341,22 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     const rec=(t,tip,c)=>({ref:t.ref,data:bancaIso(t.date),suma:Math.round(t.amount*100)/100,tip,debit:c?c.debit:"",credit:c?c.credit:"",explicatie:c?c.expl:"",exportId:id,procesatLa:acum,procesatDe:authEmail||""});
     const recs=[]; const vz=new Set();
     built.note.forEach(n=>n.tx.forEach(t=>{ if(vz.has(t.key)) return; vz.add(t.key); recs.push(rec(t,"nota",{debit:n.debit,credit:n.credit,expl:n.expl})); }));
-    built.gestiune.forEach(g=>{ if(!vz.has(g.t.key)){ vz.add(g.t.key); recs.push(rec(g.t,"gestiune")); }});
     built.excluded.forEach(t=>{ if(!vz.has(t.key)){ vz.add(t.key); recs.push(rec(t,"in_transart")); }});
     const sufix=d1+"_"+d2;
     let fisiere=[];
     if(built.note.length){ bancaDescarca("note_banca_"+sufix+".tsv",bancaTsv(built.note),"text/tab-separated-values;charset=utf-8"); fisiere.push("note_banca_"+sufix+".tsv"); }
-    if(built.gestiune.length){ if(bancaXlsxGestiune(built.gestiune,"gestiune_"+sufix+".xlsx")) fisiere.push("gestiune_"+sufix+".xlsx"); }
+    const gestDeFacut=built.gestiune.filter(g=>!procSet.has(g.t.key));
+    if(gestDeFacut.length){ if(bancaXlsxGestiune(gestDeFacut,"gestiune_"+sufix+".xlsx")) fisiere.push("gestiune_"+sufix+".xlsx"); }
     setProcesate([...proc,...recs]);
     setParsed(null);setOvr({});setEdit(null);
-    setMsg("Gata. Am marcat "+recs.length+" tranzacții (note + gestiune) ca procesate; cele manuale rămân în listă (export "+id+"). Fișiere descărcate: "+(fisiere.join(", ")||"niciunul")+".");
+    setMsg("Gata. Am marcat "+recs.length+" tranzacții (note + deja în Transart) ca procesate; manualele și gestiunea rămân în listă până le bifezi (export "+id+"). Fișiere descărcate: "+(fisiere.join(", ")||"niciunul")+".");
+  };
+  const toggleGest=(t)=>{
+    if(procSet.has(t.key)){ setProcesate(proc.filter(p=>(p.ref+"|"+p.data+"|"+Number(p.suma).toFixed(2))!==t.key)); }
+    else{
+      setProcesate([...proc,{ref:t.ref,data:bancaIso(t.date),suma:Math.round(t.amount*100)/100,tip:"gestiune_operat",debit:"",credit:"",explicatie:"",exportId:"gestiune-operate",procesatLa:new Date().toISOString(),procesatDe:authEmail||""}]);
+      setSesBif(s=>s.includes(t.key)?s:[...s,t.key]);
+    }
   };
   const rezolva=(t)=>{
     setProcesate([...proc,{ref:t.ref,data:bancaIso(t.date),suma:Math.round(t.amount*100)/100,tip:"manual",debit:"",credit:"",explicatie:"",exportId:"manual-rezolvate",procesatLa:new Date().toISOString(),procesatDe:authEmail||""}]);
@@ -10358,7 +10366,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     if(!window.confirm("Anulezi exportul "+id+"? Cele "+n+" tranzacții redevin neprocesate și vor apărea din nou la următoarea încărcare de extras.")) return;
     setProcesate(proc.filter(p=>p.exportId!==id));
   };
-  const exporturi=Object.values(proc.reduce((a,p)=>{(a[p.exportId]=a[p.exportId]||{id:p.exportId,la:p.procesatLa,de:p.procesatDe,nota:0,manual:0,gestiune:0})[p.tip]++;return a;},{})).sort((a,b)=>String(b.la).localeCompare(String(a.la)));
+  const exporturi=Object.values(proc.reduce((a,p)=>{(a[p.exportId]=a[p.exportId]||{id:p.exportId,la:p.procesatLa,de:p.procesatDe,nota:0,manual:0,gestiune:0,in_transart:0})[p.tip==="gestiune_operat"?"gestiune":p.tip]++;return a;},{})).sort((a,b)=>String(b.la).localeCompare(String(a.la)));
 
   const RowReclas=({t})=>edit===t.key?<div style={{padding:"10px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:8,alignItems:"end"}}>
@@ -10486,20 +10494,34 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
           </div>
 
           <div style={card}>
-            <div style={lbl}>Gestiune ({built.gestiune.length}) — informativ, se operează din gestiune; merge în Excel</div>
-            {["incasari","plati","card"].map(sec=>{const L=built.gestiune.filter(g=>g.sectiune===sec);return <div key={sec} style={{marginTop:10}}>
-              <div style={{fontSize:12,fontWeight:600,color:C.text}}>{gS[sec]} · {L.length} · total {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei</div>
-              {L.length>0&&<details style={{marginTop:4}}><summary style={{fontSize:11,color:C.textMuted,cursor:"pointer"}}>arată tranzacțiile</summary>
-                <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>{L.map(g=><LinieTx key={g.t.key} t={g.t} extra={bancaDetalii(g.t,["Incasare","Transfer ING Business","Plata bilet la ordin","Cumparare POS"])} butonReclas={true}/>)}</div></div></details>}
-            </div>;})}
+            {(()=>{
+              const nef=built.gestiune.filter(g=>!procSet.has(g.t.key)).length;
+              return <div style={lbl}>Gestiune — de operat în gestiune: {nef} din {built.gestiune.length} (bifezi „Operat” pe măsură ce le introduci; bifa se păstrează)</div>;
+            })()}
+            {["incasari","plati","card"].map(sec=>{
+              const L=built.gestiune.filter(g=>g.sectiune===sec).sort((a,b)=>bancaIso(a.t.date).localeCompare(bancaIso(b.t.date)));
+              const nefL=L.filter(g=>!procSet.has(g.t.key));
+              const titlu={incasari:"Clienți — încasări",plati:"Furnizori — plăți",card:"Bonuri — plăți cu cardul"}[sec];
+              return <div key={sec} style={{marginTop:14}}>
+                <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:4}}>{titlu} · de operat {nefL.length}/{L.length} · {bancaSuma(nefL.reduce((s,g)=>s+g.t.amount,0))} lei</div>
+                {L.length===0?<div style={{fontSize:12,color:C.textMuted}}>Nimic.</div>:
+                <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
+                  {L.map(g=>{const t=g.t;const gata=procSet.has(t.key);const det=sec==="incasari"?bancaDetalii(t,["Incasare"]):sec==="plati"?bancaDetalii(t,["Transfer ING Business","Plata bilet la ordin"]):"";
+                    return <label key={t.key} style={{display:"grid",gridTemplateColumns:"28px 84px 1.4fr 100px 1.6fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,cursor:"pointer",textDecoration:gata?"line-through":"none",background:gata?C.bg:"transparent"}}>
+                      <input type="checkbox" checked={gata} onChange={()=>toggleGest(t)} style={{width:16,height:16}}/>
+                      <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
+                      <div style={{textAlign:"right"}}>{bancaSuma(t.amount)}</div><div style={{fontSize:11,color:C.textSub}}>{det}</div>
+                    </label>;})}
+                </div></div>}
+              </div>;})}
           </div>
 
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-            <button onClick={exporta} disabled={!parsed.verif.ok} style={{...btn(true),opacity:parsed.verif.ok?1:0.45,cursor:parsed.verif.ok?"pointer":"not-allowed"}}>Confirmă și exportă ({built.note.length} note · {built.gestiune.length} gestiune; {built.manual.length} manuale rămân în listă)</button>
+            <button onClick={exporta} disabled={!parsed.verif.ok} style={{...btn(true),opacity:parsed.verif.ok?1:0.45,cursor:parsed.verif.ok?"pointer":"not-allowed"}}>Confirmă și exportă ({built.note.length} note; manualele și gestiunea rămân în listă până le bifezi)</button>
             <button onClick={()=>bancaTiparesteLista(built,perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește ce am de făcut</button>
-            <button onClick={()=>bancaTiparesteGestiune(built.gestiune,perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește gestiune (clienți, furnizori, card)</button>
+            <button onClick={()=>bancaTiparesteGestiune(built.gestiune.filter(g=>!procSet.has(g.t.key)),perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește gestiune (clienți, furnizori, card)</button>
             <button onClick={()=>{setParsed(null);setOvr({});}} style={btn(false)}>Renunță</button>
-            <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul de gestiune și marchează ca procesate doar notele și gestiunea. Cele manuale rămân până le marchezi „Rezolvat”.</span>
+            <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul cu ce a rămas de operat în gestiune. Marchează ca procesate doar notele. Manualele („Rezolvat”) și gestiunea (bifa „Operat”) rămân până le bifezi.</span>
           </div>
         </div>}
       </div>}
