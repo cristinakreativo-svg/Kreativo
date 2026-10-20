@@ -10155,7 +10155,6 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     const rec=(t,tip,c)=>({ref:t.ref,data:bancaIso(t.date),suma:Math.round(t.amount*100)/100,tip,debit:c?c.debit:"",credit:c?c.credit:"",explicatie:c?c.expl:"",exportId:id,procesatLa:acum,procesatDe:authEmail||""});
     const recs=[];
     built.note.forEach(n=>n.tx.forEach(t=>recs.push(rec(t,"nota",{debit:n.debit,credit:n.credit,expl:n.expl}))));
-    built.manual.forEach(m=>recs.push(rec(m.t,"manual")));
     built.gestiune.forEach(g=>recs.push(rec(g.t,"gestiune")));
     const sufix=d1+"_"+d2;
     let fisiere=[];
@@ -10163,7 +10162,10 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     if(built.gestiune.length){ if(bancaXlsxGestiune(built.gestiune,"gestiune_"+sufix+".xlsx")) fisiere.push("gestiune_"+sufix+".xlsx"); }
     setProcesate([...proc,...recs]);
     setParsed(null);setOvr({});setEdit(null);
-    setMsg("Gata. Am marcat "+recs.length+" tranzacții ca procesate (export "+id+"). Fișiere descărcate: "+(fisiere.join(", ")||"niciunul")+".");
+    setMsg("Gata. Am marcat "+recs.length+" tranzacții (note + gestiune) ca procesate; cele manuale rămân în listă (export "+id+"). Fișiere descărcate: "+(fisiere.join(", ")||"niciunul")+".");
+  };
+  const rezolva=(t)=>{
+    setProcesate([...proc,{ref:t.ref,data:bancaIso(t.date),suma:Math.round(t.amount*100)/100,tip:"manual",debit:"",credit:"",explicatie:"",exportId:"manual-rezolvate",procesatLa:new Date().toISOString(),procesatDe:authEmail||""}]);
   };
   const anuleazaExport=(id)=>{
     const n=proc.filter(p=>p.exportId===id).length;
@@ -10182,12 +10184,13 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     </div>
     <label style={{display:"flex",gap:8,alignItems:"center",fontSize:12,color:C.textSub,marginTop:8,cursor:"pointer"}}><input type="checkbox" checked={ef.regula} onChange={e=>setEf(p=>({...p,regula:e.target.checked}))}/>Salvează ca regulă nouă: tot ce conține „{t.who}” se contează la fel (pe tranzacție)</label>
   </div>:null;
-  const LinieTx=({t,extra,butonReclas})=><React.Fragment>
+  const LinieTx=({t,extra,butonReclas,butonRezolva})=><React.Fragment>
     <div style={{display:"grid",gridTemplateColumns:"84px 1.4fr 100px 1.6fr auto",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:edit===t.key?"none":`1px solid ${C.border}`}}>
       <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
       <div style={{textAlign:"right",color:t.amount<0?"#A04030":C.text}}>{bancaSuma(t.amount)}</div>
       <div style={{color:C.textSub,fontSize:11}}>{extra}</div>
       {butonReclas&&<button onClick={()=>{setEdit(edit===t.key?null:t.key);setEf({debit:"",credit:"5121.000",expl:t.who,regula:true});}} style={{...btn(false),padding:"4px 10px",fontSize:11}}>Reclasifică</button>}
+      {butonRezolva&&<button onClick={()=>rezolva(t)} style={{...btn(false),padding:"4px 10px",fontSize:11,marginLeft:6}}>Rezolvat</button>}
     </div>
     <RowReclas t={t}/>
   </React.Fragment>;
@@ -10236,10 +10239,10 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
           </div>
 
           <div style={card}>
-            <div style={lbl}>Operare manuală ({built.manual.length}) — nu se exportă ca note</div>
+            <div style={lbl}>Operare manuală ({built.manual.length}) — nu se exportă; rămân aici la fiecare încărcare până apeși „Rezolvat”</div>
             {built.manual.length===0?<div style={{fontSize:12,color:C.textMuted,marginTop:8}}>Nimic de operat manual.</div>:
             <div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
-              {built.manual.map(m=><LinieTx key={m.t.key} t={m.t} extra={m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):"")} butonReclas={true}/>)}
+              {built.manual.map(m=><LinieTx key={m.t.key} t={m.t} extra={m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):"")} butonReclas={true} butonRezolva={true}/>)}
             </div></div>}
           </div>
 
@@ -10253,9 +10256,9 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
           </div>
 
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-            <button onClick={exporta} disabled={!parsed.verif.ok} style={{...btn(true),opacity:parsed.verif.ok?1:0.45,cursor:parsed.verif.ok?"pointer":"not-allowed"}}>Confirmă și exportă ({built.note.length} note · {built.manual.length} manuale · {built.gestiune.length} gestiune)</button>
+            <button onClick={exporta} disabled={!parsed.verif.ok} style={{...btn(true),opacity:parsed.verif.ok?1:0.45,cursor:parsed.verif.ok?"pointer":"not-allowed"}}>Confirmă și exportă ({built.note.length} note · {built.gestiune.length} gestiune; {built.manual.length} manuale rămân în listă)</button>
             <button onClick={()=>{setParsed(null);setOvr({});}} style={btn(false)}>Renunță</button>
-            <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul de gestiune și marchează toate cele {noi.length} tranzacții ca procesate.</span>
+            <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul de gestiune și marchează ca procesate doar notele și gestiunea. Cele manuale rămân până le marchezi „Rezolvat”.</span>
           </div>
         </div>}
       </div>}
