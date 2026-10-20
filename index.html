@@ -6498,7 +6498,10 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const valoareBenziManopera=(pr)=>esteStorRoman(pr)?mpStor(pr)*(Number(pr.pretBenziManopera)||0)*(Number(pr.cantitate)||1):0;
   const valoareMecanism=(pr)=>esteStorRoman(pr)?(Number(pr.latimeStorCm)||0)/100*(Number(pr.pretMecanism)||0)*(Number(pr.cantitate)||1):0;
   const valoareLining=(pr)=>esteStorRomanOpac(pr)?(Number(pr.cantitateLining)||0)*(Number(pr.pretLining)||0):0;
+  const montajGen=(pr)=>esteRulou(pr)||pr.tip==="altele"||pr.tip==="stor"||pr.tip==="stor roman electric";
+  const montajGenOn=(pr)=>montajGen(pr)&&pr.montajInclus===true;
   const valoareMontaj=(pr)=>{
+    if(montajGen(pr)) return pr.montajInclus===true?(Number(pr.cantitate)||1)*(Number(pr.pretMontaj)||0):0;
     if(pr.tip==="șină") return pr.montajInclus!==false?(Number(pr.pretMontaj)||0):0;
     return (esteSina(pr)||estePliseu(pr)||esteJaluzea(pr)||esteStorRoman(pr))&&pr.montajInclus!==false?(Number(pr.cantitate)||1)*(Number(pr.pretMontaj)||0):0;
   };
@@ -6526,6 +6529,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const tipCol=(t)=>{ const c=cap(t); return c==="Altele"?"":(c||"—"); };
   const tipTotal=(t)=>{ const c=cap(t); return c==="Altele"?"Produse":(c||"Produse"); };
   const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
+const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Montaj</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
+    const rTotalG=(pr)=>`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
     const randProdusOferta=(pr)=>{
       if(esteSinaManuala(pr)){
         const mSina=(Number(pr.lungimeSinaManCm)||0)/100;
@@ -6534,7 +6539,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
       }
       if(esteRulou(pr)){
         const dimR=(pr.latimeRulouCm&&pr.inaltimeRulouCm)?` (${pr.latimeRulouCm}×${pr.inaltimeRulouCm} cm)`:"";
-        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}${dimR}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(Number(pr.pretUnitar)||0,true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+        const rRulou=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}${dimR}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(Number(pr.pretUnitar)||0,true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(montajGenOn(pr)?mv(valoareMaterial(pr)):valoareLinieM(pr))}</td></tr>`;
+        return montajGenOn(pr)?rRulou+rMontajG(pr)+rTotalG(pr):rRulou;
       }
       if(esteSina(pr)){
         const lungimeAfisata=lungimeExactaSina(pr)?`${lungimeExactaSina(pr)} m`:"—";
@@ -6578,6 +6584,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
           const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
           return rMaterial+rMontajSina+rTotalSina;
         }
+        if(montajGenOn(pr)) return rMaterial+rMontajG(pr)+rTotalG(pr);
         return rMaterial;
       }
       const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateBandaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretBanda||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareBanda(pr)))}</td></tr>`;
@@ -7123,6 +7130,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
               <option value="Creață">Creață</option>
             </select>
           </div>}
+          {montajGen(pr)&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,flexWrap:"wrap"}}>
+            <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+              <input type="checkbox" checked={pr.montajInclus===true} onChange={e=>updProdus(c.id,pr.id,"montajInclus",e.target.checked)}/>
+              <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
+            </label>
+            <input value={pr.pretMontaj||""} disabled={pr.montajInclus!==true} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} placeholder="lei/buc" style={{...selStyle,width:70,opacity:pr.montajInclus!==true?0.5:1}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/buc × cantitate (completezi tu)</span>
+          </div>}
           {pr.tip==="șină"&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,flexWrap:"wrap"}}>
             <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
               <input type="checkbox" checked={pr.montajInclus!==false} onChange={e=>updProdus(c.id,pr.id,"montajInclus",e.target.checked)}/>
@@ -7380,6 +7395,14 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
             <span>Preț unitar introdus manual (nu se ia din listă).</span>
             {Number(pr.latimeRulouCm)>0&&Number(pr.inaltimeRulouCm)>0&&<span style={{marginLeft:"auto"}}>{((Number(pr.latimeRulouCm)/100)*(Number(pr.inaltimeRulouCm)/100)).toFixed(2)} m² / buc.</span>}
           </div>
+          {montajGen(pr)&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,flexWrap:"wrap"}}>
+            <label style={{display:"flex",alignItems:"center",gap:5,cursor:"pointer"}}>
+              <input type="checkbox" checked={pr.montajInclus===true} onChange={e=>updProdus(c.id,pr.id,"montajInclus",e.target.checked)}/>
+              <span style={{fontSize:11,color:C.textMuted}}>Montaj:</span>
+            </label>
+            <input value={pr.pretMontaj||""} disabled={pr.montajInclus!==true} onChange={e=>updProdus(c.id,pr.id,"pretMontaj",e.target.value)} placeholder="lei/buc" style={{...selStyle,width:70,opacity:pr.montajInclus!==true?0.5:1}}/>
+            <span style={{fontSize:11,color:C.textMuted}}>lei/buc × cantitate (completezi tu)</span>
+          </div>}
           </>}
           {estePliseu(pr)&&<>
           <div style={{display:"grid",gridTemplateColumns:"90px 1fr 90px 90px 80px auto",gap:8,alignItems:"center"}}>
