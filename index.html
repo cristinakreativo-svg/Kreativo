@@ -10255,10 +10255,11 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     }catch(e){ setD112({nume:file.name,sume:{},eroare:(e&&e.message)||String(e)}); }
   };
   // cât din D112 e deja alocat în împărțirile din ecran (pe cont)
-  const alocat=(cont,exceptKey)=>Object.keys(ovr).reduce((s,k)=>k===exceptKey||!ovr[k].split?s:s+ovr[k].split.filter(l=>l.debit===cont).reduce((x,l)=>x+(Number(l.suma)||0),0),0);
+  const alocatDin=(o,cont,exceptKey)=>Object.keys(o).reduce((s,k)=>k===exceptKey||!o[k].split?s:s+o[k].split.filter(l=>l.debit===cont).reduce((x,l)=>x+(Number(l.suma)||0),0),0);
+  const alocat=(cont,exceptKey)=>alocatDin(ovrEff,cont,exceptKey);
   const deschideSplit=(t)=>{
     setEdit(null); setSplitKey(t.key);
-    const ex=ovr[t.key]&&ovr[t.key].split;
+    const ex=ovrEff[t.key]&&ovrEff[t.key].split;
     const lines=Object.entries(BANCA_D112_CONT).map(([cod,[cont,expl]])=>{const l=ex&&ex.find(z=>z.debit===cont);return {cod,debit:cont,credit:"5121.000",expl:l?l.expl:expl,suma:l?String(l.suma):""};});
     setSpl(lines);
   };
@@ -10279,7 +10280,23 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   };
   const noi=parsed?parsed.tx.filter(t=>!procSet.has(t.key)):[];
   const sarite=parsed?parsed.tx.length-noi.length:0;
-  const built0=parsed?bancaConstruieste(noi,efRules,ovr):null;
+  const trez=parsed?noi.filter(t=>/TREZ/.test(t.text)&&!/TVA LUNAR/.test(t.text)&&!(ovr[t.key]&&!ovr[t.key].split)).sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date))||Math.abs(b.amount)-Math.abs(a.amount)):[];
+  const trezSet=new Set(trez.map(t=>t.key));
+  const ovrEff=(()=>{
+    const o={...ovr};
+    if(!parsed||!d112||d112.eroare) return o;
+    const rem={}; Object.entries(BANCA_D112_CONT).forEach(([cod,[cont]])=>{rem[cont]=Math.round(((d112.sume[cod]||0)-alocatDin(ovr,cont))*100)/100;});
+    for(const t of trez){
+      if(ovr[t.key]) continue;
+      let r=Math.abs(t.amount); const lines=[]; const nou={};
+      for(const [cod,[cont,expl]] of Object.entries(BANCA_D112_CONT)){
+        const v=Math.min(Math.max(0,rem[cont]),r); if(v>0){ lines.push({debit:cont,credit:"5121.000",expl,suma:Math.round(v*100)/100}); nou[cont]=v; r=Math.round((r-v)*100)/100; }
+      }
+      if(r<0.005&&lines.length){ o[t.key]={split:lines,auto:true}; Object.keys(nou).forEach(c=>{rem[c]=Math.round((rem[c]-nou[c])*100)/100;}); }
+    }
+    return o;
+  })();
+  const built0=parsed?bancaConstruieste(noi,efRules,ovrEff):null;
   const built=built0?(tr&&tr.rows.length?bancaExclude(built0,tr.rows):{...built0,excluded:[]}):null;
   const isoDates=noi.map(t=>bancaIso(t.date)).sort();
   const d1=isoDates[0],d2=isoDates[isoDates.length-1];
@@ -10406,17 +10423,38 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
               <div style={{display:"grid",gridTemplateColumns:"84px 90px 90px 100px 1fr 60px",gap:8,padding:"4px 8px",...lbl}}><div>Data</div><div>Debit</div><div>Credit</div><div style={{textAlign:"right"}}>Sumă</div><div>Explicație</div><div style={{textAlign:"center"}}>Tranz.</div></div>
               {built.note.map((n,i)=><div key={i} style={{display:"grid",gridTemplateColumns:"84px 90px 90px 100px 1fr 60px",gap:8,padding:"6px 8px",borderTop:`1px solid ${C.border}`,fontSize:12,color:C.text,alignItems:"center"}}>
                 <div>{n.date}</div><div>{n.debit}</div><div>{n.credit}</div><div style={{textAlign:"right",fontWeight:600}}>{bancaSuma(n.suma)}</div>
-                <div>{n.expl}{n.tx.length===1&&ovr[n.tx[0].key]&&<span style={{marginLeft:8,fontSize:10,color:"#8A5A00"}}>reclasificat · <a onClick={()=>setOvr(o=>{const c={...o};delete c[n.tx[0].key];return c;})} style={{cursor:"pointer",textDecoration:"underline"}}>anulează</a></span>}</div>
+                <div>{n.expl}{n.tx.length===1&&ovrEff[n.tx[0].key]&&ovrEff[n.tx[0].key].split&&<span style={{marginLeft:8,fontSize:10,color:"#8A5A00"}}>împărțit{ovrEff[n.tx[0].key].auto?" automat din D112":""}</span>}{n.tx.length===1&&ovr[n.tx[0].key]&&!ovr[n.tx[0].key].split&&<span style={{marginLeft:8,fontSize:10,color:"#8A5A00"}}>reclasificat · <a onClick={()=>setOvr(o=>{const c={...o};delete c[n.tx[0].key];return c;})} style={{cursor:"pointer",textDecoration:"underline"}}>anulează</a></span>}</div>
                 <div style={{textAlign:"center",color:C.textMuted}}>{n.tx.length}</div>
               </div>)}
             </div></div>}
           </div>
 
+          {trez.length+Object.keys(ovr).filter(k=>ovr[k].split).length>0&&<div style={card}>
+            <div style={lbl}>Trezorerie — plăți către buget, împărțite pe note cu D112</div>
+            {(()=>{
+              const toate=parsed.tx.filter(t=>!procSet.has(t.key)&&(trezSet.has(t.key)||(ovr[t.key]&&ovr[t.key].split)));
+              const totPlati=Math.round(toate.reduce((s,t)=>s+Math.abs(t.amount),0)*100)/100;
+              const totAloc=Math.round(toate.reduce((s,t)=>{const o=ovrEff[t.key];return s+(o&&o.split?o.split.reduce((x,l)=>x+l.suma,0):0);},0)*100)/100;
+              const dOk=d112&&!d112.eroare;
+              return <div>
+                {!dOk&&<div style={{fontSize:12,color:"#8A5A00",margin:"8px 0"}}>Încarcă D112 (câmpul de sus) ca să se împartă automat. Până atunci plățile rămân de operat manual.</div>}
+                <div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
+                  {toate.map(t=>{const o=ovrEff[t.key];return <LinieTx key={t.key} t={t} butonSplit={true} extra={o&&o.split?o.split.map(l=>l.debit+" = "+bancaSuma(l.suma)).join(" · "):"nu s-a putut împărți din D112"}/>;})}
+                </div></div>
+                {dOk&&<div style={{marginTop:10,fontSize:12,lineHeight:1.7}}>
+                  <div style={{fontWeight:600,color:C.text}}>Verificare față de D112{d112.luna?" luna "+d112.luna+"/"+d112.an:""}:</div>
+                  {Object.entries(BANCA_D112_CONT).map(([cod,[cont,expl]])=>{const dv=d112.sume[cod]||0;const al=Math.round(alocat(cont)*100)/100;const ok=Math.abs(dv-al)<0.005;
+                    return <div key={cod} style={{color:ok?"#2F6B2F":"#8A2A1C"}}>{ok?"✓":"⚠"} {cont} {expl}: D112 {bancaSuma(dv)} · alocat {bancaSuma(al)}{ok?"":" · diferență "+bancaSuma(dv-al)+(cont==="436"?" (CAM probabil se plătește separat, nu e în acest extras)":"")}</div>;})}
+                  <div style={{color:Math.abs(totPlati-totAloc)<0.005?"#2F6B2F":"#8A2A1C",fontWeight:600}}>{Math.abs(totPlati-totAloc)<0.005?"✓":"⚠"} Plăți în extras {bancaSuma(totPlati)} · împărțite pe note {bancaSuma(totAloc)}{Math.abs(totPlati-totAloc)<0.005?"":" · NEîmpărțit "+bancaSuma(totPlati-totAloc)+" — apasă „Împarte” pe plată și corectează manual"}</div>
+                </div>}
+              </div>;})()}
+          </div>}
+
           <div style={card}>
-            <div style={lbl}>Operare manuală ({built.manual.length}) — nu se exportă; rămân aici la fiecare încărcare până apeși „Rezolvat”</div>
-            {built.manual.length===0?<div style={{fontSize:12,color:C.textMuted,marginTop:8}}>Nimic de operat manual.</div>:
+            <div style={lbl}>Operare manuală ({built.manual.filter(m=>!trezSet.has(m.t.key)).length}) — nu se exportă; rămân aici la fiecare încărcare până apeși „Rezolvat”</div>
+            {built.manual.filter(m=>!trezSet.has(m.t.key)).length===0?<div style={{fontSize:12,color:C.textMuted,marginTop:8}}>Nimic de operat manual.</div>:
             <div style={{overflowX:"auto",marginTop:8}}><div style={{minWidth:640}}>
-              {built.manual.map(m=><LinieTx key={m.t.key} t={m.t} extra={m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):"")} butonReclas={true} butonRezolva={true} butonSplit={/^Trezorerie/.test(m.reason)}/>)}
+              {built.manual.filter(m=>!trezSet.has(m.t.key)).map(m=><LinieTx key={m.t.key} t={m.t} extra={m.reason+(m.t.lines[1]?" · "+m.t.lines.slice(1,3).join(" "):"")} butonReclas={true} butonRezolva={true} butonSplit={/^Trezorerie/.test(m.reason)}/>)}
             </div></div>}
           </div>
 
