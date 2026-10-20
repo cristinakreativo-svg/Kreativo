@@ -10150,6 +10150,27 @@ const bancaSuma=(x)=>(Number(x)||0).toLocaleString("ro-RO",{minimumFractionDigit
 function bancaDetalii(t,eticheteStandard){
   return t.lines.slice(1).filter(l=>!eticheteStandard.includes(l)&&!/^Referinta bancii/i.test(l)&&!/^[0-9a-f]{4,}(-[0-9a-f]{2,})+$/i.test(l)&&!/^RO\d{2}[A-Z]{4}\d+$/.test(l)&&!/^Nr\. Card:/i.test(l)&&!/^Data:\s*\d{2}-\d{2}-\d{4}/.test(l)).join(" ");
 }
+function bancaTiparesteLista(built,perioada,nume){
+  const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const f=(x)=>(Number(x)||0).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const man=built.manual.slice().sort((a,b)=>bancaIso(a.t.date).localeCompare(bancaIso(b.t.date)));
+  const note=built.note.slice().sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date)));
+  const rM=man.map(m=>`<tr><td>${esc(m.t.date)}</td><td>${esc(m.t.who)}</td><td class="n">${f(m.t.amount)}</td><td>${esc(m.reason)}${m.t.lines[1]?" · "+esc(m.t.lines.slice(1,3).join(" ")):""}</td><td class="box"></td></tr>`).join("");
+  const rN=note.map(n=>`<tr><td>${esc(n.date)}</td><td>${esc(n.debit)}</td><td>${esc(n.credit)}</td><td class="n">${f(n.suma)}</td><td>${esc(n.expl)}</td><td class="box"></td></tr>`).join("");
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — listă de operat</title><style>
+  @page{size:A4 landscape;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:12px}
+  h1{font-size:20px;margin:0 0 2px} h2{font-size:15px;margin:18px 0 6px} .meta{font-size:12px;color:#555;margin-bottom:6px}
+  table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:11px;padding:6px;border:1px solid #888}
+  td{border:1px solid #888;padding:6px;font-size:12px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.6cm;height:.9cm}
+  thead{display:table-header-group} tr{page-break-inside:avoid}</style></head><body>
+  <h1>Bancă — listă de operat</h1><div class="meta">${esc(nume||"")} · perioada ${esc(perioada||"")} · tipărit ${new Date().toLocaleDateString("ro-RO")}</div>
+  <h2>1. De rezolvat / operat manual (${man.length})</h2>
+  ${man.length?`<table><thead><tr><th>Data</th><th>Beneficiar / ordonator</th><th>Sumă (lei)</th><th>Ce trebuie făcut</th><th>Gata</th></tr></thead><tbody>${rM}</tbody></table>`:"<div>Nimic.</div>"}
+  <h2>2. Note contabile de introdus (${note.length})</h2>
+  ${note.length?`<table><thead><tr><th>Data</th><th>Debit</th><th>Credit</th><th>Sumă (lei)</th><th>Explicație</th><th>Gata</th></tr></thead><tbody>${rN}</tbody></table>`:"<div>Nimic.</div>"}
+  </body></html>`;
+  printHtmlDoc(html);
+}
 function bancaXlsxGestiune(gest,nume){
   if(typeof XLSX==="undefined"){ alert("Modulul Excel nu s-a încărcat (verifică conexiunea) — fișierul de gestiune nu s-a generat."); return false; }
   const aoa=[];
@@ -10340,6 +10361,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
 
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
             <button onClick={exporta} disabled={!parsed.verif.ok} style={{...btn(true),opacity:parsed.verif.ok?1:0.45,cursor:parsed.verif.ok?"pointer":"not-allowed"}}>Confirmă și exportă ({built.note.length} note · {built.gestiune.length} gestiune; {built.manual.length} manuale rămân în listă)</button>
+            <button onClick={()=>bancaTiparesteLista(built,perioadaExtras,parsed.nume)} style={btn(false)}>Tipărește lista (de rezolvat + note)</button>
             <button onClick={()=>{setParsed(null);setOvr({});}} style={btn(false)}>Renunță</button>
             <span style={{fontSize:11,color:C.textMuted}}>Descarcă TSV-ul cu note + Excelul de gestiune și marchează ca procesate doar notele și gestiunea. Cele manuale rămân până le marchezi „Rezolvat”.</span>
           </div>
