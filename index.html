@@ -34,6 +34,7 @@ input[type=checkbox]{accent-color:#C58A1B;}
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-thumb{background:#C9C6BE;border-radius:4px;}
 button{transition:opacity .15s,transform .1s;}
+button:focus:not(:focus-visible){outline:none;}
 button:hover{opacity:0.85;}
 button:active{transform:scale(0.98);}
 
@@ -11489,7 +11490,7 @@ function AppInner({authRole,authEmail,onLogout}) {
           <div style={{fontSize:9,color:"#8F9AB8",marginTop:8,letterSpacing:"0.08em"}}>✓ salvat</div>)}
       </div>
       <div style={{flex:1,padding:"14px 0"}}>
-        {GRUPURI.flatMap(g=>g.items).map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:"9px 20px",cursor:"pointer",border:"none",borderLeft:tab===t.id?`3px solid #C58A1B`:"3px solid transparent",background:tab===t.id?"#24375E":"transparent",color:tab===t.id?"#FFFFFF":"#C5CCE0",fontWeight:tab===t.id?600:500,fontSize:13,letterSpacing:"0.02em"}}>
+        {GRUPURI.flatMap(g=>g.items).map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:"9px 20px",cursor:"pointer",border:"none",borderLeft:tab===t.id?`3px solid #C58A1B`:"3px solid transparent",background:tab===t.id?"#24375E":"transparent",color:tab===t.id?"#F4C95D":"#C5CCE0",fontWeight:tab===t.id?600:500,fontSize:13,letterSpacing:"0.02em"}}>
             <span style={{flex:1}}>{t.l}</span>
             {t.id==="recurente"&&recAzi.length>0?<span style={{background:"#C58A1B",color:"#fff",fontSize:9,padding:"1px 6px",fontWeight:700}}>{recAzi.length}</span>:null}
           </button>)}
