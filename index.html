@@ -143,6 +143,7 @@ const CVM = "kreativo_vopsele_miscari_v1";
 const CVC = "kreativo_vopsele_comenzi_v1";
 const BKP = "kreativo_banca_procesate_v1";
 const BKR = "kreativo_banca_reguli_v1";
+const DCK = "kreativo_declaratii_v1";
 const AK = "kreativo_admin_v1";
 const PK = "kreativo_perdele_v1";
 const MIK = "kreativo_mit_v1";
@@ -10252,6 +10253,56 @@ function bancaXlsxGestiune(gest,nume){
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Gestiune"); XLSX.writeFile(wb,nume);
   return true;
 }
+const DECL_PASI=[
+  {id:"p1",t:"Introducere toate facturile interne",d:"Toate facturile de vânzare și de cumpărare din România ale lunii, introduse în contabilitate."},
+  {id:"p2",t:"Verificare introducere facturi externe",d:"Toate facturile fiscale de la furnizorii din afara României (fără proforme), după data facturii, sunt înregistrate."},
+  {id:"p3",t:"Verificare sold bancă lei",d:"Soldul din contabilitate pentru contul în lei este egal cu soldul din extrasul ING."},
+  {id:"p4",t:"Verificare sold bancă euro",d:"Soldul din contabilitate pentru contul în euro este egal cu soldul din extrasul ING."},
+  {id:"p5",t:"Verificare sold POS",d:"Soldul POS din contabilitate corespunde cu încasările din raportul POS."}
+];
+function DeclaratiiTab({declaratii,setDeclaratii,C,esteAdmin,mergiLa}){
+  const azi=tday();
+  const lunaPrec=(()=>{let y=+azi.slice(0,4),m=+azi.slice(5,7)-1;if(m<1){m=12;y-=1;}return y+"-"+String(m).padStart(2,"0");})();
+  const [luna,setLuna]=React.useState(lunaPrec);
+  const dl=(declaratii&&declaratii[luna])||{};
+  const facute=DECL_PASI.filter(x=>dl[x.id]&&dl[x.id].done).length;
+  const eticheta=(()=>{try{const[y,m]=luna.split("-");return new Date(+y,+m-1,1).toLocaleDateString("ro-RO",{month:"long",year:"numeric"});}catch(e){return luna;}})();
+  const setPas=(id,patch)=>setDeclaratii(p=>{const base=(p&&typeof p==="object")?p:{};const lunaV=base[luna]||{};return {...base,[luna]:{...lunaV,[id]:{...(lunaV[id]||{}),...patch}}};});
+  const bifeaza=(id)=>{const cur=dl[id]&&dl[id].done;setPas(id,cur?{done:false,la:""}:{done:true,la:azi});};
+  const goleste=()=>{if(!window.confirm("Debifezi toți pașii pentru "+eticheta+"?")) return;setDeclaratii(p=>{const n={...(p||{})};delete n[luna];return n;});};
+  const fmt=(iso)=>iso&&iso.length===10?iso.slice(8,10)+"."+iso.slice(5,7)+"."+iso.slice(0,4):"";
+  const gata=facute===DECL_PASI.length;
+  return <div>
+    <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Declarații — pașii lunii</div>
+    <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:16}}>
+      <label style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:500}}>Luna</label>
+      <input type="month" value={luna} onChange={e=>{if(e.target.value) setLuna(e.target.value);}} style={{padding:"7px 10px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:13,outline:"none"}}/>
+      <span style={{fontSize:13,color:C.textSub,textTransform:"capitalize"}}>{eticheta}</span>
+      <span style={{marginLeft:"auto",fontSize:12,fontWeight:600,color:gata?C.accent:C.textSub}}>{facute} / {DECL_PASI.length} pași{gata?" · gata":""}</span>
+    </div>
+    <div style={{background:C.border,height:4,marginBottom:18}}><div style={{width:`${facute/DECL_PASI.length*100}%`,height:4,background:C.accent,transition:"width .4s ease"}}/></div>
+    {DECL_PASI.map((x,i)=>{
+      const st=dl[x.id]||{};
+      const done=!!st.done;
+      return <div key={x.id} style={{background:C.surface,border:`1px solid ${C.border}`,padding:"14px 18px",marginBottom:10,opacity:done?0.85:1}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+          <input type="checkbox" checked={done} onChange={()=>bifeaza(x.id)} style={{width:20,height:20,marginTop:2,cursor:"pointer",accentColor:C.accent,flexShrink:0}}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:14,fontWeight:600,color:C.text,textDecoration:done?"line-through":"none"}}>{i+1}. {x.t}</div>
+            <div style={{fontSize:12,color:C.textMuted,marginTop:3}}>{x.d}</div>
+            {done&&st.la?<div style={{fontSize:11,color:C.accent,marginTop:5}}>✓ bifat pe {fmt(st.la)}</div>:null}
+            <input value={st.nota||""} onChange={e=>setPas(x.id,{nota:e.target.value})} placeholder="Notă (opțional)" style={{marginTop:8,padding:"6px 10px",border:`1px solid ${C.border}`,background:C.bg,color:C.text,fontSize:12,width:"100%",boxSizing:"border-box",outline:"none"}}/>
+          </div>
+        </div>
+      </div>;
+    })}
+    <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+      {esteAdmin&&<button onClick={()=>mergiLa("banca")} style={{padding:"8px 18px",border:"none",background:C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>Deschide Bancă →</button>}
+      <button onClick={goleste} style={{padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub}}>Debifează luna</button>
+    </div>
+  </div>;
+}
+
 function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   const [tab,setTab]=React.useState("incarcare");
   const [parsed,setParsed]=React.useState(null);
@@ -10639,6 +10690,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   const [vopseleComenzi,setVopseleComenzi]=useState([]);
   const [bancaProc,setBancaProc]=useState([]);
   const [bancaReguli,setBancaReguli]=useState([]);
+  const [declaratii,setDeclaratii]=useState({});
   const [raduModul,setRaduModul]=useState("vopsele");
   const [achizSub,setAchizSub]=useState("lista");
   const [catalogSine,setCatalogSine]=useState([]);
@@ -10889,6 +10941,7 @@ function AppInner({authRole,authEmail,onLogout}) {
             [CVC,(d)=>{setVopseleComenzi(Array.isArray(d)?d:[]);}],
             [BKP,(d)=>{setBancaProc(Array.isArray(d)?d:[]);}],
             [BKR,(d)=>{setBancaReguli(Array.isArray(d)?d:[]);}],
+            [DCK,(d)=>{setDeclaratii(d&&typeof d==="object"&&!Array.isArray(d)?d:{});}],
           ];
           // Toate cheile în paralel — nu una câte una — ca o singură cerere lentă (sau multe cereri, chiar dacă fiecare e rapidă)
           // să nu epuizeze singură bugetul de timp și să arunce toată aplicația fals în modul „offline · date locale".
@@ -10900,8 +10953,8 @@ function AppInner({authRole,authEmail,onLogout}) {
         console.log("Supabase indisponibil, încarc din localStorage:",e);
         setSupabaseOk(false);
         // Încarc din localStorage
-        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK,CVS,CVM,CVC,BKP,BKR];
-        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori,(v)=>setVopseleStoc(Array.isArray(v)&&v.length?vopNormFin(v):vopseleSeed()),(v)=>setVopseleMiscari(Array.isArray(v)?v:[]),(v)=>setVopseleComenzi(Array.isArray(v)?v:[]),(v)=>setBancaProc(Array.isArray(v)?v:[]),(v)=>setBancaReguli(Array.isArray(v)?v:[])];
+        const keys=[SK,CLK,AK,PK,MIK,JK,PLK,RK,MOK,IEK,INK,BLK,LGK,TRK,ENK,PRK,FLK,TDK,OBK,TCK,ZBK,OMK,RMK,CMK,CTK,PVK,MTK,OFK2,CSK,CPK,CJK,CCK,CSSK,CEXK,CSRE,CFK,CVS,CVM,CVC,BKP,BKR,DCK];
+        const setters=[setData,(v)=>setClients(v.map(c=>({...c,open:false}))),(v)=>setAdmin({contabilitate:[],administrativ:[],marketing:[],personal:[],...v}),setPerdele,setMit,setJurnal,setPlanMaine,setRecurente,setMotoare,setIesiri,setIntrari,setBilete,setLog,setTrezorerie,setEnergie,setProiecte,setFurnizoriLista,(v)=>setTudor(v.map(t=>({...t,open:false}))),setObiective,setTudorContacte,(v)=>setZileBlocate({nico:[],dan:[],tudor:[],...v}),(v)=>setObiectiveMari(v.map(o=>({...o,open:false}))),setRulouMateriale,setCamereLista,setContractCounter,setPvCounter,setCatalogMateriale,setOfertaCounter,setCatalogSine,setCatalogPlisse,setCatalogJaluzele,setCatalogCostComponente,setCatalogSinaSimpla,setComandaExecutieCounter,setCatalogStorRomanElectric,setComenziFurnizori,(v)=>setVopseleStoc(Array.isArray(v)&&v.length?vopNormFin(v):vopseleSeed()),(v)=>setVopseleMiscari(Array.isArray(v)?v:[]),(v)=>setVopseleComenzi(Array.isArray(v)?v:[]),(v)=>setBancaProc(Array.isArray(v)?v:[]),(v)=>setBancaReguli(Array.isArray(v)?v:[]),(v)=>setDeclaratii(v&&typeof v==="object"&&!Array.isArray(v)?v:{})];
         keys.forEach((k,i)=>{if(!keyAllowed(k)) return;const v=lsGet(k);if(v){setters[i](v);gotAnyData=true;}});
       }
       // PROTECȚIE CRITICĂ: dacă nu am obținut NICIO dată (nici Supabase, nici localStorage),
@@ -10917,7 +10970,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   },[]);
 
   // Setterii React per cheie — folosiți de sincronizare (îmbinare după salvare / reîmprospătare automată)
-  applyRef.current={[SK]:setData,[CLK]:setClients,[AK]:setAdmin,[PK]:setPerdele,[MIK]:setMit,[JK]:setJurnal,[PLK]:setPlanMaine,[RK]:setRecurente,[MOK]:setMotoare,[IEK]:setIesiri,[INK]:setIntrari,[BLK]:setBilete,[LGK]:setLog,[TRK]:setTrezorerie,[ENK]:setEnergie,[PRK]:setProiecte,[FLK]:setFurnizoriLista,[TDK]:setTudor,[OBK]:setObiective,[TCK]:setTudorContacte,[ZBK]:setZileBlocate,[OMK]:setObiectiveMari,[RMK]:setRulouMateriale,[CMK]:setCamereLista,[CTK]:setContractCounter,[PVK]:setPvCounter,[MTK]:setCatalogMateriale,[OFK2]:setOfertaCounter,[CEXK]:setComandaExecutieCounter,[CSK]:setCatalogSine,[CPK]:setCatalogPlisse,[CJK]:setCatalogJaluzele,[CCK]:setCatalogCostComponente,[CSSK]:setCatalogSinaSimpla,[CSRE]:setCatalogStorRomanElectric,[CFK]:setComenziFurnizori,[CVS]:setVopseleStoc,[CVM]:setVopseleMiscari,[CVC]:setVopseleComenzi,[BKP]:setBancaProc,[BKR]:setBancaReguli};
+  applyRef.current={[SK]:setData,[CLK]:setClients,[AK]:setAdmin,[PK]:setPerdele,[MIK]:setMit,[JK]:setJurnal,[PLK]:setPlanMaine,[RK]:setRecurente,[MOK]:setMotoare,[IEK]:setIesiri,[INK]:setIntrari,[BLK]:setBilete,[LGK]:setLog,[TRK]:setTrezorerie,[ENK]:setEnergie,[PRK]:setProiecte,[FLK]:setFurnizoriLista,[TDK]:setTudor,[OBK]:setObiective,[TCK]:setTudorContacte,[ZBK]:setZileBlocate,[OMK]:setObiectiveMari,[RMK]:setRulouMateriale,[CMK]:setCamereLista,[CTK]:setContractCounter,[PVK]:setPvCounter,[MTK]:setCatalogMateriale,[OFK2]:setOfertaCounter,[CEXK]:setComandaExecutieCounter,[CSK]:setCatalogSine,[CPK]:setCatalogPlisse,[CJK]:setCatalogJaluzele,[CCK]:setCatalogCostComponente,[CSSK]:setCatalogSinaSimpla,[CSRE]:setCatalogStorRomanElectric,[CFK]:setComenziFurnizori,[CVS]:setVopseleStoc,[CVM]:setVopseleMiscari,[CVC]:setVopseleComenzi,[BKP]:setBancaProc,[BKR]:setBancaReguli,[DCK]:setDeclaratii};
   // REÎMPROSPĂTARE AUTOMATĂ: la 30 s și când te întorci în filă, aducem ce au salvat alte dispozitive.
   // Cheile la care ai modificări netrimise sunt sărite (se îmbină la salvare). Cardurile deschise rămân deschise.
   const [ultimaSincro,setUltimaSincro]=useState(null);
@@ -10980,6 +11033,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   useEffect(()=>{if(loaded) sbSave(CVC,vopseleComenzi);},[vopseleComenzi,loaded]);
   useEffect(()=>{if(loaded) sbSave(BKP,bancaProc);},[bancaProc,loaded]);
   useEffect(()=>{if(loaded) sbSave(BKR,bancaReguli);},[bancaReguli,loaded]);
+  useEffect(()=>{if(loaded) sbSave(DCK,declaratii);},[declaratii,loaded]);
   useEffect(()=>{
     // Migrare unică: stocul de până acum devine „Stoc inițial” în fișa de magazie
     if(loaded&&vopseleMiscari.length===0&&vopseleStoc.some(x=>x.stoc)){
@@ -11169,7 +11223,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
         [RK]:recurente,[MOK]:motoare,
         [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi,[BKP]:bancaProc,[BKR]:bancaReguli
+        [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi,[BKP]:bancaProc,[BKR]:bancaReguli,[DCK]:declaratii
       }
     };
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
@@ -11226,7 +11280,7 @@ function AppInner({authRole,authEmail,onLogout}) {
           [PK]:perdele,[MIK]:mit,[JK]:jurnal,[PLK]:planMaine,
           [RK]:recurente,[MOK]:motoare,
           [IEK]:iesiri,[INK]:intrari,[BLK]:bilete,
-          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi,[BKP]:bancaProc,[BKR]:bancaReguli
+          [TRK]:trezorerie,[LGK]:log,[PRK]:proiecte,[FLK]:furnizoriLista,[TDK]:tudor,[OBK]:obiective,[TCK]:tudorContacte,[ZBK]:zileBlocate,[OMK]:obiectiveMari,[RMK]:rulouMateriale,[CMK]:camereLista,[CTK]:contractCounter,[PVK]:pvCounter,[MTK]:catalogMateriale,[OFK2]:ofertaCounter,[CSK]:catalogSine,[CPK]:catalogPlisse,[CJK]:catalogJaluzele,[CCK]:catalogCostComponente,[CSSK]:catalogSinaSimpla,[CEXK]:comandaExecutieCounter,[CSRE]:catalogStorRomanElectric,[CFK]:comenziFurnizori,[CVS]:vopseleStoc,[CVM]:vopseleMiscari,[CVC]:vopseleComenzi,[BKP]:bancaProc,[BKR]:bancaReguli,[DCK]:declaratii
         }
       };
       // Un fișier nou pe zi (kreativo_backup_2026-09-30.json) — nu se mai suprascrie fișierul de ieri.
@@ -11314,6 +11368,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         if(d[CVC]) setVopseleComenzi(Array.isArray(d[CVC])?d[CVC]:[]);
         if(d[BKP]) setBancaProc(Array.isArray(d[BKP])?d[BKP]:[]);
         if(d[BKR]) setBancaReguli(Array.isArray(d[BKR])?d[BKR]:[]);
+        if(d[DCK]&&typeof d[DCK]==="object"&&!Array.isArray(d[DCK])) setDeclaratii(d[DCK]);
         if(d[CVS]) setVopseleStoc(Array.isArray(d[CVS])?vopNormFin(d[CVS]):[]);
         if(d[OBK]) setObiective(d[OBK]);
         alert(`✓ Date importate din ${file.name} (v${p.version||1})`);
@@ -11403,7 +11458,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
     {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu"},{id:"recurente",l:"Recurente"}]},
-    {titlu:"Financiar",items:[{id:"trezorerie",l:"Cash Flow"},{id:"contabilitate",l:"Contabilitate"}].concat(authRole==="admin"?[{id:"banca",l:"Bancă"}]:[])},
+    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"}]:[]}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
 
@@ -11488,10 +11543,19 @@ function AppInner({authRole,authEmail,onLogout}) {
           <div style={{fontSize:9,color:C.textMuted,marginTop:8,letterSpacing:"0.08em"}}>✓ salvat</div>)}
       </div>
       <div style={{flex:1,padding:"14px 0"}}>
-        {GRUPURI.flatMap(g=>g.items).map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:"9px 20px",cursor:"pointer",border:"none",borderLeft:tab===t.id?`3px solid ${C.text}`:"3px solid transparent",background:tab===t.id?"#C4A882":"transparent",color:C.text,fontWeight:tab===t.id?600:500,fontSize:13,letterSpacing:"0.02em"}}>
-            <span style={{flex:1}}>{t.l}</span>
-            {t.id==="recurente"&&recAzi.length>0?<span style={{background:C.danger,color:"#fff",fontSize:9,padding:"1px 6px",fontWeight:700}}>{recAzi.length}</span>:null}
-          </button>)}
+        {GRUPURI.flatMap(g=>g.items).map(t=>{
+          const subs=t.sub||[];
+          const deschis=subs.length>0&&(tab===t.id||subs.some(x=>x.id===tab));
+          const btnStil=(act,nivel)=>({display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:nivel?"7px 20px 7px 36px":"9px 20px",cursor:"pointer",border:"none",borderLeft:act?`3px solid ${C.text}`:"3px solid transparent",background:act?"#C4A882":"transparent",color:C.text,fontWeight:act?600:500,fontSize:nivel?12:13,letterSpacing:"0.02em"});
+          return <React.Fragment key={t.id}>
+            <button onClick={()=>setTab(t.id)} style={btnStil(tab===t.id,0)}>
+              <span style={{flex:1}}>{t.l}</span>
+              {t.id==="recurente"&&recAzi.length>0?<span style={{background:C.danger,color:"#fff",fontSize:9,padding:"1px 6px",fontWeight:700}}>{recAzi.length}</span>:null}
+              {subs.length>0?<span style={{fontSize:10,opacity:0.6}}>{deschis?"▾":"▸"}</span>:null}
+            </button>
+            {deschis&&subs.map(x=><button key={x.id} onClick={()=>setTab(x.id)} style={btnStil(tab===x.id,1)}><span style={{flex:1}}>{x.l}</span></button>)}
+          </React.Fragment>;
+        })}
       </div>
       <div style={{padding:"14px 20px",borderTop:"1px solid #C4B8A4"}}>
         <div style={{display:"flex",gap:6,marginBottom:8}}>
@@ -12264,6 +12328,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       <div style={{fontSize:13,color:C.textMuted,maxWidth:360,margin:"0 auto",lineHeight:1.7}}>Planul pentru Benjamin Moore — sesiune dedicată.</div>
     </div>}
 
+    {tab==="declaratii"&&<DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={authRole==="admin"} mergiLa={setTab}/>}
     {tab==="banca"&&authRole==="admin"&&<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>}
     {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
 
