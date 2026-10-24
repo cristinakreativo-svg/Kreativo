@@ -10073,12 +10073,12 @@ function bancaConstruieste(tx,reguli,ovr){
     if(o&&o.split){ o.split.forEach((l,i)=>note.set("split|"+t.key+"|"+i,{date:t.date,debit:l.debit,credit:l.credit,expl:l.expl||"",suma:Math.round(Number(l.suma)*100)/100,tx:[t],fix:true})); continue; }
     if(rataRule&&t.text.includes("Rata Credit")&&!(o&&o.debit)){(rataZi[t.date]=rataZi[t.date]||[]).push(t);continue;} // ratele au prioritate peste regulile utilizatorului
     let c=bancaClasifica(t,reguli);
-    if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:!!o.agg};
+    if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:!!o.agg,force:!!o.force};
     if(c.kind==="gestiune"){gestiune.push({t,sectiune:c.sectiune});continue;}
     if(c.kind==="manual"&&!(o&&o.debit)&&rataRule&&/^Rată credit/.test(c.reason)){(rataZi[t.date]=rataZi[t.date]||[]).push(t);continue;}
     if(c.kind==="manual"){manual.push({t,reason:c.reason});continue;}
-    const k=c.agg?[t.date,c.debit,c.credit,c.expl].join("\u0001"):[t.date,c.debit,c.credit,c.expl,t.ref].join("\u0001");
-    if(!note.has(k)) note.set(k,{date:t.date,debit:c.debit,credit:c.credit,expl:c.expl,suma:0,tx:[]});
+    const k=c.agg?[t.date,c.debit,c.credit,c.expl,c.force?"F":""].join("\u0001"):[t.date,c.debit,c.credit,c.expl,t.ref].join("\u0001");
+    if(!note.has(k)) note.set(k,{date:t.date,debit:c.debit,credit:c.credit,expl:c.expl,suma:0,tx:[],force:!!c.force});
     const n=note.get(k); n.suma+=Math.abs(t.amount); n.tx.push(t);
     if(c.ret&&t.amount<0) note.set("ret|"+t.key,{date:t.date,debit:c.ret.debit,credit:c.debit,expl:c.ret.expl,suma:Math.abs(t.amount),tx:[t],fix:true,ret:true});
   }
@@ -10141,6 +10141,7 @@ function bancaExclude(built,rows){
   const retNote=[];
   for(const n of built.note){
     if(n.ret){ retNote.push(n); continue; }
+    if(n.force){ note.push(n); continue; } // bifat de utilizator: se generează chiar dacă Transart are deja o sumă identică
     const dir=n.debit==="5121.000"?1:-1;
     if(bancaPotrivesteT(pool,bancaIso(n.date),dir,n.suma)){ n.tx.forEach(t=>excluded.push(t)); continue; }
     if(n.tx.length>1&&!n.fix){
@@ -10444,10 +10445,9 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   const contaCardBifate=()=>{
     const L=proc.filter(p=>p.tip==="restant"&&p.sect==="card"&&!p.gata&&p.suma<0&&selCard[kCard(p)]);
     if(!L.length){ alert("Bifează mai întâi, la „Pe notă”, plățile pe care vrei să le trimiți în contabilitate."); return; }
-    const zi={}; L.forEach(r=>{ zi[r.data]=Math.round(((zi[r.data]||0)+Math.abs(r.suma))*100)/100; });
-    const note=Object.keys(zi).sort().map(d=>({date:bancaFmtD(d),debit:"6021.G.01",credit:"5121.000",suma:zi[d],expl:"Plati cu cardul"}));
+    const note=L.slice().sort((a,b)=>String(a.data).localeCompare(String(b.data))).map(r=>({date:bancaFmtD(r.data),debit:"6021.G.01",credit:"5121.000",suma:Math.round(Math.abs(r.suma)*100)/100,expl:"Plati cu cardul"}));
     const total=note.reduce((a,n)=>a+n.suma,0);
-    if(!window.confirm("Generez "+note.length+" note (pe zi) din "+L.length+" plăți bifate, total "+bancaSuma(total)+" lei, Debit 6021.G.01 / Credit 5121.000, fără terț. Plățile bifate se marchează ca făcute. Continui?")) return;
+    if(!window.confirm("Generez "+note.length+" linii (câte una pe plată) din "+L.length+" plăți bifate, total "+bancaSuma(total)+" lei, Debit 6021.G.01 / Credit 5121.000, fără terț. Plățile bifate se marchează ca făcute. Continui?")) return;
     const sf=note[0].date.split(".").reverse().join("-")+"_"+note[note.length-1].date.split(".").reverse().join("-");
     bancaDescarca("note_bonuri_card_"+sf+".tsv",bancaTsv(note),"text/tab-separated-values;charset=utf-8");
     setProcesate(proc.map(p=>L.includes(p)?{...p,gata:true}:p)); setSelCard({});
@@ -10593,14 +10593,14 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
               const nBif=L.filter(g=>g.bifat).length;
                             const titlu={incasari:"Clienți — încasări",plati:"Furnizori — plăți",card:"Bonuri — plăți cu cardul"}[sec];
               return <div key={sec} style={{marginTop:14}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:4}}>{titlu} · {L.length} · {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei{sec==="card"&&L.length>0&&<span style={{fontWeight:400,fontSize:12,color:C.textSub}}> — bifează „Pe notă” plățile care merg pe 6021.G.01 / 5121.000 (câte o notă pe zi, fără terț). Bifate: {nBif} · {bancaSuma(L.filter(g=>g.bifat).reduce((s,g)=>s+Math.abs(g.t.amount),0))} lei</span>}</div>
+                <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:4}}>{titlu} · {L.length} · {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei{sec==="card"&&L.length>0&&<span style={{fontWeight:400,fontSize:12,color:C.textSub}}> — bifează „Pe notă” plățile care merg pe 6021.G.01 / 5121.000 (câte o linie pe fiecare plată, fără terț). Bifate: {nBif} · {bancaSuma(L.filter(g=>g.bifat).reduce((s,g)=>s+Math.abs(g.t.amount),0))} lei</span>}</div>
                 {L.length===0?<div style={{fontSize:12,color:C.textMuted}}>Nimic.</div>:
                 <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
                   {L.map(g=>{const t=g.t;const det=sec==="incasari"?bancaDetalii(t,["Incasare"]):sec==="plati"?bancaDetalii(t,["Transfer ING Business","Plata bilet la ordin"]):"";
                     return <div key={t.key} style={{display:"grid",gridTemplateColumns:(sec==="card"?"26px ":"")+"84px 1.4fr 100px 1.6fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:`1px solid ${C.border}`,background:g.bifat?C.accentLight:"transparent"}}>
-                      {sec==="card"&&<input type="checkbox" checked={!!g.bifat} title="Pe notă: 6021.G.01 / 5121.000" onChange={()=>setOvr(o=>{const n={...o}; if(g.bifat) delete n[t.key]; else n[t.key]={debit:"6021.G.01",credit:"5121.000",expl:"Plati cu cardul",agg:true,card:true}; return n;})} style={{width:16,height:16}}/>}
+                      {sec==="card"&&<input type="checkbox" checked={!!g.bifat} title="Pe notă: 6021.G.01 / 5121.000" onChange={()=>setOvr(o=>{const n={...o}; if(g.bifat) delete n[t.key]; else n[t.key]={debit:"6021.G.01",credit:"5121.000",expl:"Plati cu cardul",agg:false,card:true}; return n;})} style={{width:16,height:16}}/>}
                       <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
-                      <div style={{textAlign:"right"}}>{bancaSuma(t.amount)}</div><div style={{fontSize:11,color:C.textSub}}>{det}</div>
+                      <div style={{textAlign:"right"}}>{bancaSuma(t.amount)}</div><div style={{fontSize:11,color:C.textSub}}>{det}{g.bifat&&built.excluded.some(x=>x.key===t.key)&&<span style={{color:"#8B4A2B"}}>Nu se generează: Transart are deja în 5121 o sumă identică la aceeași dată. <a href="#" onClick={(e)=>{e.preventDefault();setOvr(o=>({...o,[t.key]:{...o[t.key],force:true}}));}} style={{color:C.accent,fontWeight:600}}>Totuși generează</a></span>}{g.bifat&&ovrEff[t.key]&&ovrEff[t.key].force&&<span style={{color:"#2F6B2F"}}>Generată forțat (ignoră Transart)</span>}</div>
                     </div>;})}
                 </div></div>}
               </div>;})}
