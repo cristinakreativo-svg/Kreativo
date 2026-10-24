@@ -10073,7 +10073,7 @@ function bancaConstruieste(tx,reguli,ovr){
     if(o&&o.split){ o.split.forEach((l,i)=>note.set("split|"+t.key+"|"+i,{date:t.date,debit:l.debit,credit:l.credit,expl:l.expl||"",suma:Math.round(Number(l.suma)*100)/100,tx:[t],fix:true})); continue; }
     if(rataRule&&t.text.includes("Rata Credit")&&!(o&&o.debit)){(rataZi[t.date]=rataZi[t.date]||[]).push(t);continue;} // ratele au prioritate peste regulile utilizatorului
     let c=bancaClasifica(t,reguli);
-    if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:false};
+    if(o&&o.debit&&o.credit) c={kind:"nota",debit:o.debit,credit:o.credit,expl:o.expl||"",agg:!!o.agg};
     if(c.kind==="gestiune"){gestiune.push({t,sectiune:c.sectiune});continue;}
     if(c.kind==="manual"&&!(o&&o.debit)&&rataRule&&/^Rată credit/.test(c.reason)){(rataZi[t.date]=rataZi[t.date]||[]).push(t);continue;}
     if(c.kind==="manual"){manual.push({t,reason:c.reason});continue;}
@@ -10320,6 +10320,7 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
   const [msg,setMsg]=React.useState("");
   const [ovr,setOvr]=React.useState({});
   const [edit,setEdit]=React.useState(null);
+  const [selCard,setSelCard]=React.useState({});
   const [tr,setTr]=React.useState(null);
   const [d112,setD112]=React.useState(null);
   const [splitKey,setSplitKey]=React.useState(null);
@@ -10438,17 +10439,18 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
     setMsg("Gata. Export "+id+": notele sunt în fișier, iar manualele și gestiunea (de operat) sunt acum în tab-ul „De făcut”, unde le bifezi și le poți tipări (export "+id+"). Fișiere descărcate: "+(fisiere.join(", ")||"niciunul")+".");
   };
   const gataRestant=(r)=>setProcesate(proc.map(p=>p===r?{...p,gata:!p.gata}:p));
-  // Rest de bonuri card nebifate -> note pe zi, fără terț: D 6021.G.01 / C 5121.000 (se face la final, după ce ai introdus bonurile care se pot introduce)
-  const contaResturiCard=()=>{
-    const L=proc.filter(p=>p.tip==="restant"&&p.sect==="card"&&!p.gata&&p.suma<0);
-    if(!L.length){ alert("Nu mai e nimic nebifat la plăți cu cardul."); return; }
+  // Bonuri card: bifezi „Pe notă" doar plățile pe care vrei să le trimiți în contabilitate -> note pe zi, fără terț: D 6021.G.01 / C 5121.000
+  const kCard=(r)=>r.ref+"|"+r.data+"|"+r.suma;
+  const contaCardBifate=()=>{
+    const L=proc.filter(p=>p.tip==="restant"&&p.sect==="card"&&!p.gata&&p.suma<0&&selCard[kCard(p)]);
+    if(!L.length){ alert("Bifează mai întâi, la „Pe notă”, plățile pe care vrei să le trimiți în contabilitate."); return; }
     const zi={}; L.forEach(r=>{ zi[r.data]=Math.round(((zi[r.data]||0)+Math.abs(r.suma))*100)/100; });
     const note=Object.keys(zi).sort().map(d=>({date:bancaFmtD(d),debit:"6021.G.01",credit:"5121.000",suma:zi[d],expl:"Plati cu cardul"}));
     const total=note.reduce((a,n)=>a+n.suma,0);
-    if(!window.confirm("Generez "+note.length+" note (pe zi), total "+bancaSuma(total)+" lei, Debit 6021.G.01 / Credit 5121.000, fără terț. Cele "+L.length+" bonuri nebifate se marchează ca făcute. Continui?")) return;
+    if(!window.confirm("Generez "+note.length+" note (pe zi) din "+L.length+" plăți bifate, total "+bancaSuma(total)+" lei, Debit 6021.G.01 / Credit 5121.000, fără terț. Plățile bifate se marchează ca făcute. Continui?")) return;
     const sf=note[0].date.split(".").reverse().join("-")+"_"+note[note.length-1].date.split(".").reverse().join("-");
     bancaDescarca("note_bonuri_card_"+sf+".tsv",bancaTsv(note),"text/tab-separated-values;charset=utf-8");
-    setProcesate(proc.map(p=>L.includes(p)?{...p,gata:true}:p));
+    setProcesate(proc.map(p=>L.includes(p)?{...p,gata:true}:p)); setSelCard({});
   };
   const anuleazaExport=(id)=>{
     const n=proc.filter(p=>p.exportId===id).length;
@@ -10586,14 +10588,17 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
               return <div style={lbl}>Gestiune ({built.gestiune.length}) — după „Confirmă și exportă” se mută în „De făcut”, unde le bifezi pe măsură ce le operezi</div>;
             })()}
             {["incasari","plati","card"].map(sec=>{
-              const L=built.gestiune.filter(g=>g.sectiune===sec).sort((a,b)=>bancaIso(a.t.date).localeCompare(bancaIso(b.t.date)));
+              const cardBifate=sec==="card"?noi.filter(t=>ovrEff[t.key]&&ovrEff[t.key].card).map(t=>({t,sectiune:"card",bifat:true})):[];
+              const L=[...built.gestiune.filter(g=>g.sectiune===sec),...cardBifate].sort((a,b)=>bancaIso(a.t.date).localeCompare(bancaIso(b.t.date)));
+              const nBif=L.filter(g=>g.bifat).length;
                             const titlu={incasari:"Clienți — încasări",plati:"Furnizori — plăți",card:"Bonuri — plăți cu cardul"}[sec];
               return <div key={sec} style={{marginTop:14}}>
-                <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:4}}>{titlu} · {L.length} · {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei</div>
+                <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:4}}>{titlu} · {L.length} · {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei{sec==="card"&&L.length>0&&<span style={{fontWeight:400,fontSize:12,color:C.textSub}}> — bifează „Pe notă” plățile care merg pe 6021.G.01 / 5121.000 (câte o notă pe zi, fără terț). Bifate: {nBif} · {bancaSuma(L.filter(g=>g.bifat).reduce((s,g)=>s+Math.abs(g.t.amount),0))} lei</span>}</div>
                 {L.length===0?<div style={{fontSize:12,color:C.textMuted}}>Nimic.</div>:
                 <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
                   {L.map(g=>{const t=g.t;const det=sec==="incasari"?bancaDetalii(t,["Incasare"]):sec==="plati"?bancaDetalii(t,["Transfer ING Business","Plata bilet la ordin"]):"";
-                    return <div key={t.key} style={{display:"grid",gridTemplateColumns:"84px 1.4fr 100px 1.6fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:`1px solid ${C.border}`}}>
+                    return <div key={t.key} style={{display:"grid",gridTemplateColumns:(sec==="card"?"26px ":"")+"84px 1.4fr 100px 1.6fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:`1px solid ${C.border}`,background:g.bifat?C.accentLight:"transparent"}}>
+                      {sec==="card"&&<input type="checkbox" checked={!!g.bifat} title="Pe notă: 6021.G.01 / 5121.000" onChange={()=>setOvr(o=>{const n={...o}; if(g.bifat) delete n[t.key]; else n[t.key]={debit:"6021.G.01",credit:"5121.000",expl:"Plati cu cardul",agg:true,card:true}; return n;})} style={{width:16,height:16}}/>}
                       <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
                       <div style={{textAlign:"right"}}>{bancaSuma(t.amount)}</div><div style={{fontSize:11,color:C.textSub}}>{det}</div>
                     </div>;})}
@@ -10626,9 +10631,15 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
           const L=R.filter(r=>r.sect===id).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
           if(!L.length) return null; const nef=L.filter(r=>!r.gata);
           return <div key={id} style={{marginTop:14}}>
-            <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:4}}><div style={{fontSize:13,fontWeight:600,color:C.text}}>{titlu} · de făcut {nef.length}/{L.length} · {bancaSuma(nef.reduce((s,r)=>s+r.suma,0))} lei</div>{id==="card"&&nef.length>0&&<><div style={{flex:1}}/><button onClick={contaResturiCard} style={btn(true)}>Contează restul nebifat (6021.G.01 / 5121.000, pe zi)</button></>}</div>
+            <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:4}}><div style={{fontSize:13,fontWeight:600,color:C.text}}>{titlu} · de făcut {nef.length}/{L.length} · {bancaSuma(nef.reduce((s,r)=>s+r.suma,0))} lei</div>{id==="card"&&nef.length>0&&<><div style={{flex:1}}/><button onClick={contaCardBifate} style={btn(true)}>Generează note pentru cele bifate „Pe notă” ({nef.filter(r=>selCard[kCard(r)]).length} · {bancaSuma(nef.filter(r=>selCard[kCard(r)]).reduce((a,r)=>a+Math.abs(r.suma),0))} lei)</button></>}</div>
             <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
-              {L.map((r,i)=><label key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,cursor:"pointer",textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
+              {id==="card"&&<div style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"4px 8px",fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em"}}><div>Pe notă</div><div title="Făcut în alt fel (bon introdus)">Gata</div><div>Data</div><div>Comerciant</div><div style={{textAlign:"right"}}>Sumă</div><div>Detalii</div></div>}
+              {id==="card"&&L.map((r,i)=><div key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
+                <input type="checkbox" disabled={!!r.gata} checked={!!selCard[kCard(r)]&&!r.gata} onChange={()=>setSelCard(o=>({...o,[kCard(r)]:!o[kCard(r)]}))} style={{width:16,height:16}}/>
+                <input type="checkbox" checked={!!r.gata} onChange={()=>gataRestant(r)} style={{width:16,height:16}}/>
+                <div>{bancaFmtD(r.data)}</div><div style={{fontWeight:600}}>{r.who}</div><div style={{textAlign:"right"}}>{bancaSuma(r.suma)}</div><div style={{fontSize:11,color:C.textSub}}>{r.detalii}</div>
+              </div>)}
+              {id!=="card"&&L.map((r,i)=><label key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,cursor:"pointer",textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
                 <input type="checkbox" checked={!!r.gata} onChange={()=>gataRestant(r)} style={{width:16,height:16}}/>
                 <div>{bancaFmtD(r.data)}</div><div style={{fontWeight:600}}>{r.who}</div><div style={{textAlign:"right"}}>{bancaSuma(r.suma)}</div><div style={{fontSize:11,color:C.textSub}}>{r.detalii}</div>
               </label>)}
