@@ -10023,13 +10023,13 @@ const BANCA_RATA_SEED={id:"rata",ordine:90,conditie_tip:"rata_credit",conditie_t
 const BANCA_TVA_SEED={id:"r9",ordine:9,conditie_tip:"contains",conditie_text:"BUGETUL DE STAT-TVA LUNAR",debit:"4423",credit:"5121.000",explicatie:"BUGETUL DE STAT-TVA LUNAR",agregare:"tranzactie",activ:true};
 // Popriri salariale (executori): plata din bancă = D 462.G.<terț> / C 5121.000; reținerea din salariu = D 421 / C 462.G.<terț> (aceeași sumă, aceeași dată) — generată automat (câmpul "retinere")
 const BANCA_POPRIRI_SEED=[
-  {id:"pop1",ordine:9.1,conditie_tip:"contains",conditie_text:"STRUGARIU",debit:"462.G.00694",credit:"5121.000",retinere:"421",explicatie:"Poprire Strugariu Ana Mihaela",explicatie_ret:"Retinere poprire Strugariu",agregare:"tranzactie",activ:true},
-  {id:"pop2",ordine:9.2,conditie_tip:"contains",conditie_text:"DARSTAR",debit:"462.G.1475447",credit:"5121.000",retinere:"421",explicatie:"Poprire Darstar Catalin",explicatie_ret:"Retinere poprire Darstar",agregare:"tranzactie",activ:true}
+  {id:"pop1",ordine:9.1,conditie_tip:"contains_debit",conditie_text:"BEJ STRUGARIU",debit:"462.G.00694",credit:"5121.000",retinere:"421",explicatie:"Poprire Strugariu Ana Mihaela",explicatie_ret:"Retinere poprire Strugariu",agregare:"tranzactie",activ:true},
+  {id:"pop2",ordine:9.2,conditie_tip:"contains_debit",conditie_text:"BIROU EX JUD DARSTAR",debit:"462.G.1475447",credit:"5121.000",retinere:"421",explicatie:"Poprire Darstar Catalin",explicatie_ret:"Retinere poprire Darstar",agregare:"tranzactie",activ:true}
 ];
 function bancaReguliEfective(reguli){
   let base=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
   if(!base.some(r=>r.id==="r9"||r.conditie_text===BANCA_TVA_SEED.conditie_text)) base=[...base,BANCA_TVA_SEED];
-  BANCA_POPRIRI_SEED.forEach(pr=>{ if(!base.some(r=>r.id===pr.id)) base=[...base,pr]; });
+  base=[...base.filter(r=>!BANCA_POPRIRI_SEED.some(pr=>pr.id===r.id)),...BANCA_POPRIRI_SEED]; // fixe: doar plăți (a<0), nu și încasările de la Darstar-client
   return base.some(r=>r.conditie_tip==="rata_credit")?base:[...base,BANCA_RATA_SEED];
 }
 // D112: sumele de plată pe creanță fiscală: 602 impozit salarii, 412 CAS, 432 CASS (CAM 480 se ignoră — alt cont, altă plată)
@@ -10046,6 +10046,7 @@ const BANCA_D112_CONT={"412":["4315","CAS retinut"],"432":["4316","CASS retinut"
 function bancaPotrivire(r,t){
   const s=t.text,a=t.amount;
   if(r.conditie_tip==="contains") return s.includes(r.conditie_text);
+  if(r.conditie_tip==="contains_debit") return a<0&&s.includes(r.conditie_text);
   if(r.conditie_tip==="iban_debit") return a<0&&s.includes(r.conditie_text);
   if(r.conditie_tip==="iban_credit") return a>0&&s.includes(r.conditie_text);
   return false;
