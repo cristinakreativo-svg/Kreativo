@@ -10026,8 +10026,12 @@ const BANCA_POPRIRI_SEED=[
   {id:"pop1",ordine:9.1,conditie_tip:"contains_debit",conditie_text:"BEJ STRUGARIU",debit:"462.G.00694",credit:"5121.000",retinere:"421",explicatie:"Poprire Strugariu Ana Mihaela",explicatie_ret:"Retinere poprire Strugariu",agregare:"tranzactie",activ:true},
   {id:"pop2",ordine:9.2,conditie_tip:"contains_debit",conditie_text:"BIROU EX JUD DARSTAR",debit:"462.G.1475447",credit:"5121.000",retinere:"421",explicatie:"Poprire Darstar Catalin",explicatie_ret:"Retinere poprire Darstar",agregare:"tranzactie",activ:true}
 ];
+// Numerar: nota compusă. Retragere: D 581.001/C 5121.000 + D casă/C 581.001. Depunere: D 5121.000/C 581.001 + D 581.001/C casă. Contul casei se schimbă doar aici.
+const BANCA_CASA="5311.000";
+const BANCA_LINIE2={"Retragere numerar":{debit:BANCA_CASA,credit:"581.001",expl:"Numerar in casa"},"Depunere numerar":{debit:"581.001",credit:BANCA_CASA,expl:"Numerar scos din casa"}};
 function bancaReguliEfective(reguli){
   let base=Array.isArray(reguli)&&reguli.length?reguli:BANCA_REGULI_SEED;
+  base=base.map(r=>(BANCA_LINIE2[r.conditie_text]&&r.conditie_tip==="contains"&&!r.linie2)?{...r,linie2:BANCA_LINIE2[r.conditie_text]}:r);
   if(!base.some(r=>r.id==="r9"||r.conditie_text===BANCA_TVA_SEED.conditie_text)) base=[...base,BANCA_TVA_SEED];
   base=[...base.filter(r=>!BANCA_POPRIRI_SEED.some(pr=>pr.id===r.id)),...BANCA_POPRIRI_SEED]; // fixe: doar plăți (a<0), nu și încasările de la Darstar-client
   return base.some(r=>r.conditie_tip==="rata_credit")?base:[...base,BANCA_RATA_SEED];
@@ -10054,7 +10058,7 @@ function bancaPotrivire(r,t){
 // → {kind:'nota',debit,credit,expl,agg} | {kind:'manual',reason} | {kind:'gestiune',sectiune}
 function bancaClasifica(t,reguli){
   const rs=(reguli||[]).filter(r=>r.activ!==false).slice().sort((a,b)=>(a.ordine||0)-(b.ordine||0));
-  for(const r of rs) if(bancaPotrivire(r,t)) return {kind:"nota",debit:r.debit,credit:r.credit,expl:r.explicatie,agg:r.agregare==="zi",ret:r.retinere?{debit:r.retinere,expl:r.explicatie_ret||("Retinere "+(r.explicatie||""))}:null};
+  for(const r of rs) if(bancaPotrivire(r,t)) return {kind:"nota",debit:r.debit,credit:r.credit,expl:r.explicatie,agg:r.agregare==="zi",ret:r.retinere?{debit:r.retinere,expl:r.explicatie_ret||("Retinere "+(r.explicatie||""))}:null,l2:r.linie2||null};
   const s=t.text;
   if(s.includes("Rata Credit")) return {kind:"manual",reason:"Rată credit (split principal 1621.001 + dobândă 666.G.04 din scadențar)"};
   if(s.includes("TREZ")) return {kind:"manual",reason:"Trezorerie (split 4315/4316/444/436/4423 din salarizare / decont TVA)"};
@@ -10080,6 +10084,7 @@ function bancaConstruieste(tx,reguli,ovr){
     const k=c.agg?[t.date,c.debit,c.credit,c.expl,c.force?"F":""].join("\u0001"):[t.date,c.debit,c.credit,c.expl,t.ref].join("\u0001");
     if(!note.has(k)) note.set(k,{date:t.date,debit:c.debit,credit:c.credit,expl:c.expl,suma:0,tx:[],force:!!c.force});
     const n=note.get(k); n.suma+=Math.abs(t.amount); n.tx.push(t);
+    if(c.l2&&!(o&&o.debit)){ n.grup=k; const k2="l2|"+k; if(!note.has(k2)) note.set(k2,{date:t.date,debit:c.l2.debit,credit:c.l2.credit,expl:c.l2.expl,suma:0,tx:n.tx,grup:k,comp:true,fix:true}); note.get(k2).suma+=Math.abs(t.amount); }
     if(c.ret&&t.amount<0) note.set("ret|"+t.key,{date:t.date,debit:c.ret.debit,credit:c.debit,expl:c.ret.expl,suma:Math.abs(t.amount),tx:[t],fix:true,ret:true});
   }
   for(const dt of Object.keys(rataZi)){
@@ -10094,9 +10099,11 @@ const bancaNum=(x)=>{const s=String(x);return /^-?\d+$/.test(s)?s+".0":s;}; // c
 const BANCA_COLS=['NrNota','NrIC','Valuta','TipDoc','NrDoc','Data','DataDoc','Debit','Credit','Curs','Suma_V','Suma','ExplIC','TipJC','TVA','DenDebit','DenCredit','CFDebit','CFCredit','TipNC','ExplNC'];
 function bancaTsv(note){
   const rows=[BANCA_COLS.join("\t")];
+  let nrN=0; const gMap={};
   note.forEach((n,i)=>{
     const d=bancaIso(n.date),s=bancaNum(n.suma);
-    rows.push([i+1,i+1,"LEI","EC","1",d,d,n.debit,n.credit,"1",s,s,n.expl,"","","","","","","1","Extras de cont ING "+n.date].join("\t"));
+    let nn; if(n.grup&&gMap[n.grup]) nn=gMap[n.grup]; else { nn=++nrN; if(n.grup) gMap[n.grup]=nn; }
+    rows.push([nn,i+1,"LEI","EC","1",d,d,n.debit,n.credit,"1",s,s,n.expl,"","","","","","","1","Extras de cont ING "+n.date].join("\t"));
   });
   return rows.join("\n")+"\n";
 }
@@ -10138,9 +10145,10 @@ function bancaExclude(built,rows){
   const pool=rows.map(r=>({...r,used:false})); const excluded=[];
   const dirT=(t)=>t.amount>0?1:-1;
   const note=[];
-  const retNote=[];
+  const retNote=[],compNote=[];
   for(const n of built.note){
     if(n.ret){ retNote.push(n); continue; }
+    if(n.comp){ compNote.push(n); continue; }
     if(n.force){ note.push(n); continue; } // bifat de utilizator: se generează chiar dacă Transart are deja o sumă identică
     const dir=n.debit==="5121.000"?1:-1;
     if(bancaPotrivesteT(pool,bancaIso(n.date),dir,n.suma)){ n.tx.forEach(t=>excluded.push(t)); continue; }
@@ -10150,6 +10158,7 @@ function bancaExclude(built,rows){
     } else note.push(n);
   }
   const keep=(arr,getT)=>arr.filter(x=>{const t=getT(x); if(bancaPotrivesteT(pool,bancaIso(t.date),dirT(t),Math.abs(t.amount))){excluded.push(t);return false;} return true;});
+  compNote.forEach(c=>{ const pr=note.find(n=>n.grup===c.grup&&!n.comp); if(pr){ const i=note.indexOf(pr); note.splice(i+1,0,{...c,suma:pr.suma,tx:pr.tx}); } }); // linia a doua urmează linia de bancă rămasă
   const exK=new Set(excluded.map(t=>t.key)); retNote.forEach(n=>{ if(!exK.has(n.tx[0].key)) note.push(n); }); // reținerea se exportă doar dacă plata nu e deja în Transart
   const vazut=new Set(); const ex2=excluded.filter(t=>!vazut.has(t.key)&&vazut.add(t.key));
   return {note,manual:keep(built.manual,m=>m.t),gestiune:keep(built.gestiune,g=>g.t),excluded:ex2};
