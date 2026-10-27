@@ -3583,21 +3583,24 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
     </div>
     {open&&<div style={{padding:"12px 14px"}}>
+      <div style={{border:"2px solid #33444D",background:"#FFF8E1",marginBottom:14}}>
+        <div style={{background:"#33444D",color:"#fff",fontSize:12,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",padding:"7px 12px"}}>✎ Aici completezi tu — observații, poziționare, călărei (pentru montaj)</div>
+        <div style={{padding:"12px 12px 2px"}}>
       <div style={{marginBottom:12}}>
         <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,color:C.textMuted}}>Observație pentru Dan</div>
         <textarea value={obsText} onChange={e=>setObsText(e.target.value)} placeholder="adaugă o observație (ex: atenție la colțul din stânga)..." rows={2}
-          style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
+          style={{width:"100%",boxSizing:"border-box",fontSize:13,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
         {obsText!==(cfg.observatii||"")&&<button onClick={saveObs} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Salvează observația</button>}
       </div>
-      <div style={{marginBottom:12,padding:10,border:`1px solid ${C.border}`,background:C.bg}}>
+      <div style={{marginBottom:12,padding:"4px 0"}}>
         <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:8,color:C.textMuted}}>Poziționare pe perete (pentru montaj) — lasă gol dacă șina e pe tot peretele</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
           {[["Stânga (mm)",pSt,setPSt],["Zona liberă (mm)",pMj,setPMj],["Dreapta (mm)",pDr,setPDr]].map(([lb,v,fn])=>(
             <label key={lb} style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 110px"}}>{lb}
-              <input type="number" inputMode="decimal" value={v} onChange={e=>fn(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+              <input type="number" inputMode="decimal" value={v} onChange={e=>fn(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
             </label>))}
           <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 130px"}}>Ce e la mijloc
-            <input value={pEt} onChange={e=>setPEt(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+            <input value={pEt} onChange={e=>setPEt(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
           </label>
         </div>
         {!pGoala&&<div style={{marginTop:8,fontSize:13,fontWeight:700,padding:"6px 10px",color:pDif===0?"#2F6B2F":"#fff",background:pDif===0?"#E3EFE3":"#B3261E"}}>
@@ -3606,18 +3609,18 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
         {pModif&&<button onClick={savePoz} style={{marginTop:8,fontSize:12,fontWeight:600,padding:"6px 14px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Salvează poziționarea</button>}
         {!pModif&&!pGoala&&<span style={{marginLeft:0,display:"inline-block",marginTop:8,fontSize:11,color:C.textMuted}}>salvat</span>}
       </div>
-      {calBase&&<div style={{marginBottom:12,padding:10,border:`1px solid ${C.border}`,background:C.bg}}>
+      {calBase&&<div style={{marginBottom:12,padding:"4px 0"}}>
         <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:8,color:C.textMuted}}>Călărei pentru montaj {calSalvat&&<span style={{color:"#8A5A00"}}>· modificat manual</span>} <span style={{textTransform:"none",fontWeight:400}}>(implicit din calcul: {calBase.tip}, {calBase.tot} buc.{calBase.split?" ("+calBase.split+")":""})</span></div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
           <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"2 1 180px"}}>Tip
-            <input list="tipuri-calareti" value={cTip} onChange={e=>setCTip(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+            <input list="tipuri-calareti" value={cTip} onChange={e=>setCTip(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
             <datalist id="tipuri-calareti"><option value="Pleat"/><option value="Wave 8 (80 mm)"/><option value="Wave 6 (60 mm)"/></datalist>
           </label>
           <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 100px"}}>{calCenter?"Partea 1 (buc.)":"Număr (buc.)"}
-            <input type="number" value={cA} onChange={e=>setCA(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+            <input type="number" value={cA} onChange={e=>setCA(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
           </label>
           {calCenter&&<label style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 100px"}}>Partea 2 (buc.)
-            <input type="number" value={cB} onChange={e=>setCB(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+            <input type="number" value={cB} onChange={e=>setCB(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
           </label>}
           <div style={{fontSize:14,fontWeight:700,padding:"8px 4px",flex:"0 0 auto"}}>Total: {calTotal}</div>
         </div>
@@ -3626,6 +3629,8 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
           {calSalvat&&<button onClick={resetCal} style={{fontSize:12,padding:"6px 14px",background:"transparent",color:C.accent,border:`1px solid ${C.accent}`,cursor:"pointer"}}>Revino la calcul</button>}
         </div>
       </div>}
+        </div>
+      </div>
       {vErrors.length>0&&<div style={{background:"#2A383F",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
         <div style={{fontWeight:700,marginBottom:4}}>Configurație imposibilă:</div>
         {vErrors.map((e,i)=><div key={i}>{e}</div>)}
