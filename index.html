@@ -19,19 +19,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Kreativo">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#2A2118">
+<meta name="theme-color" content="#28343C">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Jost:wght@300;400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;}
-body{background:#F2EFE9;margin:0;font-family:'Jost',sans-serif;}
+body{background:#EDF0ED;margin:0;font-family:'Jost',sans-serif;}
   
 input,select,textarea,button{font-family:'Jost',sans-serif;}
-input[type=checkbox]{accent-color:#A0845C;}
+input[type=checkbox]{accent-color:#33444D;}
 ::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-thumb{background:#D4C9B8;}
+::-webkit-scrollbar-thumb{background:#D3DBD6;}
 button{transition:opacity .15s,transform .1s;}
 button:hover{opacity:0.85;}
 button:active{transform:scale(0.98);}
@@ -183,7 +183,7 @@ const IC = [
 ];
 
 const PP = [
-  {etapa:"ETAPA 1",titlu:"Consolidare & Fundație",period:"Iulie–Sept 2025",color:"#2A2118",taskuri:[
+  {etapa:"ETAPA 1",titlu:"Consolidare & Fundație",period:"Iulie–Sept 2025",color:"#1F2A30",taskuri:[
     {id:"p1",text:"Rezolvare probleme tehnice perdelekreativo.ro",resp:"Expert-Online",done:false,deadline:""},
     {id:"p2",text:"Reducere pagini neindexate de la 176 la sub 80",resp:"Cristina + Expert-Online",done:false,deadline:""},
     {id:"p3",text:"Publicare 4 articole blog SEO",resp:"Cristina",done:false,deadline:""},
@@ -214,9 +214,9 @@ const PP = [
   ]}
 ];
 
-const CC = ["#C4A882","#D4C9B8"];
-const TC=[["#FBEAD9","#EEC9A3"],["#E4EEF8","#B6D2EC"],["#E5F3E9","#B8DCC5"],["#F8EAEE","#E9C3CE"],["#EEEAF8","#CFC5EC"],["#FAF2DB","#EBDCA6"],["#E8F2F2","#BBD9D9"],["#F4EBE2","#DCC8B4"]];
-const CC_LIGHT = ["#C4A882","#D4C9B8"];
+const CC = ["#B9C6C0","#D3DBD6"];
+const TC=[["#FBEAD9","#EEC9A3"],["#E4EEF8","#B6D2EC"],["#E5F3E9","#B8DCC5"],["#F8EAEE","#E9C3CE"],["#EEEAF8","#CFC5EC"],["#FAF2DB","#EBDCA6"],["#E8F2F2","#BBD9D9"],["#EEF1EE","#CBD5D0"]];
+const CC_LIGHT = ["#B9C6C0","#D3DBD6"];
 
 // ============ COULISSE SMARTCURTAIN ENGINE ============
 // ============ COULISSE SMARTCURTAIN ENGINE ============
@@ -2168,7 +2168,7 @@ function impactScore(task,cat,prio) {
   return s;
 }
 
-const C={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textSub:"#4A3F30",textMuted:"#7A6C5A",accent:"#A0845C",accentLight:"#F5F0E8",danger:"#2A2118",dangerLight:"#FAF8F4",warn:"#4A3F30",warnLight:"#FAF8F4"};
+const C={bg:"#EDF0ED",surface:"#F7F9F7",border:"#DCE3DF",text:"#1F2A30",textSub:"#34444C",textMuted:"#5F7078",accent:"#33444D",accentLight:"#E6ECE8",danger:"#1F2A30",dangerLight:"#F7F9F7",warn:"#34444C",warnLight:"#F7F9F7"};
 
 function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onOraChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
@@ -2181,13 +2181,13 @@ function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,fu
   const ov=d&&d<tday();
   const soon=d&&!ov&&daysTo(d)<=2&&daysTo(d)>=0;
   const dlId="furnizori-"+(taskTitle||"").replace(/\W+/g,"");
-  return <div style={{background:C.surface,border:`1px solid ${ov?"#C9BCA6":soon?"#C9BCA6":C.border}`,padding:"10px 14px",marginBottom:8}}>
+  return <div style={{background:C.surface,border:`1px solid ${ov?"#C4CFCA":soon?"#C4CFCA":C.border}`,padding:"10px 14px",marginBottom:8}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
       <input type="checkbox" checked={false} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
       <span style={{flex:1,fontSize:13,color:C.text}}>{taskTitle}</span>
       <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
-        style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
+        style={{fontSize:12,border:`1px solid ${ov?"#C4CFCA":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
       <Ora24 value={o} onChange={v=>{setO(v);onOraChange&&onOraChange(v);}} title="Ora (dacă e o programare/întâlnire)"
         style={{fontSize:12,border:`1px solid ${C.border}`,background:C.surface,color:C.textSub,outline:"none"}}/>
       {onAchizChange&&<button title={achiz?"Marcat pt. achiziție":"Necesită achiziție material"} onClick={()=>onAchizChange(!achiz)} style={{background:"none",border:`1px solid ${achiz?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:achiz?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>achiz</button>}
@@ -2208,12 +2208,12 @@ function TudorTaskRow({task,date,obs,done,onToggle,onDelete,onDateChange,onObsCh
   const [o,setO]=useState(obs||"");
   const ov=d&&!done&&d<tday();
   const soon=d&&!done&&!ov&&daysTo(d)<=2&&daysTo(d)>=0;
-  return <div style={{background:done?C.bg:C.surface,border:`1px solid ${ov?"#C9BCA6":soon?"#C9BCA6":C.border}`,padding:"10px 14px",marginBottom:8,opacity:done?0.65:1}}>
+  return <div style={{background:done?C.bg:C.surface,border:`1px solid ${ov?"#C4CFCA":soon?"#C4CFCA":C.border}`,padding:"10px 14px",marginBottom:8,opacity:done?0.65:1}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
       <input type="checkbox" checked={!!done} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
       <span style={{flex:1,fontSize:13,color:done?C.textMuted:C.text,textDecoration:done?"line-through":"none"}}>{task}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
-        style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
+        style={{fontSize:12,border:`1px solid ${ov?"#C4CFCA":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
     </div>
     <input value={o} onChange={e=>{const v=e.target.value;setO(v);onObsChange(v);}} placeholder="Observații..." style={{width:"100%",fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.bg,outline:"none",boxSizing:"border-box"}}/>
@@ -2258,7 +2258,7 @@ function TudorDocumente({t,ti_,setTudor,C,sb,tday,fmtD}){
       </div>;
     })}
     <input ref={inputRef} type="file" style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document"}</button>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#1F2A30",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",marginTop:4,width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă document"}</button>
   </div>;
 }
 
@@ -2273,7 +2273,7 @@ function AdminTaskRow({task,onToggle,onDelete,onRespChange,onDateChange}) {
       {!task.done&&<input value={lr} onChange={e=>{setLr(e.target.value);onRespChange(e.target.value);}} placeholder="Resp."
         style={{fontSize:12,border:`1px solid ${C.border}`,padding:"3px 7px",background:C.surface,color:C.textSub,outline:"none",width:100,flexShrink:0}}/>}
       {!task.done&&<input type="date" value={ld} onChange={e=>{setLd(e.target.value);onDateChange(e.target.value);}}
-        style={{fontSize:12,border:`1px solid ${ov?"#C9BCA6":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>}
+        style={{fontSize:12,border:`1px solid ${ov?"#C4CFCA":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:C.textSub,outline:"none",flexShrink:0}}/>}
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
     </div>
   </div>;
@@ -2283,7 +2283,7 @@ function CalItem({item,onComplete,onReschedule}) {
   const [ed,setEd]=useState(false);
   const [nd,setNd]=useState("");
   const [nt,setNt]=useState(null);
-  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:item.isMontaj?"#F2EDF7":item.isDan?"#EAF0F6":C.surface,border:`1px solid ${item.isMontaj?"#8E75A8":item.isDan?"#5B7FA0":item.isRecurent?"#D4B88A":C.border}`,borderLeft:item.isMontaj?"5px solid #8E75A8":item.isDan?"5px solid #5B7FA0":undefined,marginBottom:6}}>
+  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:item.isMontaj?"#F2EDF7":item.isDan?"#EAF0F6":C.surface,border:`1px solid ${item.isMontaj?"#8E75A8":item.isDan?"#5B7FA0":item.isRecurent?"#B9C6C0":C.border}`,borderLeft:item.isMontaj?"5px solid #8E75A8":item.isDan?"5px solid #5B7FA0":undefined,marginBottom:6}}>
     {item.isMontaj?<span title="Montaj" style={{width:15,textAlign:"center",fontSize:13,flexShrink:0}}>🔧</span>:<input type="checkbox" checked={false} onChange={onComplete} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>}
     <div style={{flex:1}}>
       <div style={{fontSize:13,color:C.text}}>{item.title}</div>
@@ -2511,22 +2511,22 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
   const printeazaComanda=()=>{
     const secțiuni=comanda.camere.map(cam=>{
       const rows=cam.linii.map(l=>`<tr>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8">${cap(l.tip)}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.material||"—"}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.culoare||"—"}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:center">${l.geamNr}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right">${l.h||"—"}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right">${l.l||"—"}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:center">${l.nrBucati||"—"}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.banda||"—"}</td>
-        <td style="padding:7px 10px;border:1px solid #D4C9B8">${l.obs||""}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6">${cap(l.tip)}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6">${l.material||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6">${l.culoare||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:center">${l.geamNr}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:right">${l.h||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:right">${l.l||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:center">${l.nrBucati||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6">${l.banda||"—"}</td>
+        <td style="padding:7px 10px;border:1px solid #D3DBD6">${l.obs||""}</td>
       </tr>`).join("");
       return `<div style="margin-bottom:22px;break-inside:avoid">
-        <div style="font:600 1.05em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">${cam.numeCamera||"Cameră"}</div>
-        ${(cam.geamuri||[]).length>0?`<div style="display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px;background:#F7F3EA;font-size:.85em;color:#5C4F3E;border-bottom:1px solid #D4C9B8">${(cam.geamuri||[]).map((g,gi)=>`<span><b>Geam ${gi+1}:</b> H=${g.inaltime?cmToM(g.inaltime):"—"} · L=${g.lungime?cmToM(g.lungime):"—"}</span>`).join("")}</div>`:""}
-        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
-          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
-            <td style="padding:6px 10px;border:1px solid #D4C9B8">Tip</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Material</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Geam</td><td style="padding:6px 10px;border:1px solid #D4C9B8">H (m)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">L (m)</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Buc.</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Bandă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Obs.</td>
+        <div style="font:600 1.05em 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${cam.numeCamera||"Cameră"}</div>
+        ${(cam.geamuri||[]).length>0?`<div style="display:flex;gap:18px;flex-wrap:wrap;padding:8px 12px;background:#EEF1EE;font-size:.85em;color:#3F5058;border-bottom:1px solid #D3DBD6">${(cam.geamuri||[]).map((g,gi)=>`<span><b>Geam ${gi+1}:</b> H=${g.inaltime?cmToM(g.inaltime):"—"} · L=${g.lungime?cmToM(g.lungime):"—"}</span>`).join("")}</div>`:""}
+        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
+            <td style="padding:6px 10px;border:1px solid #D3DBD6">Tip</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Material</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Geam</td><td style="padding:6px 10px;border:1px solid #D3DBD6">H (m)</td><td style="padding:6px 10px;border:1px solid #D3DBD6">L (m)</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Bandă</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Obs.</td>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
@@ -2545,32 +2545,32 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
     printHtmlDoc(html);
   };
   const printeazaConsum=()=>{
-    const randMaterial=(m)=>`<tr><td style="padding:7px 10px;border:1px solid #D4C9B8">${m.material}</td><td style="padding:7px 10px;border:1px solid #D4C9B8">${m.culoare||"—"}</td><td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${m.cantitate} m</td></tr>`;
-    const randBanda=(b)=>`<tr><td style="padding:7px 10px;border:1px solid #D4C9B8">${b.tipBanda}</td><td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${b.cantitate} m</td></tr>`;
-    const randManual=(l)=>`<tr><td style="padding:7px 10px;border:1px solid #D4C9B8">${l.denumire||"—"}</td><td style="padding:7px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${l.cantitate||"—"}</td><td style="padding:7px 10px;border:1px solid #D4C9B8">${l.obs||""}</td></tr>`;
+    const randMaterial=(m)=>`<tr><td style="padding:7px 10px;border:1px solid #D3DBD6">${m.material}</td><td style="padding:7px 10px;border:1px solid #D3DBD6">${m.culoare||"—"}</td><td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${m.cantitate} m</td></tr>`;
+    const randBanda=(b)=>`<tr><td style="padding:7px 10px;border:1px solid #D3DBD6">${b.tipBanda}</td><td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${b.cantitate} m</td></tr>`;
+    const randManual=(l)=>`<tr><td style="padding:7px 10px;border:1px solid #D3DBD6">${l.denumire||"—"}</td><td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${l.cantitate||"—"}</td><td style="padding:7px 10px;border:1px solid #D3DBD6">${l.obs||""}</td></tr>`;
     const secMaterial=consum.materiale.length?`<div style="margin-bottom:20px">
-      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">Material — Perdea și Draperie</div>
-      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
-        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
-          <td style="padding:6px 10px;border:1px solid #D4C9B8">Material</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cantitate</td>
+      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">Material — Perdea și Draperie</div>
+      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
+          <td style="padding:6px 10px;border:1px solid #D3DBD6">Material</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cod culoare</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cantitate</td>
         </tr></thead>
         <tbody>${consum.materiale.map(randMaterial).join("")}</tbody>
       </table>
     </div>`:"";
     const secBanda=consum.banda.length?`<div style="margin-bottom:20px">
-      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">Bandă — pe tip</div>
-      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
-        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
-          <td style="padding:6px 10px;border:1px solid #D4C9B8">Tip bandă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cantitate</td>
+      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">Bandă — pe tip</div>
+      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
+          <td style="padding:6px 10px;border:1px solid #D3DBD6">Tip bandă</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cantitate</td>
         </tr></thead>
         <tbody>${consum.banda.map(randBanda).join("")}</tbody>
       </table>
     </div>`:"";
     const secManual=(consum.liniiManuale||[]).length?`<div style="margin-bottom:20px">
-      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">Linii adăugate manual</div>
-      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
-        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
-          <td style="padding:6px 10px;border:1px solid #D4C9B8">Denumire</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cantitate</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Observații</td>
+      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">Linii adăugate manual</div>
+      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
+          <td style="padding:6px 10px;border:1px solid #D3DBD6">Denumire</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cantitate</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Observații</td>
         </tr></thead>
         <tbody>${consum.liniiManuale.map(randManual).join("")}</tbody>
       </table>
@@ -2840,7 +2840,7 @@ function ComenziNico({client,ci,setClients,C,sb,tday,fmtD}){
       </div>;
     })}
     <input ref={inputRef} type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă comandă (Excel)"}</button>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#1F2A30",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?"Se încarcă...":"+ adaugă comandă (Excel)"}</button>
   </div>;
 }
 
@@ -2871,7 +2871,7 @@ function BlocareZi({blocate,onAdd,onDel,C,fmtD}){
       <span style={{fontSize:12,color:C.textMuted}}>→</span>
       <input type="date" value={end} onChange={e=>setEnd(e.target.value)} style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
       <input value={motiv} onChange={e=>setMotiv(e.target.value)} placeholder="Motiv (ex: concediu)" style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 10px",background:C.surface,outline:"none",minWidth:120}}/>
-      <button onClick={()=>{if(!start) return; onAdd(start,end||start,motiv); setStart(""); setEnd(""); setMotiv("");}} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"6px 14px",cursor:"pointer"}}>Blochează perioada</button>
+      <button onClick={()=>{if(!start) return; onAdd(start,end||start,motiv); setStart(""); setEnd(""); setMotiv("");}} style={{fontSize:12,color:"#1F2A30",background:"#5C6B65",border:"none",padding:"6px 14px",cursor:"pointer"}}>Blochează perioada</button>
     </div>
     {sorted.length>0&&<div>
       {sorted.map(z=><div key={z.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:C.bg,marginBottom:4}}>
@@ -2976,8 +2976,8 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
           const isWeekend=dow===0||dow===6;
           const blocat=(blocate||[]).find(z=>key>=z.dataStart&&key<=(z.dataEnd||z.dataStart));
           let bg=nume.length?"#5C6B65":C.bg, textCol=nume.length?"rgba(255,255,255,0.75)":C.textMuted;
-          if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
-          if(blocat){bg="#B8A88F";textCol="#fff";}
+          if(isWeekend){bg="#DCE3DF";textCol="#9DACB2";}
+          if(blocat){bg="#A5B2B7";textCol="#fff";}
           cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
             <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
             {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
@@ -2997,7 +2997,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
       })}
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
-      {nicoClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
+      {nicoClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #1F2A30":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
       </div>)}
       {nicoClients.length===0&&<div style={{fontSize:13,color:C.textMuted,gridColumn:"1/-1",padding:"20px 0"}}>{nView==="lucru"?(toateNico.length===0?'Niciun client alocat încă. Bifează "Alocă la Nico" din fișa clientului, în tab-ul Clienți.':"Niciun client în lucru."):nView==="nelivrat"?"Niciun client nelivrat (cusut, în așteptare de montaj).":"Niciun client livrat."}</div>}
@@ -3064,7 +3064,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
             <input value={r.cantitate} onChange={e=>updConsum(idx,"cantitate",e.target.value)} placeholder="Cantitate" style={{flex:1,fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.surface,outline:"none"}}/>
             <button onClick={()=>delConsum(idx)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:14,flexShrink:0}}>×</button>
           </div>)}
-          <button onClick={addConsum} style={{fontSize:12,color:"#2A2118",border:"none",padding:"6px 12px",background:"#5C6B65",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă consum</button>
+          <button onClick={addConsum} style={{fontSize:12,color:"#1F2A30",border:"none",padding:"6px 12px",background:"#5C6B65",cursor:"pointer",width:"100%",marginBottom:10}}>+ adaugă consum</button>
           {(client.consumuri||[]).length>0&&<button onClick={printConsum} style={{width:"100%",fontSize:12,fontWeight:600,padding:"8px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează consum</button>}
         </div>
       </div>
@@ -3189,7 +3189,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
     {mod==="alta"&&<SinaAltaForm C={C} clients={clients} setClients={setClients} clientIdFixat={clientIdFixat} camereLista={camereLista} setCamereLista={setCamereLista}/>}
     {mod==="coulisse"&&<div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator șină Coulisse SmartCurtain</div>
-    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#33444D",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o configurație deja creată — la salvare, se actualizează, nu se creează una nouă.</span>
       <button onClick={anuleazaEditareCfg} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
     </div>}
@@ -3258,11 +3258,11 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
 
     {error&&<div style={{fontSize:13,color:C.text,padding:"10px 0"}}>{error}</div>}
 
-    {validErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+    {validErrors.length>0&&<div style={{background:"#2A383F",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
       <div style={{fontWeight:700,marginBottom:6}}>Configurație imposibilă:</div>
       {validErrors.map((e,i)=><div key={i} style={{marginBottom:4}}>{e}</div>)}
     </div>}
-    {validErrors.length===0&&validWarnings.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+    {validErrors.length===0&&validWarnings.length>0&&<div style={{background:"#A5B2B7",color:"#1F2A30",padding:"12px 16px",marginBottom:14,fontSize:13}}>
       <div style={{fontWeight:700,marginBottom:6}}>Atenție:</div>
       {validWarnings.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
     </div>}
@@ -3342,7 +3342,7 @@ function SinaAltaRow({cfg,clientId,setClients,C,onEdit,clientName}){
       <div style={{flex:1}}>
         <span style={{fontSize:13,fontWeight:600,color:cfg.produs?C.textMuted:C.text}}>{cfg.camera||"(fără cameră)"}</span>
         <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.canale} · {cfg.lungime}mm{cfg.cantitate>1?` · ×${cfg.cantitate} buc.`:""}</span>
-        <span style={{fontSize:10,fontWeight:700,color:"#2A2118",background:"#D4C9B8",padding:"2px 8px",marginLeft:8}}>non-Coulisse</span>
+        <span style={{fontSize:10,fontWeight:700,color:"#1F2A30",background:"#D3DBD6",padding:"2px 8px",marginLeft:8}}>non-Coulisse</span>
         {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>observație</span>}
       </div>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
@@ -3354,7 +3354,7 @@ function SinaAltaRow({cfg,clientId,setClients,C,onEdit,clientName}){
           <div key={l} style={{marginBottom:8}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div><div style={{fontSize:13,fontWeight:600,color:C.text}}>{v}</div></div>)}
       </div>
       <div style={{display:"flex",gap:8}}>
-        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={()=>printHtmlDoc(buildSinaAltaPrintHtml({...cfg,clientName}))} style={{fontSize:11,fontWeight:600,padding:"6px 12px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
         <button onClick={del} style={{fontSize:11,padding:"6px 12px",background:"transparent",color:C.textMuted,border:`1px solid ${C.border}`,cursor:"pointer",marginLeft:"auto"}}>Șterge</button>
       </div>
@@ -3398,7 +3398,7 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Comandă șină non-Coulisse (1 sau 2 canale)</div>
     <div style={{fontSize:12,color:C.textMuted,marginBottom:14}}>Fără calcul de piese — doar ce trebuie să știe Dan: tip, lungime, cantitate, culoare, montaj.</div>
-    {editingId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+    {editingId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#33444D",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o comandă deja salvată — la salvare se actualizează.</span>
       <button onClick={reset} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
     </div>}
@@ -3452,14 +3452,14 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
   const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
   const {errors:vErrors,warnings:vWarnings}=validateCoulisseInput(cfg.input);
   const cost=costProductieConfig(cfg, catalogCostComponente);
-  return <div style={{border:`1px solid ${vErrors.length?"#3A3128":C.border}`,marginBottom:6,background:C.surface}}>
+  return <div style={{border:`1px solid ${vErrors.length?"#2A383F":C.border}`,marginBottom:6,background:C.surface}}>
     <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
       <input type="checkbox" checked={!!cfg.produs} onChange={toggleProdus} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
       <div style={{flex:1}}>
         <span style={{fontSize:13,fontWeight:600,color:cfg.produs?C.textMuted:C.text}}>{cfg.camera||"(fără cameră)"}</span>
         <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.width}×{cfg.input.height}mm{cfg.input.quantity>1?` · ×${cfg.input.quantity} buc.`:""}</span>
-        {vErrors.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#3A3128",padding:"2px 8px",marginLeft:8}}>imposibil</span>}
-        {vErrors.length===0&&vWarnings.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#2A2118",background:"#B8A88F",padding:"2px 8px",marginLeft:8}}>atenție</span>}
+        {vErrors.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#2A383F",padding:"2px 8px",marginLeft:8}}>imposibil</span>}
+        {vErrors.length===0&&vWarnings.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#1F2A30",background:"#A5B2B7",padding:"2px 8px",marginLeft:8}}>atenție</span>}
         {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>observație</span>}
         {catalogCostComponente&&catalogCostComponente.length>0&&cost.total>0&&<span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost producție: {cost.total.toFixed(0)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț)`:""}</span>}
       </div>
@@ -3472,11 +3472,11 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
           style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
         {obsText!==(cfg.observatii||"")&&<button onClick={saveObs} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează observația</button>}
       </div>
-      {vErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
+      {vErrors.length>0&&<div style={{background:"#2A383F",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
         <div style={{fontWeight:700,marginBottom:4}}>Configurație imposibilă:</div>
         {vErrors.map((e,i)=><div key={i}>{e}</div>)}
       </div>}
-      {vErrors.length===0&&vWarnings.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"10px 14px",marginBottom:12,fontSize:12}}>
+      {vErrors.length===0&&vWarnings.length>0&&<div style={{background:"#A5B2B7",color:"#1F2A30",padding:"10px 14px",marginBottom:12,fontSize:12}}>
         <div style={{fontWeight:700,marginBottom:4}}>Atenție:</div>
         {vWarnings.map((w,i)=><div key={i}>{w}</div>)}
       </div>}
@@ -3516,7 +3516,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
       {catalogCostComponente&&catalogCostComponente.length>0&&<div style={{display:"flex",justifyContent:"flex-end",padding:"8px 8px 0",fontSize:13,fontWeight:700,color:C.text}}>Total: {cost.total.toFixed(2)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț, neincluse)`:""}</div>}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
-        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -3807,7 +3807,7 @@ function ConfigPanouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit}){
       </div>)}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
-        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -4869,7 +4869,7 @@ function TabCatalogCostComponente({C,catalogCostComponente,setCatalogCostCompone
         {importing?"Se importă...":"Importă din Excel"}
         <input ref={inputRef} type="file" accept=".xlsx,.xls" disabled={importing} onChange={importaExcel} style={{display:"none"}}/>
       </label>
-      <button onClick={incarcaCoulisse} style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>Încarcă lista Coulisse 2026 ({COULISSE_PL_2026.length})</button>
+      <button onClick={incarcaCoulisse} style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>Încarcă lista Coulisse 2026 ({COULISSE_PL_2026.length})</button>
       <button onClick={schimbaCurs} style={{fontSize:12,fontWeight:600,padding:"9px 16px",background:"transparent",color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer",whiteSpace:"nowrap"}}>Schimbă cursul EUR→lei</button>
     </div>
     <div style={{fontSize:11,color:C.textMuted,marginBottom:16}}>Excel-ul de import trebuie să aibă coloanele, în ordine: <b>Cod</b>, Descriere, <b>Preț (lei)</b>. Codul trebuie să fie identic cu cel din nomenclatorul furnizorului (ex: „RC3001-W", „CM-05-E"). Pozițiile deja existente (același cod) se actualizează cu noul preț, nu se dublează.</div>
@@ -5189,21 +5189,21 @@ function buildComandaFurnizorHtml(o,intern){
   const totalBuc=linii.reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
   const clienti=[...new Set(linii.map(l=>(l.client||"").trim()).filter(Boolean))];
   const titlu=`Order nr ${o.numar} - ${dataFmt}`+(intern?` - INTERN${clienti.length?" - "+clienti.join(", "):""}`:"");
-  const td="padding:7px 9px;border:1px solid #CFC4B2;";
-  const th="padding:7px 9px;border:1px solid #CFC4B2;background:#EDE4D3;font:600 .72em/1.2 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5C4F3E;text-align:left;";
+  const td="padding:7px 9px;border:1px solid #CBD5D0;";
+  const th="padding:7px 9px;border:1px solid #CBD5D0;background:#E8EDF0;font:600 .72em/1.2 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#3F5058;text-align:left;";
   const rows=linii.map((l,i)=>`<tr>
-    <td style="${td}text-align:center;color:#8A7A64">${i+1}</td>
+    <td style="${td}text-align:center;color:#5F7078">${i+1}</td>
     <td style="${td}font-weight:600">${esc(l.model)}</td>
     <td style="${td}text-align:center;font-weight:600">${esc(l.qty)}</td>
     <td style="${td}">${esc(l.rail)}</td>
     <td style="${td}">${esc(l.fabric)}</td>
     <td style="${td}text-align:right">${esc(l.width)}</td>
     <td style="${td}text-align:right">${esc(l.drop)}</td>
-    ${intern?`<td style="${td}background:#F6F1E6">${esc(l.client)}</td><td style="${td}background:#F6F1E6">${esc(l.camera)}</td>`:""}
+    ${intern?`<td style="${td}background:#EEF1EE">${esc(l.client)}</td><td style="${td}background:#EEF1EE">${esc(l.camera)}</td>`:""}
   </tr>`).join("");
   const pe={};
   linii.forEach(l=>{const k=(l.client||"").trim()||"(fără client)"; pe[k]=(pe[k]||0)+(Number(String(l.qty).replace(",","."))||0);});
-  const sumarClienti=intern?`<div style="margin-top:14px;font-size:.9em;color:#5C4F3E"><b>Pe clienți:</b> ${Object.entries(pe).map(([k,v])=>`${esc(k)} — ${v} buc.`).join(" · ")}</div>`:"";
+  const sumarClienti=intern?`<div style="margin-top:14px;font-size:.9em;color:#3F5058"><b>Pe clienți:</b> ${Object.entries(pe).map(([k,v])=>`${esc(k)} — ${v} buc.`).join(" · ")}</div>`:"";
   const banner=intern?`<div style="background:#B3402F;color:#fff;padding:8px 14px;margin-bottom:14px;font:700 .85em 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase">Document intern — conține clienții și camerele. Nu se trimite furnizorului.</div>`:"";
   return `<!DOCTYPE html><html lang="${intern?"ro":"en"}"><head><meta charset="utf-8"><title>${esc(titlu)}</title>
   <style>@page{size:A4;margin:0.55in}body{margin:0;background:#fff;font-family:'Source Sans 3',Calibri,sans-serif;color:#2A2118;font-size:13px}</style></head><body>
@@ -6133,9 +6133,9 @@ function discountHtmlBuild(subtotal,discountLei,tip,val,nr){
   if(!(discountLei>0)) return "";
   const v=Math.abs(Number(String(val==null?"":val).replace(",","."))||0);
   const eticheta=tip==="%"?`Discount ${v}%`:"Discount";
-  const bara="display:flex;justify-content:space-between;align-items:baseline;font-size:1.05em;font-weight:700;color:#2A2118;background:#EDE4D3;padding:8px 10px;margin-top:4px;border-top:2px solid #A0845C";
-  return `<div style="border:2px solid #A0845C;padding:12px 16px;margin:14px 0;break-inside:avoid;page-break-inside:avoid">
-    <h2 style="margin:0 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">${String(nr).padStart(2,"0")}</span>Discount</h2>
+  const bara="display:flex;justify-content:space-between;align-items:baseline;font-size:1.05em;font-weight:700;color:#1F2A30;background:#E8EDF0;padding:8px 10px;margin-top:4px;border-top:2px solid #33444D";
+  return `<div style="border:2px solid #33444D;padding:12px 16px;margin:14px 0;break-inside:avoid;page-break-inside:avoid">
+    <h2 style="margin:0 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#1F2A30;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#9DACB2">${String(nr).padStart(2,"0")}</span>Discount</h2>
     <div style="${bara}"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.82em">Total înainte de discount</span><span>${MON.cur==="lei"?Math.round(subtotal)+" lei":fmEur(subtotal)}</span></div>
     <div style="${bara}"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.82em">${eticheta}</span><span>-${MON.cur==="lei"?discountLei+" lei":fmEur(discountLei)}</span></div>
   </div>`;
@@ -6534,67 +6534,67 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const tipTotal=(t)=>{ const c=cap(t); return c==="Altele"?"Produse":(c||"Produse"); };
   const montajEtic=(pr)=>{ const t=String(pr.tip||"").trim(); if(!t||t==="altele") return "Montaj"; const m={"sina electrica":"șină electrică","stor roman electric":"stor roman electric"}; return "Montaj "+(m[t]||t.toLowerCase()); };
   const camereHtmlBuild=(camereList)=>camereList.filter(c=>c.numeCamera.trim()||c.produse.some(pr=>pr.material.trim())).map((c,idx)=>{
-const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
-    const rTotalG=(pr)=>`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
+    const rTotalG=(pr)=>`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
     const randProdusOferta=(pr)=>{
       if(esteSinaManuala(pr)){
         const mSina=(Number(pr.lungimeSinaManCm)||0)/100;
         const detaliiSina=[pr.calaretiWave?"călăreți wave":"călăreți normali", pr.consolaPerete?"consolă perete":""].filter(Boolean).join(", ");
-        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">Șină</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Șină Coulisse manuală (${fmtM(mSina)} m) · ${detaliiSina}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} ${pr.sinaPeMl?"ml":"buc."}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pretBucSinaManuala(pr))}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+        return `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">Șină</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">Șină Coulisse manuală (${fmtM(mSina)} m) · ${detaliiSina}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} ${pr.sinaPeMl?"ml":"buc."}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pretBucSinaManuala(pr))}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
       }
       if(esteRulou(pr)){
         const dimR=(pr.latimeRulouCm&&pr.inaltimeRulouCm)?` (${pr.latimeRulouCm}×${pr.inaltimeRulouCm} cm)`:"";
-        const rRulou=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}${dimR}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(Number(pr.pretUnitar)||0,true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(montajGenOn(pr)?mv(valoareMaterial(pr)):valoareLinieM(pr))}</td></tr>`;
+        const rRulou=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material}${dimR}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(Number(pr.pretUnitar)||0,true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(montajGenOn(pr)?mv(valoareMaterial(pr)):valoareLinieM(pr))}</td></tr>`;
         return montajGenOn(pr)?rRulou+rMontajG(pr)+rTotalG(pr):rRulou;
       }
       if(esteSina(pr)){
         const lungimeAfisata=lungimeExactaSina(pr)?`${lungimeExactaSina(pr)} m`:"—";
-        const rSina=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} (${lungimeAfisata})</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pretUnitarSinaEfectiv(pr),true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
-        const rMontaj=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
-        const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+        const rSina=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material} (${lungimeAfisata})</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pretUnitarSinaEfectiv(pr),true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
+        const rMontaj=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
+        const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
         return rSina+rMontaj+rTotalSina;
       }
       if(estePliseu(pr)){
         const {h:hAfisat,w:wAfisat}=dimensiuniSteppedPliseu(pr);
         const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm${pr.grupaPretPliseu?", Grupa "+pr.grupaPretPliseu:""})`:"";
-        const rPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pretUnitarPliseuEfectiv(pr),true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
-        const rMontajPliseu=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
-        const rTotalPliseu=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+        const rPliseu=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pretUnitarPliseuEfectiv(pr),true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
+        const rMontajPliseu=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
+        const rTotalPliseu=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
         return rPliseu+rMontajPliseu+rTotalPliseu;
       }
       if(esteJaluzea(pr)){
         const {h:hAfisat,w:wAfisat}=dimensiuniSteppedJaluzea(pr);
         const dimensiuniAfisate=(hAfisat&&wAfisat)?`(${wAfisat}×${hAfisat} cm, Lamelă ${pr.lamelaJaluzea}cm${pr.grupaPretJaluzea?", Grupa "+pr.grupaPretJaluzea:""})`:"";
-        const rJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pretUnitarJaluzeaEfectiv(pr),true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
-        const rMontajJaluzea=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
-        const rTotalJaluzea=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+        const rJaluzea=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pretUnitarJaluzeaEfectiv(pr),true)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
+        const rMontajJaluzea=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
+        const rTotalJaluzea=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
         return rJaluzea+rMontajJaluzea+rTotalJaluzea;
       }
       if(esteStorRoman(pr)){
         const mp=mpStor(pr);
         const dimensiuniAfisate=(pr.latimeStorCm&&pr.inaltimeStorCm)?`(${pr.latimeStorCm}×${pr.inaltimeStorCm} cm)`:"";
-        const rMaterialStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitateMaterialStor||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretUnitar||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
-        const rBenziManoperaStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Benzi+Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${(mp*(Number(pr.cantitate)||1)).toFixed(2)} mp</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretBenziManopera||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareBenziManopera(pr)))}</td></tr>`;
-        const rLining=esteStorRomanOpac(pr)?`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Lining</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitateLining||0} ml</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretLining||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareLining(pr)))}</td></tr>`:"";
-        const rMecanism=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Mecanism stor roman</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${((Number(pr.latimeStorCm)||0)/100).toFixed(2)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMecanism||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMecanism(pr)))}</td></tr>`;
-        const rMontajStor=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
-        const rTotalStor=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+        const rMaterialStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material} ${dimensiuniAfisate}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitateMaterialStor||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretUnitar||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial(pr)))}</td></tr>`;
+        const rBenziManoperaStor=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">Benzi+Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${(mp*(Number(pr.cantitate)||1)).toFixed(2)} mp</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretBenziManopera||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareBenziManopera(pr)))}</td></tr>`;
+        const rLining=esteStorRomanOpac(pr)?`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">Lining</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitateLining||0} ml</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretLining||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareLining(pr)))}</td></tr>`:"";
+        const rMecanism=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">Mecanism stor roman</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${((Number(pr.latimeStorCm)||0)/100).toFixed(2)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretMecanism||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMecanism(pr)))}</td></tr>`;
+        const rMontajStor=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||1} buc.</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
+        const rTotalStor=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
         return rMaterialStor+rBenziManoperaStor+rLining+rMecanism+rMontajStor+rTotalStor;
       }
-      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretUnitar||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMaterial1(pr)))}</td></tr>`;
-      const rMaterial2=(esteTextil(pr)&&pr.dublata&&(pr.material2||"").trim())?`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${pr.material2} <span style="color:#8A7A64">(dublură)</span></td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD">${pr.culoare2||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${pr.cantitate2||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretUnitar2||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMaterial2(pr)))}</td></tr>`:"";
+      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretUnitar||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial1(pr)))}</td></tr>`;
+      const rMaterial2=(esteTextil(pr)&&pr.dublata&&(pr.material2||"").trim())?`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material2} <span style="color:#5F7078">(dublură)</span></td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare2||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate2||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretUnitar2||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial2(pr)))}</td></tr>`:"";
       if(!esteTextil(pr)){
         if(pr.tip==="șină"){
-          const rMontajSina=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
-          const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+          const rMontajSina=pr.montajInclus===false?"":`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${montajEtic(pr)}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretMontaj||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMontaj(pr)))}</td></tr>`;
+          const rTotalSina=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
           return rMaterial+rMontajSina+rTotalSina;
         }
         if(montajGenOn(pr)) return rMaterial+rMontajG(pr)+rTotalG(pr);
         return rMaterial;
       }
-      const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateBandaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretBanda||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareBanda(pr)))}</td></tr>`;
-      const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${cantitateManoperaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E4DCCD">${fu(pr.pretManopera||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E4DCCD">${fm(mv(valoareManopera(pr)))}</td></tr>`;
-      const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D4C9B8">${fm(valoareLinieM(pr))}</td></tr>`;
+      const rBanda=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">Bandă fronsare</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${cantitateBandaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretBanda||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareBanda(pr)))}</td></tr>`;
+      const rManopera=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">Manoperă</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${cantitateManoperaEfectiva(pr)} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretManopera||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareManopera(pr)))}</td></tr>`;
+      const rTotal=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
       return rMaterial+rMaterial2+rBanda+rManopera+rTotal;
     };
     const rows=c.produse.filter(pr=>pr.material.trim()).map(pr=>{
@@ -6602,26 +6602,26 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
       const lk0=(pr.linkOfertaOn&&(pr.linkOferta||"").trim())?pr.linkOferta.trim():"";
       if(!lk0) return htmlP;
       const lk=(/^https?:\/\//i.test(lk0)?lk0:"https://"+lk0).replace(/"/g,"%22").replace(/</g,"%3C");
-      const rowLk=`<tr><td style="padding:0 8px 5px 0;border-bottom:1px solid #E4DCCD"></td><td colspan="5" style="padding:0 8px 5px;border-bottom:1px solid #E4DCCD;font-size:.85em"><a href="${lk}" style="color:#8A6A3A">Vezi produsul online &rarr;</a></td></tr>`;
+      const rowLk=`<tr><td style="padding:0 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td colspan="5" style="padding:0 8px 5px;border-bottom:1px solid #E1E8E4;font-size:.85em"><a href="${lk}" style="color:#8A6A3A">Vezi produsul online &rarr;</a></td></tr>`;
       const i=htmlP.indexOf("</tr>");
       return i<0?htmlP+rowLk:htmlP.slice(0,i+5)+rowLk+htmlP.slice(i+5);
     }).join("");
     const numar=String(idx+1).padStart(2,"0");
-    return `<div style="border:2px solid #A0845C;padding:12px 16px;margin:14px 0;break-inside:avoid;page-break-inside:avoid">
-    <h2 style="margin:0 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#2A2118;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#B0A38C">${numar}</span>${c.numeCamera||"Cameră"}</h2>
+    return `<div style="border:2px solid #33444D;padding:12px 16px;margin:14px 0;break-inside:avoid;page-break-inside:avoid">
+    <h2 style="margin:0 0 3px;font:600 1.1em/1.2 'Source Serif 4',Cambria,Georgia,serif;letter-spacing:.08em;text-transform:uppercase;color:#1F2A30;display:flex;gap:.7em;align-items:baseline"><span style="font-weight:400;color:#9DACB2">${numar}</span>${c.numeCamera||"Cameră"}</h2>
     <div>
     <table style="width:100%;border-collapse:collapse;margin:6px 0 4px">
-      <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64">
-        <td style="padding:5px 8px 5px 0;border-bottom:1px solid #D4C9B8">Tip</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Material</td>
-        <td style="padding:5px 8px;border-bottom:1px solid #D4C9B8">Culoare</td>
-        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D4C9B8">Cantitate</td>
-        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D4C9B8">Preț unitar</td>
-        <td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D4C9B8">Valoare</td>
+      <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#5F7078">
+        <td style="padding:5px 8px 5px 0;border-bottom:1px solid #D3DBD6">Tip</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #D3DBD6">Material</td>
+        <td style="padding:5px 8px;border-bottom:1px solid #D3DBD6">Culoare</td>
+        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Cantitate</td>
+        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Preț unitar</td>
+        <td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Valoare</td>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:1.05em;font-weight:700;color:#2A2118;background:#EDE4D3;padding:8px 10px;margin-top:4px;border-top:2px solid #A0845C"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.82em">Subtotal ${c.numeCamera||"cameră"}</span><span>${fm(subtotalCameraM(c))}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:1.05em;font-weight:700;color:#1F2A30;background:#E8EDF0;padding:8px 10px;margin-top:4px;border-top:2px solid #33444D"><span style="text-transform:uppercase;letter-spacing:.05em;font-size:.82em">Subtotal ${c.numeCamera||"cameră"}</span><span>${fm(subtotalCameraM(c))}</span></div>
     </div>
     </div>`;
   }).join("");
@@ -6646,21 +6646,21 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
     const blocuri=furnizori.map(furn=>{
       const pozitii=Object.values(grupe[furn]).sort((a,b)=>a.material.localeCompare(b.material,"ro")||(a.culoare||"").localeCompare(b.culoare||"","ro"));
       const rows=pozitii.map(p=>
-        `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #D8CDBA">${p.material}</td><td style="padding:5px 8px;border-bottom:1px solid #D8CDBA">${p.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #D8CDBA">${fmtCant(p.cantitate)} m</td></tr>`
+        `<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #CBD5D0">${p.material}</td><td style="padding:5px 8px;border-bottom:1px solid #CBD5D0">${p.culoare||"—"}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #CBD5D0">${fmtCant(p.cantitate)} m</td></tr>`
       ).join("");
       return `<div style="margin-bottom:12px">
         <div style="font:700 .82em/1 'Source Sans 3',Calibri,sans-serif;color:#5C4A2E;margin-bottom:5px">${furn}</div>
         <table style="width:100%;border-collapse:collapse">
-          <thead><tr style="font:600 .7em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#8A7A64">
-            <td style="padding:4px 8px 4px 0;border-bottom:1px solid #C9BC9E">Material</td>
-            <td style="padding:4px 8px;border-bottom:1px solid #C9BC9E">Culoare</td>
-            <td style="padding:4px 0 4px 8px;text-align:right;border-bottom:1px solid #C9BC9E">Total de comandat</td>
+          <thead><tr style="font:600 .7em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5F7078">
+            <td style="padding:4px 8px 4px 0;border-bottom:1px solid #C4CFCA">Material</td>
+            <td style="padding:4px 8px;border-bottom:1px solid #C4CFCA">Culoare</td>
+            <td style="padding:4px 0 4px 8px;text-align:right;border-bottom:1px solid #C4CFCA">Total de comandat</td>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>`;
     }).join("");
-    return `<div class="necesarMateriale" style="margin:18px 0 0;padding:14px 16px;background:#F2EAD3;border:1px dashed #B8A67A">
+    return `<div class="necesarMateriale" style="margin:18px 0 0;padding:14px 16px;background:#EEF1EE;border:1px dashed #B8A67A">
       <div style="font:700 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#6E5A2E;margin-bottom:10px">Necesar materiale de comandat (intern — nu apare la printare)</div>
       ${blocuri}
     </div>`;
@@ -7002,11 +7002,11 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
     {eurEdit&&<div style={{padding:"10px 14px",background:"#E8F0F7",color:"#1F3A52",border:"1px solid #4F6D8A",marginBottom:10,fontSize:12,lineHeight:1.5}}>
       <b>Ofertă în EURO</b> (curs {eurEdit.cursText||"—"} · 1 € = {eurEdit.curs} lei). Prețurile din formular sunt în <b>LEI</b> — pe oferta tipărită apar convertite în €. Lângă fiecare produs vezi echivalentul în €. Total ofertă acum: <b>{totalEurEdit}</b>.
     </div>}
-    {editingId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+    {editingId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#33444D",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o ofertă existentă — la salvare, se actualizează, nu se creează una nouă.</span>
       <button onClick={anuleazaEditare} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
     </div>}
-    {!editingId&&ciornaAreContinut&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#E8DFC9",color:"#2A2118",marginBottom:14,border:"1px solid #C9B98F"}}>
+    {!editingId&&ciornaAreContinut&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#E1E8E4",color:"#1F2A30",marginBottom:14,border:"1px solid #C4CFCA"}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Ciornă neterminată ({nrProduseCiorna} {nrProduseCiorna===1?"produs":"produse"}) — continui de unde ai rămas. Nu s-a generat încă nicio ofertă din ea.</span>
       <button onClick={stergeCiorna} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"transparent",color:"#B5504A",border:"1px solid #B5504A",cursor:"pointer"}}>Șterge ciorna, începe de la zero</button>
     </div>}
@@ -7676,7 +7676,7 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
       <span style={{fontSize:14,fontWeight:700,color:C.text}}>Total ofertă: {totalGeneral.toFixed(0)} lei</span>
     </div>
     <div style={{fontSize:11,color:C.textMuted,marginBottom:12}}>Nr. ofertă următoare: <b>{ofertaCounter}/{new Date().getFullYear()}</b></div>
-    <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:editingId?"#A0845C":"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>{editingId?"Salvează modificările":"Generează și vizualizează oferta"}</button>
+    <button onClick={genereaza} style={{fontSize:12,fontWeight:600,padding:"9px 18px",background:editingId?"#33444D":"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>{editingId?"Salvează modificările":"Generează și vizualizează oferta"}</button>
     </>}
 
     {(client.oferte||[]).length>0&&<div style={{marginTop:16}}>
@@ -7690,7 +7690,7 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
           <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:80}}>{oferta.numar}</span>
           <input value={oferta.denumire||""} onChange={e=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,oferte:(c.oferte||[]).map(o=>o.id!==oferta.id?o:{...o,denumire:e.target.value})}))} placeholder="+ denumire (ex: Varianta Perdele)" style={{fontSize:12,fontWeight:600,color:C.text,border:"none",borderBottom:`1px dashed ${C.border}`,background:"transparent",outline:"none",minWidth:150,padding:"2px 0"}}/>
           <span style={{fontSize:12,color:C.textSub,flex:1}}>{oferta.numeClient} · {oferta.moneda==="EUR"?`${Number(oferta.totalEur||0).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2})} € (curs ${oferta.cursText||oferta.curs})`:`${oferta.total} lei`} · {fmtD(oferta.data)}{oferta.editedHtml?" · editat manual":""}</span>
-          <button onClick={()=>editeazaOferta(oferta)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>
+          <button onClick={()=>editeazaOferta(oferta)} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>
           <button onClick={()=>duplicaOfertaCompleta(oferta)} title="Deschide o copie a acestei oferte ca ofertă nouă, cu toate camerele/geamurile completate — modifici doar ce diferă" style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#6E7C74",color:"#fff",border:"none",cursor:"pointer"}}>⧉ Duplică ofertă</button>
           {!oferta.moneda&&<button onClick={()=>transformaInEuro(oferta)} title="Creează o copie a ofertei în euro, la cursul pe care îl alegi" style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:"#4F6D8A",color:"#fff",border:"none",cursor:"pointer"}}>€ Transformă în euro</button>}
           <button onClick={()=>vizualizeaza(htmlFor(oferta))} style={{fontSize:11,fontWeight:600,padding:"5px 10px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Vizualizează</button>
@@ -7734,12 +7734,12 @@ function ProcesVerbalClientSection({client,ci,setClients,C,pvCounter,setPvCounte
       ? f.denumire.split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
           const parts=l.split(" — ");
           if(parts.length===2){
-            return `<div style="display:flex;align-items:baseline;gap:6px;padding:2px 0"><span>• ${parts[0]}</span><span style="flex:1;border-bottom:1px dotted #A99C86;margin-bottom:3px"></span><span style="flex:none">${parts[1]}</span></div>`;
+            return `<div style="display:flex;align-items:baseline;gap:6px;padding:2px 0"><span>• ${parts[0]}</span><span style="flex:1;border-bottom:1px dotted #8FA0A6;margin-bottom:3px"></span><span style="flex:none">${parts[1]}</span></div>`;
           }
           return `<div style="padding:2px 0">• ${l}</div>`;
         }).join("")
       : "—";
-    return `<tr><td style="padding:5px 8px 5px 0;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;border-bottom:1px solid #E4DCCD;vertical-align:top">${f.serie||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E4DCCD;vertical-align:top">${f.data?fmtD(f.data):"—"}</td><td style="padding:5px 0 5px 8px;border-bottom:1px solid #E4DCCD">${produseHtml}</td></tr>`;
+    return `<tr><td style="padding:5px 8px 5px 0;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4;vertical-align:top">${f.serie||"—"}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4;vertical-align:top">${f.data?fmtD(f.data):"—"}</td><td style="padding:5px 0 5px 8px;border-bottom:1px solid #E1E8E4">${produseHtml}</td></tr>`;
   }).join("");
 
   const vizualizeaza=(html)=>{
@@ -7929,7 +7929,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
 
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator Stor Roman (Absolute Roman)</div>
-    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#33444D",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o configurație deja creată — la salvare, se actualizează, nu se creează una nouă.</span>
       <button onClick={anuleazaEditareCfg} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
     </div>}
@@ -7995,11 +7995,11 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
     </div>
 
     {error&&<div style={{fontSize:13,color:C.text,padding:"10px 0"}}>{error}</div>}
-    {validErrors.length>0&&<div style={{background:"#3A3128",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+    {validErrors.length>0&&<div style={{background:"#2A383F",color:"#fff",padding:"12px 16px",marginBottom:14,fontSize:13}}>
       <div style={{fontWeight:700,marginBottom:6}}>Configurație imposibilă:</div>
       {validErrors.map((e,i)=><div key={i} style={{marginBottom:4}}>{e}</div>)}
     </div>}
-    {validErrors.length===0&&validWarnings.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+    {validErrors.length===0&&validWarnings.length>0&&<div style={{background:"#A5B2B7",color:"#1F2A30",padding:"12px 16px",marginBottom:14,fontSize:13}}>
       <div style={{fontWeight:700,marginBottom:6}}>Atenție:</div>
       {validWarnings.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
     </div>}
@@ -8106,7 +8106,7 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
       </div>)}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
-        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -8152,20 +8152,20 @@ function ListaTaiereRulouri({clients,setClients,C}){
     const sectii=materiale.map(mat=>{
       const items=grupuri[mat].sort((a,b)=>a.client.localeCompare(b.client,"ro"));
       const rowsHtml=items.map(r=>`<tr>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;text-align:center;font-size:16px">☐</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;font-weight:600">${r.latime} mm</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;font-weight:600">${r.inaltime} mm</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#5C4F3E">${r.gabaritL}×${r.gabaritH} mm</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#5C4F3E">${r.sistem}</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${r.cantitate}</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#5C4F3E">${r.client}</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#8A7A64">${r.camera}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-size:16px">☐</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:600">${r.latime} mm</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:600">${r.inaltime} mm</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.gabaritL}×${r.gabaritH} mm</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.sistem}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${r.cantitate}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.client}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#5F7078">${r.camera}</td>
       </tr>`).join("");
       return `<div style="break-inside:avoid;margin-bottom:22px">
-        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">${mat} <span style="font-weight:400;font-size:.8em;color:#8A7A64">— ${items.length} bucăți</span></div>
-        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
-          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
-            <td style="padding:6px 10px;border:1px solid #D4C9B8">Tăiat</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Lățime stofă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Înălțime stofă</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Gabarit rulou</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Sistem</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Buc.</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Client</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cameră</td>
+        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${mat} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} bucăți</span></div>
+        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
+            <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Lățime stofă</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Înălțime stofă</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit rulou</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Sistem</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Client</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cameră</td>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -8297,22 +8297,22 @@ function ListaTaiereProfile({clients,setClients,C}){
     const sectii=tipuri.map(tip=>{
       const items=grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro"));
       const cat=grupuri[tip].categorie;
-      const catHeader = cat!==lastCat ? `<div style="font:700 1.1em 'Source Serif 4',Cambria,Georgia,serif;color:#A0845C;margin:${lastCat?"22px":"0"} 0 8px;border-bottom:2px solid #A0845C;padding-bottom:4px">${cat}</div>` : "";
+      const catHeader = cat!==lastCat ? `<div style="font:700 1.1em 'Source Serif 4',Cambria,Georgia,serif;color:#33444D;margin:${lastCat?"22px":"0"} 0 8px;border-bottom:2px solid #33444D;padding-bottom:4px">${cat}</div>` : "";
       lastCat=cat;
       const rowsHtml=items.map(r=>`<tr>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;text-align:center;font-size:16px">☐</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;font-weight:600">${r.lungime} mm</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#5C4F3E">${r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—"}</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#5C4F3E">${r.detalii}</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;text-align:right;font-weight:600">${r.cantitate}</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#5C4F3E">${r.client}</td>
-        <td style="padding:8px 10px;border:1px solid #D4C9B8;color:#8A7A64">${r.camera}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-size:16px">☐</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:600">${r.lungime} mm</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—"}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.detalii}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${r.cantitate}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.client}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#5F7078">${r.camera}</td>
       </tr>`).join("");
       return `${catHeader}<div style="break-inside:avoid;margin-bottom:22px">
-        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118;background:#EDE4D3;padding:8px 12px;border-top:2px solid #A0845C">${tip} <span style="font-weight:400;font-size:.8em;color:#8A7A64">— ${items.length} bucăți</span></div>
-        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#2A2118">
-          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#8A7A64;background:#F2EFE9">
-            <td style="padding:6px 10px;border:1px solid #D4C9B8">Tăiat</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Lungime tăiere</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Gabarit</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Detalii</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Buc.</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Client</td><td style="padding:6px 10px;border:1px solid #D4C9B8">Cameră</td>
+        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${tip} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} bucăți</span></div>
+        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
+            <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Lungime tăiere</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Detalii</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Client</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cameră</td>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -8559,7 +8559,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
 
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator Rulou (Absolute Roller Blind)</div>
-    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#A0845C",color:"#fff",marginBottom:14}}>
+    {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#33444D",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o configurație deja creată — la salvare, se actualizează, nu se creează una nouă.</span>
       <button onClick={anuleazaEditareCfg} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
     </div>}
@@ -8746,7 +8746,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       <div style={{fontWeight:700,marginBottom:6}}>Lipsesc opțiuni obligatorii — nu poți salva:</div>
       {result.errs.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
     </div>}
-    {result&&(!result.errs||result.errs.length===0)&&result.warns.length>0&&<div style={{background:"#B8A88F",color:"#2A2118",padding:"12px 16px",marginBottom:14,fontSize:13}}>
+    {result&&(!result.errs||result.errs.length===0)&&result.warns.length>0&&<div style={{background:"#A5B2B7",color:"#1F2A30",padding:"12px 16px",marginBottom:14,fontSize:13}}>
       <div style={{fontWeight:700,marginBottom:6}}>Atenție — poți trece peste, la salvare te va întreba din nou:</div>
       {result.warns.map((w,i)=><div key={i} style={{marginBottom:4}}>{w}</div>)}
     </div>}
@@ -8883,7 +8883,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
       {catalogCostComponente&&catalogCostComponente.length>0&&<div style={{display:"flex",justifyContent:"flex-end",padding:"8px 8px 0",fontSize:13,fontWeight:700,color:C.text}}>Total: {cost.total.toFixed(2)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț, neincluse)`:""}</div>}
       <div style={{display:"flex",gap:10,marginTop:12}}>
         <button onClick={onPrint} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
-        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#A0845C",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
+        {onEdit&&<button onClick={()=>onEdit(cfg)} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Editează</button>}
         <button onClick={delCfg} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge configurația</button>
       </div>
     </div>}
@@ -8952,12 +8952,12 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
         <button onClick={deselecteazaToate} style={{fontSize:11,color:C.accent,border:"none",background:"transparent",cursor:"pointer",textDecoration:"underline"}}>niciuna</button>
       </div>
       <div style={{display:"flex",gap:6}}>
-        <button disabled={!nrSel} onClick={()=>printPozeClient(client,selectate,1,fmtD,printTitle)} title="Fiecare poză pe o pagină întreagă — cel mai ușor de citit pentru cifre scrise de mână" style={{flex:1,fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#A0845C",cursor:nrSel?"pointer":"default",opacity:nrSel?1:0.45}}>🖨 Printează ({nrSel}) · 1 pe pagină</button>
-        <button disabled={!nrSel} onClick={()=>printPozeClient(client,selectate,2,fmtD,printTitle)} title="Două poze pe pagină, mai puține foi" style={{fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#A0845C",cursor:nrSel?"pointer":"default",opacity:nrSel?1:0.45}}>🖨 2 pe pagină</button>
+        <button disabled={!nrSel} onClick={()=>printPozeClient(client,selectate,1,fmtD,printTitle)} title="Fiecare poză pe o pagină întreagă — cel mai ușor de citit pentru cifre scrise de mână" style={{flex:1,fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#33444D",cursor:nrSel?"pointer":"default",opacity:nrSel?1:0.45}}>🖨 Printează ({nrSel}) · 1 pe pagină</button>
+        <button disabled={!nrSel} onClick={()=>printPozeClient(client,selectate,2,fmtD,printTitle)} title="Două poze pe pagină, mai puține foi" style={{fontSize:12,fontWeight:600,color:"#fff",border:"none",padding:"7px 12px",background:"#33444D",cursor:nrSel?"pointer":"default",opacity:nrSel?1:0.45}}>🖨 2 pe pagină</button>
       </div>
     </div>}
     <input ref={inputRef} type="file" accept={accept} multiple style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#2A2118",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?`Se încarcă...${uploadProgress?" "+uploadProgress:""}`:buttonLabel}</button>
+    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#1F2A30",border:"none",padding:"7px 12px",background:"#5C6B65",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?`Se încarcă...${uploadProgress?" "+uploadProgress:""}`:buttonLabel}</button>
   </div>;
 }
 
@@ -9039,8 +9039,8 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
           const isWeekend=dow===0||dow===6;
           const blocat=(blocate||[]).find(z=>key>=z.dataStart&&key<=(z.dataEnd||z.dataStart));
           let bg=nume.length?(nume.every(n=>n.task)?"#5B7FA0":"#5C6B65"):C.bg, textCol=nume.length?"rgba(255,255,255,0.75)":C.textMuted;
-          if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
-          if(blocat){bg="#B8A88F";textCol="#fff";}
+          if(isWeekend){bg="#DCE3DF";textCol="#9DACB2";}
+          if(blocat){bg="#A5B2B7";textCol="#fff";}
           cells.push(<div key={key} style={{minHeight:56,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
             <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
             {blocat?<div style={{fontSize:9,color:"#fff",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{blocat.motiv||"Blocat"}</div>:
@@ -9087,7 +9087,7 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
       <button onClick={()=>{setDView("fin");setOpenId(null);}} style={{padding:"7px 14px",border:`1px solid ${danShowFin?C.accent:C.border}`,background:danShowFin?C.accentLight:"transparent",color:danShowFin?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:danShowFin?500:400}}>Clienți finalizați</button>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(105px,1fr))",gap:6,marginBottom:16}}>
-      {danClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #2A2118":"1px solid transparent"}}>
+      {danClients.map((c,fi)=><div key={c.id} onClick={()=>setOpenId(c.id===openId?null:c.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",aspectRatio:"1 / 1",padding:8,cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:openId===c.id?"2px solid #1F2A30":"1px solid transparent"}}>
         <span style={{fontSize:12,fontWeight:500,color:C.text,wordBreak:"break-word"}}>{c.name}</span>
       </div>)}
       {danClients.length===0&&<div style={{fontSize:13,color:C.textMuted,gridColumn:"1/-1",padding:"20px 0"}}>{danShowFin?"Niciun client finalizat încă.":dView==="livrat"?"Niciun client livrat.":"Niciun client alocat încă. Bifează \"Alocă la Dan\" din fișa clientului, în tab-ul Clienți."}</div>}
@@ -9266,7 +9266,7 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
               const isToday=keyFor(obMonth.y,obMonth.m,day)===todayKey;
               const dow=new Date(obMonth.y,obMonth.m,day).getDay();
               const isWeekend=dow===0||dow===6;
-              return <th key={day} style={{fontSize:10,color:isToday?C.text:isWeekend?"#A89E8C":C.textMuted,fontWeight:isToday?700:400,padding:"6px 2px",borderBottom:`1px solid ${C.border}`,minWidth:24,background:isWeekend?"#EFE9DC":"transparent"}}>{day}</th>;
+              return <th key={day} style={{fontSize:10,color:isToday?C.text:isWeekend?"#9DACB2":C.textMuted,fontWeight:isToday?700:400,padding:"6px 2px",borderBottom:`1px solid ${C.border}`,minWidth:24,background:isWeekend?"#EFE9DC":"transparent"}}>{day}</th>;
             })}
             <th style={{fontSize:10,color:C.textMuted,padding:"6px 8px",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>Streak</th>
             <th style={{fontSize:10,color:C.textMuted,padding:"6px 8px",borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"}}>%</th>
@@ -9288,7 +9288,7 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
                 const nota=o.note&&o.note[key];
                 const dow=new Date(obMonth.y,obMonth.m,day).getDay();
                 const isWeekend=dow===0||dow===6;
-                const bg=done?C.accent:isWeekend?"#DDD6C8":C.bg;
+                const bg=done?C.accent:isWeekend?"#DCE3DF":C.bg;
                 return <td key={day} style={{padding:2,textAlign:"center"}}>
                   <div onClick={()=>!isFuture&&toggleZi(oi,key)} title={nota||""} style={{width:20,height:20,margin:"0 auto",cursor:isFuture?"default":"pointer",background:bg,border:`1px solid ${C.border}`,opacity:isFuture?0.35:1}}/>
                 </td>;
@@ -9329,7 +9329,7 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
           </div>)}
           <div style={{display:"flex",gap:8}}>
             <input value={newItemText} onChange={e=>setNewItemText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addItem(expandedOi);}} placeholder="Titlu nou (ex: numele cărții)..." style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.surface,outline:"none"}}/>
-            <button onClick={()=>addItem(expandedOi)} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
+            <button onClick={()=>addItem(expandedOi)} style={{fontSize:12,color:"#1F2A30",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
           </div>
         </div>
       </div>;
@@ -9338,9 +9338,9 @@ function TabObiective({obiective,setObiective,C,obMonth,setObMonth,addingOb,setA
     <div>
       {addingOb?<div style={{display:"flex",alignItems:"center",gap:10}}>
         <input autoFocus value={newObName} onChange={e=>setNewObName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addObiectiv();if(e.key==="Escape")setAddingOb(false);}} placeholder="Obiectiv nou (ex: Sport, Organizare)..." style={{padding:"9px 14px",border:`1px solid ${C.border}`,fontSize:13,flex:1,background:C.surface,color:C.text,outline:"none"}}/>
-        <button onClick={addObiectiv} style={{padding:"8px 20px",border:"none",background:C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>Adaugă</button>
+        <button onClick={addObiectiv} style={{padding:"8px 20px",border:"none",background:C.accent,color:"#F7F9F7",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>Adaugă</button>
         <button onClick={()=>setAddingOb(false)} style={{padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub}}>✕</button>
-      </div>:<button onClick={()=>setAddingOb(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ obiectiv nou</button>}
+      </div>:<button onClick={()=>setAddingOb(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#1F2A30",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ obiectiv nou</button>}
     </div>
   </div>;
 }
@@ -9383,7 +9383,7 @@ function TabMotionBlinds({motoare,clients,iesiri,intrari,openModel,setOpenModel,
                 <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {fmtD(f.data)}</span>
                 <span style={{fontSize:11,color:"#5A8A5A",marginLeft:8}}>· {f.pozitii.reduce((s,p)=>s+p.qty,0)} buc.</span>
               </div>
-              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+              <button onClick={e=>{e.stopPropagation();stergeFactura(f.id);}} style={{fontSize:11,color:C.danger,border:`1px solid #C4CFCA`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
               <span style={{fontSize:11,color:"#5A8A5A"}}>{isOpenF?"▾":"▸"}</span>
             </div>
             {isOpenF&&<div style={{padding:"8px 14px 12px"}}>
@@ -9393,7 +9393,7 @@ function TabMotionBlinds({motoare,clients,iesiri,intrari,openModel,setOpenModel,
                 </select>
                 <input type="number" min="1" value={pz.qty} onChange={e=>updPozitie(f.id,pz.id,"qty",e.target.value)} style={{width:60,fontSize:13,border:`1px solid ${C.border}`,padding:"4px 6px",outline:"none",textAlign:"center"}}/>
                 <span style={{fontSize:12,color:C.textMuted}}>buc.</span>
-                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C9BCA6`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
+                <button onClick={()=>stergePozitie(f.id,pz.id)} style={{marginLeft:"auto",fontSize:11,color:C.danger,border:`1px solid #C4CFCA`,padding:"2px 8px",background:"transparent",cursor:"pointer"}}>× șterge</button>
               </div>)}
             </div>}
           </div>;
@@ -9511,9 +9511,9 @@ function AddBiletForm({furnizori,onAdd,onAddFurnizor}){
   const [valoare,setValoare]=React.useState("");
   const [scadenta,setScadenta]=React.useState("");
   const [addingFurnizor,setAddingFurnizor]=React.useState(false);
-  const C2={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textMuted:"#A8998A",accent:"#A0845C"};
+  const C2={bg:"#EDF0ED",surface:"#F7F9F7",border:"#DCE3DF",text:"#1F2A30",textMuted:"#8FA0A6",accent:"#33444D"};
   const confirmFurnizorNou=()=>{if(furnizorNou.trim()){const f=furnizorNou.trim();setFurnizor(f);onAddFurnizor(f);setAddingFurnizor(false);setFurnizorNou("");}};
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Bilet la ordin nou</button>;
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#1F2A30",border:"none",background:"#5C6B65",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Bilet la ordin nou</button>;
   return <div style={{background:C2.surface,border:`1px solid ${C2.border}`,padding:"16px",marginBottom:16}}>
     <div style={{fontSize:11,color:C2.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Bilet la ordin nou</div>
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:10}}>
@@ -9604,11 +9604,11 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
   return <div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:12}}>Cash Flow · Registru zilnic</div>
 
-    {primaZiNeg&&<div style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C9BCA6`,marginBottom:10,fontSize:13,color:C.danger,fontWeight:500}}>
+    {primaZiNeg&&<div style={{padding:"10px 14px",background:C.dangerLight,border:`1px solid #C4CFCA`,marginBottom:10,fontSize:13,color:C.danger,fontWeight:500}}>
       ● Sold negativ previzionat pe {primaZiNeg.label}: {primaZiNeg.soldEnd.toLocaleString("ro-RO")} RON
     </div>}
     {bilete.filter(b=>!b.achitat&&b.scadenta&&daysTo(b.scadenta)<=7&&daysTo(b.scadenta)>=0).map(b=>(
-      <div key={b.id} style={{padding:"8px 14px",background:C.warnLight,border:`1px solid #C9BCA6`,marginBottom:6,fontSize:12,color:C.warn}}>
+      <div key={b.id} style={{padding:"8px 14px",background:C.warnLight,border:`1px solid #C4CFCA`,marginBottom:6,fontSize:12,color:C.warn}}>
         Bilet #{b.numar} · {b.furnizor} · {Number(b.valoare).toLocaleString("ro-RO")} RON — scadent {fmtD(b.scadenta)}
       </div>
     ))}
@@ -9680,7 +9680,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                 <button onClick={()=>{adaugaInreg(z.data,"incasare");setShowForm(null);}} style={{...btnP("#3A6A3A"),fontSize:11,padding:"5px 12px"}}>✓</button>
                 <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>✕</button>
               </div>:
-              <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#2A2118",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
+              <button onClick={()=>{setShowForm({data:z.data,tip:"incasare"});setFormData({descriere:"",suma:"",});}} style={{fontSize:11,color:"#1F2A30",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginTop:4}}>+ adaugă încasare</button>
             }
             {z.totalIn>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:"#2A6A2A",marginTop:6,paddingTop:6,borderTop:"1px solid #D0E8D0"}}>Total încasări: +{z.totalIn.toLocaleString("ro-RO")} RON</div>}
           </div>
@@ -9754,7 +9754,7 @@ function CashFlowTab({trezorerie,setTrezorerie,bilete,setBilete,furnizoriLista,s
                   <button onClick={()=>setShowForm(null)} style={{...btnS,fontSize:11,padding:"5px 10px"}}>Anulează</button>
                 </div>
               </div>:
-              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:"#2A2118",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
+              <button onClick={()=>{setShowForm({data:z.data,tip:"plata"});setFormData({descriere:"",suma:"",addingFurnizor:false});}} style={{fontSize:11,color:"#1F2A30",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginTop:4}}>+ adaugă plată</button>
             }
             {z.totalOut>0&&<div style={{textAlign:"right",fontSize:12,fontWeight:700,color:C.danger,marginTop:6,paddingTop:6,borderTop:"1px solid #DED2BE"}}>Total plăți: -{z.totalOut.toLocaleString("ro-RO")} RON</div>}
           </div>
@@ -9860,7 +9860,7 @@ function AddFacturaForm({motoare, onAdd}){
   const [factura,setFactura]=React.useState("");
   const [data,setData]=React.useState(tday());
   const [pozitii,setPozitii]=React.useState([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
-  const C2={bg:"#F2EFE9",surface:"#FAF8F4",border:"#E0D8CC",text:"#2A2118",textMuted:"#A8998A"};
+  const C2={bg:"#EDF0ED",surface:"#F7F9F7",border:"#DCE3DF",text:"#1F2A30",textMuted:"#8FA0A6"};
   const addPoz=()=>setPozitii(p=>[...p,{id:Date.now().toString(),model:motoare[0]?.model||"",qty:1}]);
   const updPoz=(id,f,v)=>setPozitii(p=>p.map(pz=>pz.id!==id?pz:{...pz,[f]:f==="qty"?parseInt(v)||1:v}));
   const delPoz=(id)=>setPozitii(p=>p.filter(pz=>pz.id!==id));
@@ -9871,7 +9871,7 @@ function AddFacturaForm({motoare, onAdd}){
     setPozitii([{id:"p1",model:motoare[0]?.model||"",qty:1}]);
     setOpen(false);
   };
-  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Înregistrează intrare nouă (factură)</button>;
+  if(!open) return <button onClick={()=>setOpen(true)} style={{width:"100%",padding:"11px",fontSize:12,color:"#1F2A30",border:"none",background:"#5C6B65",cursor:"pointer",fontWeight:500,marginBottom:16}}>+ Înregistrează intrare nouă (factură)</button>;
   return <div style={{background:"#F2F8F2",border:"1.5px solid #90C090",padding:"16px",marginBottom:16}}>
     <div style={{fontSize:11,color:"#3A6A3A",textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:12}}>Intrare nouă · Factură</div>
     <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:12}}>
@@ -9891,7 +9891,7 @@ function AddFacturaForm({motoare, onAdd}){
       <span style={{fontSize:12,color:C2.textMuted}}>buc.</span>
       {pozitii.length>1&&<button onClick={()=>delPoz(pz.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#C07070",fontSize:16,padding:"0 4px"}}>×</button>}
     </div>)}
-    <button onClick={addPoz} style={{fontSize:11,color:"#2A2118",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginBottom:12}}>+ adaugă poziție</button>
+    <button onClick={addPoz} style={{fontSize:11,color:"#1F2A30",border:"none",padding:"4px 12px",background:"#5C6B65",cursor:"pointer",marginBottom:12}}>+ adaugă poziție</button>
     <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
       <button onClick={()=>setOpen(false)} style={{padding:"7px 16px",border:`1px solid ${C2.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C2.textMuted}}>Anulează</button>
       <button onClick={handleSave} style={{padding:"7px 20px",border:"none",background:"#3A6A3A",color:"#fff",cursor:"pointer",fontSize:12,fontWeight:500}}>Salvează factura</button>
@@ -10318,7 +10318,7 @@ function DeclaratiiTab({declaratii,setDeclaratii,C,esteAdmin,mergiLa}){
       </div>;
     })}
     <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
-      {esteAdmin&&<button onClick={()=>mergiLa("banca")} style={{padding:"8px 18px",border:"none",background:C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>Deschide Bancă →</button>}
+      {esteAdmin&&<button onClick={()=>mergiLa("banca")} style={{padding:"8px 18px",border:"none",background:C.accent,color:"#F7F9F7",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>Deschide Bancă →</button>}
       <button onClick={goleste} style={{padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub}}>Debifează luna</button>
     </div>
   </div>;
@@ -10844,6 +10844,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   const [newObName,setNewObName]=useState("");
   const [obMonth,setObMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [danView,setDanView]=useState("dan");
+  const [nicoView,setNicoView]=useState("nico");
   const [pendingEditCfg,setPendingEditCfg]=useState(null);
   const [newTaskPr,setNewTaskPr]=useState({});
   const [addingToPr,setAddingToPr]=useState(null);
@@ -11514,7 +11515,7 @@ function AppInner({authRole,authEmail,onLogout}) {
 
   const inp={padding:"9px 14px",border:`1px solid ${C.border}`,fontSize:13,width:"100%",background:C.surface,color:C.text,outline:"none",letterSpacing:"0.01em"};
   const card={background:C.surface,border:`1px solid ${C.border}`,padding:"18px 22px",marginBottom:12};
-  const btnP=(bg)=>({padding:"8px 20px",border:"none",background:bg||C.accent,color:"#FAF8F4",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"});
+  const btnP=(bg)=>({padding:"8px 20px",border:"none",background:bg||C.accent,color:"#F7F9F7",cursor:"pointer",fontSize:12,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"});
   const btnS={padding:"8px 16px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12,color:C.textSub,letterSpacing:"0.04em"};
   const lbl={fontSize:10,color:C.textMuted,display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.1em",fontWeight:500};
   const row={display:"flex",alignItems:"center",gap:10};
@@ -11541,9 +11542,9 @@ function AppInner({authRole,authEmail,onLogout}) {
   };
 
   const recLabel=(r)=>{if(r.type==="lunar_zi") return `Lunar, ziua ${r.day}`;if(r.type==="lunar_inceput") return "Lunar, prima zi";if(r.type==="lunar_sfarsit") return "Lunar, ultima zi";if(r.type==="saptamanal") return `Săptămânal, ${r.day}`;return "";};
-  if(!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#F2EFE9",flexDirection:"column",gap:16}}>
-    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:300,color:"#2A2118",letterSpacing:"0.05em"}}>Kreativo Studio</div>
-    <div style={{fontSize:11,color:"#A8998A",textTransform:"uppercase",letterSpacing:"0.15em"}}>Se încarcă datele...</div>
+  if(!loaded) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#EDF0ED",flexDirection:"column",gap:16}}>
+    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:300,color:"#1F2A30",letterSpacing:"0.05em"}}>Kreativo Studio</div>
+    <div style={{fontSize:11,color:"#8FA0A6",textTransform:"uppercase",letterSpacing:"0.15em"}}>Se încarcă datele...</div>
   </div>;
 
   const GRUPURI=[
@@ -11557,7 +11558,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   const raduOnly=authRole==="radu"||(authRole==="admin"&&new URLSearchParams(window.location.search).get("radu")==="1");
   if(raduOnly){
     return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px",position:"relative"}}>
-      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C9B98F",background:"transparent",color:"#4A3F30",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
+      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C4CFCA",background:"transparent",color:"#34444C",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Radu</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Vopsele · Kreativo Studio</div>
@@ -11569,19 +11570,22 @@ function AppInner({authRole,authEmail,onLogout}) {
   const nicoOnly=authRole==="nico"||(authRole==="admin"&&new URLSearchParams(window.location.search).get("nico")==="1");
   if(nicoOnly){
     return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px",position:"relative"}}>
-      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C9B98F",background:"transparent",color:"#4A3F30",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
+      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C4CFCA",background:"transparent",color:"#34444C",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Nico</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Croitorie · Kreativo Studio</div>
       </div>
-      <TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale} readOnly={true}/>
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        {[["nico","Croitorie"],["declaratii","Declarații"]].map(([v,l])=><button key={v} onClick={()=>setNicoView(v)} style={{padding:"7px 14px",border:`1px solid ${nicoView===v?C.accent:C.border}`,background:nicoView===v?C.accentLight:"transparent",color:nicoView===v?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:nicoView===v?600:400}}>{l}</button>)}
+      </div>
+      {nicoView==="declaratii"?<div style={{maxWidth:900}}><DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={false} mergiLa={()=>{}}/></div>:<TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale} readOnly={true}/>}
     </div>;
   }
 
   const danOnly=authRole==="dan"||(authRole==="admin"&&new URLSearchParams(window.location.search).get("dan")==="1");
   if(danOnly){
     return <div style={{fontFamily:"'Jost',sans-serif",background:C.bg,minHeight:"100vh",padding:"20px 16px",position:"relative"}}>
-      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C9B98F",background:"transparent",color:"#4A3F30",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
+      <button onClick={onLogout} title={authEmail} style={{position:"absolute",top:14,right:14,fontSize:11,padding:"5px 12px",border:"1px solid #C4CFCA",background:"transparent",color:"#34444C",cursor:"pointer",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Dan</div>
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Montaj · Kreativo Studio</div>
@@ -11615,8 +11619,8 @@ function AppInner({authRole,authEmail,onLogout}) {
       <button onClick={()=>window.location.reload()} style={{background:"#fff",color:"#B3402F",border:"none",padding:"7px 16px",fontWeight:700,cursor:"pointer",fontSize:13}}>Reîncarcă acum</button>
     </div>}
     {/* SIDEBAR */}
-    <div style={{width:210,flexShrink:0,background:"#D4C9B8",borderRight:"1px solid #C4B8A4",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
-      <div style={{padding:"24px 20px 18px",borderBottom:"1px solid #C4B8A4"}}>
+    <div style={{width:210,flexShrink:0,background:"#D3DBD6",borderRight:"1px solid #C4CFCA",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
+      <div style={{padding:"24px 20px 18px",borderBottom:"1px solid #C4CFCA"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{display:"flex",gap:2.5}}>
             <div style={{width:3,height:38,background:C.text}}/>
@@ -11631,14 +11635,14 @@ function AppInner({authRole,authEmail,onLogout}) {
         {staleTab?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● date vechi · salvare oprită</div>:protectMode?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● mod protejat · salvare blocată</div>:
         !supabaseOk&&<div style={{fontSize:9,color:C.textSub,marginTop:8,letterSpacing:"0.08em"}}>● offline · date locale</div>}
         {!staleTab&&!protectMode&&supabaseOk&&(savingKeys.size>0?
-          <div style={{fontSize:9,color:"#A0845C",marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● se salvează…</div>:
+          <div style={{fontSize:9,color:"#33444D",marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● se salvează…</div>:
           <div style={{fontSize:9,color:C.textMuted,marginTop:8,letterSpacing:"0.08em"}}>✓ salvat</div>)}
       </div>
       <div style={{flex:1,padding:"14px 0"}}>
         {GRUPURI.flatMap(g=>g.items).map(t=>{
           const subs=t.sub||[];
           const deschis=subs.length>0&&(tab===t.id||subs.some(x=>x.id===tab));
-          const btnStil=(act,nivel)=>({display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:nivel?"7px 20px 7px 36px":"9px 20px",cursor:"pointer",border:"none",borderLeft:act?`3px solid ${C.text}`:"3px solid transparent",background:act?"#C4A882":"transparent",color:C.text,fontWeight:act?600:500,fontSize:nivel?12:13,letterSpacing:"0.02em"});
+          const btnStil=(act,nivel)=>({display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:nivel?"7px 20px 7px 36px":"9px 20px",cursor:"pointer",border:"none",borderLeft:act?`3px solid ${C.text}`:"3px solid transparent",background:act?"#B9C6C0":"transparent",color:C.text,fontWeight:act?600:500,fontSize:nivel?12:13,letterSpacing:"0.02em"});
           return <React.Fragment key={t.id}>
             <button onClick={()=>setTab(t.id)} style={btnStil(tab===t.id,0)}>
               <span style={{flex:1}}>{t.l}</span>
@@ -11649,14 +11653,14 @@ function AppInner({authRole,authEmail,onLogout}) {
           </React.Fragment>;
         })}
       </div>
-      <div style={{padding:"14px 20px",borderTop:"1px solid #C4B8A4"}}>
+      <div style={{padding:"14px 20px",borderTop:"1px solid #C4CFCA"}}>
         <div style={{display:"flex",gap:6,marginBottom:8}}>
-          <button onClick={exportDate} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
-          <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
+          <button onClick={exportDate} style={{flex:1,padding:"7px 0",border:"1px solid #8FA0A6",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
+          <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid #8FA0A6",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
           <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
         </div>
-        <button onClick={onLogout} title={authEmail} style={{width:"100%",marginBottom:8,padding:"7px 0",border:"1px solid #A89878",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
-        <button onClick={configureazaAutoBackup} style={{width:"100%",padding:"7px 0",border:"1px solid #A89878",background:autoBackupStatus?"#5C6B65":"transparent",color:autoBackupStatus?"#fff":C.text,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{autoBackupStatus?"Backup automat activ":"Configurează backup automat"}</button>
+        <button onClick={onLogout} title={authEmail} style={{width:"100%",marginBottom:8,padding:"7px 0",border:"1px solid #8FA0A6",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
+        <button onClick={configureazaAutoBackup} style={{width:"100%",padding:"7px 0",border:"1px solid #8FA0A6",background:autoBackupStatus?"#5C6B65":"transparent",color:autoBackupStatus?"#fff":C.text,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{autoBackupStatus?"Backup automat activ":"Configurează backup automat"}</button>
         {autoBackupStatus&&<div style={{fontSize:9,color:C.textSub,marginTop:6,letterSpacing:"0.04em"}}>→ {autoBackupStatus}{autoBackupLast?` · ultima salvare: ${autoBackupLast}`:""}</div>}
         {autoBackupNeedsClick&&<button onClick={reactiveazaAutoBackup} style={{width:"100%",marginTop:6,padding:"6px 0",border:"1px solid #B5504A",background:"transparent",color:"#B5504A",cursor:"pointer",fontSize:9,letterSpacing:"0.05em",fontWeight:600}}>⚠ Reactivează backup automat (un click)</button>}
       </div>
@@ -11771,7 +11775,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         {notifAlerts.map((n,i)=><div key={i} style={{...row,marginBottom:4}}><span style={{flex:1,fontSize:13,color:C.text}}>{n.name} · {n.task}</span><span style={{fontSize:11,color:C.textMuted}}>{n.days===0?"Azi":n.days===1?"Mâine":`În ${n.days} zile`}</span></div>)}
       </div>;
       })()}
-      {recAzi.length>0&&<div style={{...card,border:`1px solid #C9BCA6`,background:C.dangerLight,marginBottom:12}}>
+      {recAzi.length>0&&<div style={{...card,border:`1px solid #C4CFCA`,background:C.dangerLight,marginBottom:12}}>
         <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>{recAzi.length} recurente azi — acționează</div>
         {recAzi.map(r=><div key={r.id} style={{...row,marginBottom:6}}><span style={{flex:1,fontSize:13,color:C.text}}>{r.title}</span><button style={btnP()} onClick={()=>doneRec(r.id)}>✓</button></div>)}
       </div>}
@@ -11842,7 +11846,7 @@ function AppInner({authRole,authEmail,onLogout}) {
             </div>)}
             <div style={{display:"flex",gap:8,marginTop:8,marginBottom:10}}>
               <input value={newSubObText[o.id]||""} onChange={e=>setNewSubObText(p=>({...p,[o.id]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter"){addSubOb(o.id,newSubObText[o.id]);setNewSubObText(p=>({...p,[o.id]:""}));}}} placeholder="Obiectiv mic nou..." style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"}}/>
-              <button onClick={()=>{addSubOb(o.id,newSubObText[o.id]);setNewSubObText(p=>({...p,[o.id]:""}));}} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
+              <button onClick={()=>{addSubOb(o.id,newSubObText[o.id]);setNewSubObText(p=>({...p,[o.id]:""}));}} style={{fontSize:12,color:"#1F2A30",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
             </div>
             <button onClick={()=>delObMare(o.id)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge obiectiv mare</button>
           </div>}
@@ -11853,7 +11857,7 @@ function AppInner({authRole,authEmail,onLogout}) {
           <input autoFocus value={newObMareName} onChange={e=>setNewObMareName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){addObMare(newObMareName);setNewObMareName("");setAddingObMare(false);}if(e.key==="Escape")setAddingObMare(false);}} placeholder="Obiectiv mare nou (ex: Extindere pe alt oraș)..." style={{...inp,flex:1}}/>
           <button onClick={()=>{addObMare(newObMareName);setNewObMareName("");setAddingObMare(false);}} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingObMare(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingObMare(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ obiectiv mare nou</button>}
+        </div>:<button onClick={()=>setAddingObMare(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#1F2A30",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ obiectiv mare nou</button>}
       </div>
     </div>}
 
@@ -11880,7 +11884,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       {recurente.length===0&&<div style={{color:C.textMuted,textAlign:"center",padding:"3rem",fontSize:13}}>Nicio sarcină recurentă.</div>}
       {recAzi.length>0&&<div style={{marginBottom:16}}>
         <div style={{fontSize:11,fontWeight:600,color:C.danger,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Scadente azi</div>
-        {recAzi.map(r=><div key={r.id} style={{...card,padding:"12px 16px",border:`1px solid #C9BCA6`,background:C.dangerLight,marginBottom:8}}>
+        {recAzi.map(r=><div key={r.id} style={{...card,padding:"12px 16px",border:`1px solid #C4CFCA`,background:C.dangerLight,marginBottom:8}}>
           <div style={row}><div style={{flex:1}}><div style={{fontSize:13,color:C.text,fontWeight:500}}>{r.title}</div><div style={{fontSize:11,color:C.textMuted,marginTop:2}}>{recLabel(r)} · {r.cat}</div></div>
             <button style={btnP()} onClick={()=>doneRec(r.id)}>✓ Gata</button>
             <button onClick={()=>delRec(r.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16}}>×</button>
@@ -11935,7 +11939,7 @@ function AppInner({authRole,authEmail,onLogout}) {
                 const doarMontaj=items.length>0&&items.every(it=>it.isMontaj);
                 const doarDan=items.length>0&&items.every(it=>it.isDan);
                 let bg=items.length?(doarMontaj?"#8E75A8":doarDan?"#5B7FA0":"#5C6B65"):C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
-                if(isWeekend&&!items.length){bg="#DDD6C8";textCol="#A89E8C";}
+                if(isWeekend&&!items.length){bg="#DCE3DF";textCol="#9DACB2";}
                 cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
                   <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
                   {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",...(it.isMontaj&&!doarMontaj?{background:"#8E75A8",padding:"1px 3px",marginTop:1}:it.isDan&&!doarDan?{background:"#5B7FA0",padding:"1px 3px",marginTop:1}:{})}}>{it.isMontaj?"🔧 ":""}{it.time} {it.title}</div>)}
@@ -12034,7 +12038,7 @@ function AppInner({authRole,authEmail,onLogout}) {
                 const isWeekend=dow===0||dow===6;
                 const items=byDay[key]||[];
                 let bg=items.length?"#5C6B65":C.bg, textCol=items.length?"rgba(255,255,255,0.75)":C.textMuted;
-                if(isWeekend){bg="#DDD6C8";textCol="#A89E8C";}
+                if(isWeekend){bg="#DCE3DF";textCol="#9DACB2";}
                 cells.push(<div key={key} style={{minHeight:60,padding:"4px 5px",background:bg,border:isToday?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
                   <div style={{fontSize:11,fontWeight:isToday?700:400,color:textCol,marginBottom:2}}>{day}</div>
                   {items.map((it,i)=><div key={i} style={{fontSize:9,color:"rgba(255,255,255,0.95)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.ora} {it.text}</div>)}
@@ -12117,7 +12121,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         const ci=clients.indexOf(client);
         const pending=client.done.filter(d=>!d).length;const allDone=client.tasks.length>0&&client.done.every(Boolean);
         const activ=client.open;
-        return <div key={client.id} onClick={()=>setClients(p=>p.map((c,i)=>({...c,open:i===ci?!c.open:false})))} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,aspectRatio:"1 / 1",padding:"8px",cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:activ?"2px solid #2A2118":"1px solid transparent",transition:"border-color .1s"}}>
+        return <div key={client.id} onClick={()=>setClients(p=>p.map((c,i)=>({...c,open:i===ci?!c.open:false})))} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,aspectRatio:"1 / 1",padding:"8px",cursor:"pointer",userSelect:"none",textAlign:"center",background:CC[fi%CC.length],border:activ?"2px solid #1F2A30":"1px solid transparent",transition:"border-color .1s"}}>
           <span style={{fontSize:12,fontWeight:500,color:C.text,overflow:"hidden",wordBreak:"break-word",maxHeight:"3em",letterSpacing:"0.01em"}}>{client.name}</span>
           {allDone?<span style={{fontSize:10,color:"#3A6A3A",flexShrink:0,fontWeight:600}}>✓</span>:
            pending>0?<span style={{fontSize:10,fontWeight:600,color:C.text,flexShrink:0,background:"rgba(255,255,255,0.55)",padding:"1px 7px"}}>{pending}</span>:null}
@@ -12238,7 +12242,7 @@ function AppInner({authRole,authEmail,onLogout}) {
           <input autoFocus value={newCliName} onChange={e=>setNewCliName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCli();if(e.key==="Escape")setAddingCli(false);}} placeholder={tab==="oferte"?"Nume client nou (prospect)...":"Nume client nou..."} style={{...inp,flex:1}}/>
           <button onClick={addCli} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingCli(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>{tab==="oferte"?"+ client nou (prospect fără ofertă încă)":"+ client nou"}</button>}
+        </div>:<button onClick={()=>setAddingCli(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#1F2A30",border:"none",background:"#5C6B65",cursor:"pointer"}}>{tab==="oferte"?"+ client nou (prospect fără ofertă încă)":"+ client nou"}</button>}
       </div>
       </div>}
     </div>}
@@ -12354,7 +12358,7 @@ function AppInner({authRole,authEmail,onLogout}) {
                   </div>)}
                   <div style={{display:"flex",gap:8}}>
                     <input value={newTaskJurnalItemText} onChange={e=>setNewTaskJurnalItemText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){addTaskJurnalItem(pi,ti,newTaskJurnalItemText);setNewTaskJurnalItemText("");}}} placeholder="Titlu nou..." style={{flex:1,fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"}}/>
-                    <button onClick={()=>{addTaskJurnalItem(pi,ti,newTaskJurnalItemText);setNewTaskJurnalItemText("");}} style={{fontSize:12,color:"#2A2118",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
+                    <button onClick={()=>{addTaskJurnalItem(pi,ti,newTaskJurnalItemText);setNewTaskJurnalItemText("");}} style={{fontSize:12,color:"#1F2A30",background:"#5C6B65",border:"none",padding:"0 16px",cursor:"pointer"}}>+ adaugă</button>
                   </div>
                 </div>}
               </div>;
@@ -12375,7 +12379,7 @@ function AppInner({authRole,authEmail,onLogout}) {
           <input autoFocus value={newPrName} onChange={e=>setNewPrName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addPr();if(e.key==="Escape")setAddingPr(false);}} placeholder="Nume proiect (ex: Renovare apartament)..." style={{...inp,flex:1}}/>
           <button onClick={addPr} style={btnP()}>Adaugă</button>
           <button onClick={()=>setAddingPr(false)} style={btnS}>✕</button>
-        </div>:<button onClick={()=>setAddingPr(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#2A2118",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ proiect nou</button>}
+        </div>:<button onClick={()=>setAddingPr(true)} style={{width:"100%",padding:"12px",fontSize:13,color:"#1F2A30",border:"none",background:"#5C6B65",cursor:"pointer"}}>+ proiect nou</button>}
       </div>
     </div>}
 
@@ -12435,7 +12439,7 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, info){ this.setState({info}); console.error("Eroare Kreativo:", error, info); }
   render(){
     if(this.state.hasError){
-      return <div style={{padding:30,fontFamily:"Arial,sans-serif",maxWidth:800,margin:"40px auto",background:"#F2EFE9",border:"1px solid #B5504A"}}>
+      return <div style={{padding:30,fontFamily:"Arial,sans-serif",maxWidth:800,margin:"40px auto",background:"#EDF0ED",border:"1px solid #B5504A"}}>
         <h2 style={{color:"#B5504A"}}>A apărut o eroare</h2>
         <p>Aplicația a întâmpinat o problemă și s-a oprit, ca să nu piardă date. Detaliile de mai jos ajută la reparare — trimite-le, te rog.</p>
         <p style={{fontWeight:700}}>{String(this.state.error && this.state.error.message || this.state.error)}</p>
@@ -12495,23 +12499,23 @@ function LoginScreen({onDone,recovery}){
     }catch(err){ setEroare(tradu(err.message)); }
     finally{ setOcupat(false); }
   };
-  const inp={width:"100%",boxSizing:"border-box",fontSize:15,padding:"11px 12px",border:"1px solid #C9B98F",background:"#FAF8F4",color:"#2A2118",outline:"none",marginBottom:10};
+  const inp={width:"100%",boxSizing:"border-box",fontSize:15,padding:"11px 12px",border:"1px solid #C4CFCA",background:"#F7F9F7",color:"#1F2A30",outline:"none",marginBottom:10};
   const titlu={intra:"Intră în cont",cont:"Creează cont",uitat:"Parolă uitată",nou:"Alege o parolă nouă"}[mod];
-  return <div style={{fontFamily:"'Jost',sans-serif",background:"#F2EFE9",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
-    <form onSubmit={trimite} style={{width:"100%",maxWidth:360,background:"#fff",border:"1px solid #E0D8CC",padding:"28px 24px"}}>
-      <div style={{fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:"#2A2118"}}>KREATIVO</div>
-      <div style={{fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:"#4A3F30",marginBottom:22}}>STUDIO</div>
-      <div style={{fontSize:16,fontWeight:600,color:"#2A2118",marginBottom:14}}>{titlu}</div>
+  return <div style={{fontFamily:"'Jost',sans-serif",background:"#EDF0ED",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
+    <form onSubmit={trimite} style={{width:"100%",maxWidth:360,background:"#fff",border:"1px solid #DCE3DF",padding:"28px 24px"}}>
+      <div style={{fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:"#1F2A30"}}>KREATIVO</div>
+      <div style={{fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:"#34444C",marginBottom:22}}>STUDIO</div>
+      <div style={{fontSize:16,fontWeight:600,color:"#1F2A30",marginBottom:14}}>{titlu}</div>
       {mod!=="nou"&&<input type="email" required autoComplete="username" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} style={inp}/>}
       {mod!=="uitat"&&<input type="password" required autoComplete={mod==="intra"?"current-password":"new-password"} placeholder={mod==="nou"?"Parola nouă":"Parolă"} value={parola} onChange={e=>setParola(e.target.value)} style={inp}/>}
       {(mod==="cont"||mod==="nou")&&<input type="password" required autoComplete="new-password" placeholder="Repetă parola" value={parola2} onChange={e=>setParola2(e.target.value)} style={inp}/>}
       {eroare&&<div style={{color:"#B3402F",fontSize:13,marginBottom:10}}>{eroare}</div>}
-      {msg&&<div style={{color:"#4A3F30",fontSize:13,marginBottom:10}}>{msg}</div>}
+      {msg&&<div style={{color:"#34444C",fontSize:13,marginBottom:10}}>{msg}</div>}
       <button type="submit" disabled={ocupat} style={{width:"100%",padding:"12px 0",background:"#5C6B65",color:"#fff",border:"none",fontSize:14,fontWeight:600,cursor:ocupat?"default":"pointer",opacity:ocupat?0.6:1}}>{ocupat?"Un moment…":(mod==="intra"?"Intră":mod==="cont"?"Creează cont":mod==="uitat"?"Trimite linkul":"Salvează parola")}</button>
       {mod!=="nou"&&<div style={{display:"flex",justifyContent:"space-between",marginTop:14,fontSize:12}}>
-        {mod==="intra"?<><a href="#" onClick={e=>{e.preventDefault();setMod("cont");setEroare("");setMsg("");}} style={{color:"#A0845C"}}>Prima dată? Creează cont</a>
-          <a href="#" onClick={e=>{e.preventDefault();setMod("uitat");setEroare("");setMsg("");}} style={{color:"#A0845C"}}>Ai uitat parola?</a></>
-        :<a href="#" onClick={e=>{e.preventDefault();setMod("intra");setEroare("");setMsg("");}} style={{color:"#A0845C"}}>← Înapoi la „Intră”</a>}
+        {mod==="intra"?<><a href="#" onClick={e=>{e.preventDefault();setMod("cont");setEroare("");setMsg("");}} style={{color:"#33444D"}}>Prima dată? Creează cont</a>
+          <a href="#" onClick={e=>{e.preventDefault();setMod("uitat");setEroare("");setMsg("");}} style={{color:"#33444D"}}>Ai uitat parola?</a></>
+        :<a href="#" onClick={e=>{e.preventDefault();setMod("intra");setEroare("");setMsg("");}} style={{color:"#33444D"}}>← Înapoi la „Intră”</a>}
       </div>}
     </form>
   </div>;
@@ -12544,11 +12548,11 @@ function App(){
     try{ await sb.auth.signOut(); }catch{}
     window.location.reload();
   };
-  if(st.loading) return <div style={{fontFamily:"'Jost',sans-serif",background:"#F2EFE9",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#7A6C5A",fontSize:14}}>Se încarcă…</div>;
+  if(st.loading) return <div style={{fontFamily:"'Jost',sans-serif",background:"#EDF0ED",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#5F7078",fontSize:14}}>Se încarcă…</div>;
   if(st.recovery) return <LoginScreen recovery={true} onDone={()=>{setSt(p=>({...p,recovery:false}));window.location.reload();}}/>;
   if(!st.session) return <LoginScreen onDone={()=>{}}/>;
-  if(!st.role) return <div style={{fontFamily:"'Jost',sans-serif",background:"#F2EFE9",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
-    <div style={{maxWidth:380,background:"#fff",border:"1px solid #E0D8CC",padding:"28px 24px",color:"#2A2118"}}>
+  if(!st.role) return <div style={{fontFamily:"'Jost',sans-serif",background:"#EDF0ED",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px 16px"}}>
+    <div style={{maxWidth:380,background:"#fff",border:"1px solid #DCE3DF",padding:"28px 24px",color:"#1F2A30"}}>
       <div style={{fontSize:16,fontWeight:600,marginBottom:10}}>Cont fără acces</div>
       <div style={{fontSize:14,lineHeight:1.5,marginBottom:16}}>{st.err||("Adresa "+(st.session.user.email||"")+" nu are acces în aplicație. Contactează administratorul.")}</div>
       <button onClick={iesire} style={{padding:"10px 18px",background:"#5C6B65",color:"#fff",border:"none",fontSize:13,fontWeight:600,cursor:"pointer"}}>Ieșire</button>
