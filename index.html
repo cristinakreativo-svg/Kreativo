@@ -3089,6 +3089,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
   const [observatii,setObservatii]=React.useState("");
   const [savedMsg,setSavedMsg]=React.useState("");
   const [editingCfgId,setEditingCfgId]=React.useState(null);
+  const [openRowId,setOpenRowId]=React.useState(null);
 
   let result=null, parts=[], error=null;
   try{
@@ -3151,7 +3152,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
     if(editingCfgId){
       setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:{...cfg,pozitie:x.pozitie,poz:x.poz,calOvr:x.calOvr})}));
       setSavedMsg(`Actualizat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
-      setEditingCfgId(null);
+      setEditingCfgId(null); setOpenRowId(null);
     } else {
       setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:[...(c.configuratiiSina||[]),cfg]}));
       setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
@@ -3167,9 +3168,11 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
     setOptions(i.options||[]);
     setCamera(cfg.camera||""); setObservatii(cfg.observatii||"");
     setEditingCfgId(cfg.id);
+    setOpenRowId(null);
+    setTimeout(()=>{const el=document.getElementById("zona-editare-cfg"); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"start"});},60);
   };
   const anuleazaEditareCfg=()=>{
-    setEditingCfgId(null);
+    setEditingCfgId(null); setOpenRowId(null);
     setCamera(""); setObservatii("");
   };
 
@@ -3189,6 +3192,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
     {mod==="alta"&&<SinaAltaForm C={C} clients={clients} setClients={setClients} clientIdFixat={clientIdFixat} camereLista={camereLista} setCamereLista={setCamereLista}/>}
     {mod==="coulisse"&&<div>
     <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator șină Coulisse SmartCurtain</div>
+    <div id="zona-editare-cfg" style={editingCfgId?{borderLeft:"5px solid #B5504A",background:"#F6ECE8",padding:"14px 16px 6px",marginBottom:16,fontFamily:"Georgia,'Times New Roman',serif",outline:"1px dashed #B5504A"}:{}}>
     {editingCfgId&&<div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:"#33444D",color:"#fff",marginBottom:14}}>
       <span style={{fontSize:12,fontWeight:600,flex:1}}>Editezi o configurație deja creată — la salvare, se actualizează, nu se creează una nouă.</span>
       <button onClick={anuleazaEditareCfg} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:"rgba(255,255,255,0.2)",color:"#fff",border:"none",cursor:"pointer"}}>Renunță</button>
@@ -3255,6 +3259,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
         )}
       </div>
     </div>
+    </div>
 
     {error&&<div style={{fontSize:13,color:C.text,padding:"10px 0"}}>{error}</div>}
 
@@ -3315,7 +3320,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
       <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:10}}>Configurații salvate la {clientObj.name} ({(clientObj.configuratiiSina||[]).length})</div>
       {(clientObj.configuratiiSina||[]).map(cfg=>
-        <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} catalogCostComponente={catalogCostComponente} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig}/>
+        <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={clientObj.id} setClients={setClients} C={C} catalogCostComponente={catalogCostComponente} onPrint={()=>printSaved({...cfg,clientName:clientObj.name})} onEdit={incarcaConfig} open={openRowId===cfg.id} setOpen={(v)=>setOpenRowId(v?cfg.id:null)} editing={editingCfgId===cfg.id}/>
       )}
     </div>}
     </div>}
@@ -3516,8 +3521,10 @@ function buildCentralizatorMontajHtml(client){
     <div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div>
   </body></html>`;
 }
-function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostComponente}){
-  const [open,setOpen]=React.useState(false);
+function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostComponente,open:openP,setOpen:setOpenP,editing}){
+  const [openL,setOpenL]=React.useState(false);
+  const open=openP!==undefined?openP:openL;
+  const setOpen=setOpenP||setOpenL;
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
@@ -3570,6 +3577,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
         {vErrors.length===0&&vWarnings.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#1F2A30",background:"#A5B2B7",padding:"2px 8px",marginLeft:8}}>atenție</span>}
         {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>observație</span>}
         {cfg.pozitie&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5F7078",padding:"2px 8px",marginLeft:8}}>poziționare</span>}
+        {editing&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#B5504A",padding:"2px 8px",marginLeft:8}}>SE EDITEAZĂ ACUM</span>}
         {catalogCostComponente&&catalogCostComponente.length>0&&cost.total>0&&<span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost producție: {cost.total.toFixed(0)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț)`:""}</span>}
       </div>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
