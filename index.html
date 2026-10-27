@@ -3149,7 +3149,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       result, parts
     };
     if(editingCfgId){
-      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:{...cfg,pozitie:x.pozitie})}));
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:{...cfg,pozitie:x.pozitie,poz:x.poz})}));
       setSavedMsg(`Actualizat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
       setEditingCfgId(null);
     } else {
@@ -3501,9 +3501,23 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
   const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
-  const [pozText,setPozText]=React.useState(cfg.pozitie||"");
-  const savePoz=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,pozitie:pozText.trim()})})); };
-  const pozParsat=parsePozitie(pozText);
+  const pz0=cfg.poz||{};
+  const [pSt,setPSt]=React.useState(pz0.st!=null?String(pz0.st):"");
+  const [pMj,setPMj]=React.useState(pz0.mj!=null?String(pz0.mj):"");
+  const [pDr,setPDr]=React.useState(pz0.dr!=null?String(pz0.dr):"");
+  const [pEt,setPEt]=React.useState(pz0.et||"fereastră");
+  const nz=(v)=>{const n=parseFloat(String(v).replace(",","."));return n>0?n:0;};
+  const pTotal=nz(pSt)+nz(pMj)+nz(pDr);
+  const pLat=Number(cfg.input.width)||0;
+  const pDif=Math.round((pLat-pTotal)*10)/10;
+  const pGoala=!pSt.trim()&&!pMj.trim()&&!pDr.trim();
+  const pModif=(pSt!==(pz0.st!=null?String(pz0.st):"")||pMj!==(pz0.mj!=null?String(pz0.mj):"")||pDr!==(pz0.dr!=null?String(pz0.dr):"")||pEt!==(pz0.et||"fereastră"));
+  const savePoz=()=>{
+    const et=pEt.trim()||"fereastră";
+    const parts=[]; if(nz(pSt)) parts.push(nz(pSt)+" stânga"); if(nz(pMj)) parts.push(nz(pMj)+" "+et); if(nz(pDr)) parts.push(nz(pDr)+" dreapta");
+    const poz=pGoala?null:{st:pSt.trim(),mj:pMj.trim(),dr:pDr.trim(),et};
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,poz,pozitie:parts.join(" - ")})}));
+  };
   const {errors:vErrors,warnings:vWarnings}=validateCoulisseInput(cfg.input);
   const cost=costProductieConfig(cfg, catalogCostComponente);
   return <div style={{border:`1px solid ${vErrors.length?"#2A383F":C.border}`,marginBottom:6,background:C.surface}}>
@@ -3527,15 +3541,22 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
           style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
         {obsText!==(cfg.observatii||"")&&<button onClick={saveObs} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează observația</button>}
       </div>
-      <div style={{marginBottom:12}}>
-        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,color:C.textMuted}}>Poziționare pe perete (pentru montaj)</div>
-        <input value={pozText} onChange={e=>setPozText(e.target.value)} placeholder="ex: 310 stânga - 2000 fereastră - 310 dreapta (gol = pe tot peretele)"
-          style={{width:"100%",boxSizing:"border-box",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",fontFamily:"inherit"}}/>
-        {pozParsat&&<div style={{fontSize:11,marginTop:4,color:Math.abs(pozParsat.sum-Number(cfg.input.width))<0.5?"#2F6B2F":"#8A5A00"}}>
-          Total {pozParsat.sum} mm · lățimea șinei {cfg.input.width} mm{Math.abs(pozParsat.sum-Number(cfg.input.width))<0.5?" ✓":` — diferență ${Math.round((Number(cfg.input.width)-pozParsat.sum)*10)/10} mm`}
+      <div style={{marginBottom:12,padding:10,border:`1px solid ${C.border}`,background:C.bg}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:8,color:C.textMuted}}>Poziționare pe perete (pentru montaj) — lasă gol dacă șina e pe tot peretele</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+          {[["Stânga (mm)",pSt,setPSt],["Zona liberă (mm)",pMj,setPMj],["Dreapta (mm)",pDr,setPDr]].map(([lb,v,fn])=>(
+            <label key={lb} style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 110px"}}>{lb}
+              <input type="number" inputMode="decimal" value={v} onChange={e=>fn(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+            </label>))}
+          <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 130px"}}>Ce e la mijloc
+            <input value={pEt} onChange={e=>setPEt(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+          </label>
+        </div>
+        {!pGoala&&<div style={{marginTop:8,fontSize:13,fontWeight:700,padding:"6px 10px",color:pDif===0?"#2F6B2F":"#fff",background:pDif===0?"#E3EFE3":"#B3261E"}}>
+          Total: {pTotal} mm · lățimea șinei: {pLat} mm {pDif===0?"✓ se potrivește":`— ATENȚIE: ${pDif>0?"lipsesc":"sunt în plus"} ${Math.abs(pDif)} mm`}
         </div>}
-        {pozText.trim()&&!pozParsat&&<div style={{fontSize:11,marginTop:4,color:C.textMuted}}>Nu pot desena schema din text; se tipărește ca text simplu. Format pentru schemă: „valoare etichetă - valoare etichetă” (ex. 310 stânga - 2000 fereastră - 310 dreapta).</div>}
-        {pozText!==(cfg.pozitie||"")&&<button onClick={savePoz} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează poziționarea</button>}
+        {pModif&&<button onClick={savePoz} style={{marginTop:8,fontSize:12,fontWeight:600,padding:"6px 14px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează poziționarea</button>}
+        {!pModif&&!pGoala&&<span style={{marginLeft:0,display:"inline-block",marginTop:8,fontSize:11,color:C.textMuted}}>salvat</span>}
       </div>
       {vErrors.length>0&&<div style={{background:"#2A383F",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
         <div style={{fontWeight:700,marginBottom:4}}>Configurație imposibilă:</div>
