@@ -3149,7 +3149,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       result, parts
     };
     if(editingCfgId){
-      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:{...cfg,pozitie:x.pozitie,poz:x.poz})}));
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:{...cfg,pozitie:x.pozitie,poz:x.poz,calOvr:x.calOvr})}));
       setSavedMsg(`Actualizat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
       setEditingCfgId(null);
     } else {
@@ -3458,6 +3458,24 @@ function parsePozitie(t){
   }
   return segs.length>=1?{segs,sum:segs.reduce((a,x)=>a+x.v,0)}:null;
 }
+// Călărei pentru montaj: tip (Pleat / Wave 8 / Wave 6) + număr total, cu împărțirea pe cele 2 părți la deschidere centrală
+function calaretiMontaj(c){
+  const inp=c.input||{}, g=c.result&&c.result.gliders; if(!g) return null;
+  const pk=PACK_SIDES[inp.packKey]||{};
+  const nm=String(inp.gliderKey||"");
+  let tip=nm;
+  if(/Wave 80/i.test(nm)) tip="Wave 8 (80 mm)"; else if(/Wave 60/i.test(nm)) tip="Wave 6 (60 mm)";
+  let tot=pk.center?g*2:g, split=pk.center?g+" + "+g:"";
+  const o=c.calOvr;
+  if(o){
+    if(o.tip) tip=o.tip;
+    const a=Number(o.a), b=Number(o.b);
+    if(pk.center){ if(a>=0&&b>=0&&(o.a!==""||o.b!=="")){ tot=a+b; split=a+" + "+b; } }
+    else if(o.a!==""&&a>=0){ tot=a; }
+  }
+  const imp=pk.center?"Deschidere centrală":(/Left/i.test(inp.packKey||"")?"Se strânge în stânga":/Right/i.test(inp.packKey||"")?"Se strânge în dreapta":(inp.packKey||""));
+  return {tip,tot,split,imp,modif:!!o};
+}
 // Centralizator pentru montaj (fără costuri): cameră, dimensiuni, buc., poziționare, observații
 function buildCentralizatorMontajHtml(client){
   const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -3470,11 +3488,13 @@ function buildCentralizatorMontajHtml(client){
     const bar=pz?`<div style="display:flex;border:1.5px solid #222;margin-top:6px;">${pz.segs.map((g,k)=>`<div style="flex:${g.v};min-width:46px;padding:7px 4px;text-align:center;font-size:12px;background:${k%2?"#d9d9d9":"#f3f3f3"};${k?"border-left:1.5px solid #222;":""}"><b>${esc(String(g.v).replace(".",","))}</b>${g.label?"<br>"+esc(g.label):""}</div>`).join("")}</div>`:"";
     const txt=c.pozitie&&!pz?`<div style="margin-top:4px;">${esc(c.pozitie)}</div>`:"";
     const q=Number(c.input&&c.input.quantity)||1;
+    const cl=calaretiMontaj(c);
     return `<tr>
       <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;">${i+1}</td>
       <td style="padding:8px;border:1px solid #444;font-weight:700;font-size:15px;">${esc(c.camera||"(fără cameră)")}</td>
       <td style="padding:8px;border:1px solid #444;white-space:nowrap;">${esc(c.input.width)} × ${esc(c.input.height)} mm</td>
       <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;">${q}</td>
+      <td style="padding:8px;border:1px solid #444;">${cl?`<b>${esc(cl.tip)}</b><br><span style="font-size:15px;font-weight:700;">${cl.tot} buc.</span>${cl.split?` <b>(${cl.split})</b>`:""}<br><span style="font-size:11px;color:#444;">${esc(cl.imp)}</span>`:""}</td>
       <td style="padding:8px;border:1px solid #444;min-width:230px;">${bar||txt||'<span style="color:#888;">pe tot peretele</span>'}${bar&&c.pozitie?"":""}</td>
       <td style="padding:8px;border:1px solid #444;">${esc(c.observatii||"")}</td>
       <td style="padding:8px;border:1px solid #444;width:28px;"></td>
@@ -3485,11 +3505,12 @@ function buildCentralizatorMontajHtml(client){
     <div style="font-size:14px;margin-bottom:2px;"><b>Client:</b> ${esc(client.name)}${client.telefon?" · "+esc(client.telefon):""}</div>
     ${client.adresa?`<div style="font-size:14px;margin-bottom:2px;"><b>Adresa:</b> ${esc(client.adresa)}</div>`:""}
     ${dt?`<div style="font-size:14px;margin-bottom:2px;"><b>Montaj:</b> ${esc(dt)}</div>`:""}
-    <div style="font-size:13px;color:#444;margin:6px 0 12px;">${cfgs.length} configurații · ${totalBuc} buc. · dimensiuni în mm (lățime × înălțime), pe bucată</div>
+    <div style="font-size:13px;color:#444;margin:6px 0 12px;">${cfgs.length} configurații · ${totalBuc} buc. · dimensiuni în mm (lățime × înălțime) · călăreții sunt pe bucată</div>
     <table style="border-collapse:collapse;width:100%;font-size:13px;">
       <thead><tr style="background:#e6e6e6;">
         <th style="padding:8px;border:1px solid #444;">Nr.</th><th style="padding:8px;border:1px solid #444;text-align:left;">Cameră</th>
         <th style="padding:8px;border:1px solid #444;">Dimensiuni</th><th style="padding:8px;border:1px solid #444;">Buc.</th>
+        <th style="padding:8px;border:1px solid #444;text-align:left;">Călărei / deschidere</th>
         <th style="padding:8px;border:1px solid #444;text-align:left;">Poziționare pe perete (mm)</th><th style="padding:8px;border:1px solid #444;text-align:left;">Observații</th><th style="padding:8px;border:1px solid #444;">✓</th>
       </tr></thead><tbody>${rows}</tbody></table>
     <div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div>
@@ -3517,6 +3538,25 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
     const parts=[]; if(nz(pSt)) parts.push(nz(pSt)+" stânga"); if(nz(pMj)) parts.push(nz(pMj)+" "+et); if(nz(pDr)) parts.push(nz(pDr)+" dreapta");
     const poz=pGoala?null:{st:pSt.trim(),mj:pMj.trim(),dr:pDr.trim(),et};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,poz,pozitie:parts.join(" - ")})}));
+  };
+  const calBase=calaretiMontaj({...cfg,calOvr:null});
+  const calCenter=!!(PACK_SIDES[cfg.input.packKey]||{}).center;
+  const gBase=cfg.result&&cfg.result.gliders;
+  const co0=cfg.calOvr||{};
+  const [cTip,setCTip]=React.useState(co0.tip||calBase&&calBase.tip||"");
+  const [cA,setCA]=React.useState(co0.a!=null&&co0.a!==""?String(co0.a):String(gBase!=null?gBase:""));
+  const [cB,setCB]=React.useState(co0.b!=null&&co0.b!==""?String(co0.b):String(gBase!=null?gBase:""));
+  const calTotal=calCenter?(Number(cA)||0)+(Number(cB)||0):(Number(cA)||0);
+  const calEsteModif=(cTip!==(calBase&&calBase.tip))||(calCenter?(Number(cA)!==gBase||Number(cB)!==gBase):Number(cA)!==gBase);
+  const calSalvat=!!cfg.calOvr;
+  const calStoredSame=calSalvat&&(cTip===(co0.tip||""))&&cA===String(co0.a)&&cB===String(co0.b);
+  const saveCal=()=>{
+    const o=calEsteModif?{tip:cTip.trim(),a:cA===""?"":Number(cA),b:cB===""?"":Number(cB)}:null;
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,calOvr:o})}));
+  };
+  const resetCal=()=>{
+    setCTip(calBase&&calBase.tip||""); setCA(String(gBase)); setCB(String(gBase));
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,calOvr:null})}));
   };
   const {errors:vErrors,warnings:vWarnings}=validateCoulisseInput(cfg.input);
   const cost=costProductieConfig(cfg, catalogCostComponente);
@@ -3558,6 +3598,26 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
         {pModif&&<button onClick={savePoz} style={{marginTop:8,fontSize:12,fontWeight:600,padding:"6px 14px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează poziționarea</button>}
         {!pModif&&!pGoala&&<span style={{marginLeft:0,display:"inline-block",marginTop:8,fontSize:11,color:C.textMuted}}>salvat</span>}
       </div>
+      {calBase&&<div style={{marginBottom:12,padding:10,border:`1px solid ${C.border}`,background:C.bg}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:8,color:C.textMuted}}>Călărei pentru montaj {calSalvat&&<span style={{color:"#8A5A00"}}>· modificat manual</span>} <span style={{textTransform:"none",fontWeight:400}}>(implicit din calcul: {calBase.tip}, {calBase.tot} buc.{calBase.split?" ("+calBase.split+")":""})</span></div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"2 1 180px"}}>Tip
+            <input list="tipuri-calareti" value={cTip} onChange={e=>setCTip(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+            <datalist id="tipuri-calareti"><option value="Pleat"/><option value="Wave 8 (80 mm)"/><option value="Wave 6 (60 mm)"/></datalist>
+          </label>
+          <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 100px"}}>{calCenter?"Partea 1 (buc.)":"Număr (buc.)"}
+            <input type="number" value={cA} onChange={e=>setCA(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+          </label>
+          {calCenter&&<label style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 100px"}}>Partea 2 (buc.)
+            <input type="number" value={cB} onChange={e=>setCB(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`1px solid ${C.border}`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
+          </label>}
+          <div style={{fontSize:14,fontWeight:700,padding:"8px 4px",flex:"0 0 auto"}}>Total: {calTotal}</div>
+        </div>
+        <div style={{marginTop:8,display:"flex",gap:8,flexWrap:"wrap"}}>
+          {!calStoredSame&&(calEsteModif||calSalvat)&&<button onClick={saveCal} style={{fontSize:12,fontWeight:600,padding:"6px 14px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează călăreții</button>}
+          {calSalvat&&<button onClick={resetCal} style={{fontSize:12,padding:"6px 14px",background:"transparent",color:C.accent,border:`1px solid ${C.accent}`,cursor:"pointer"}}>Revino la calcul</button>}
+        </div>
+      </div>}
       {vErrors.length>0&&<div style={{background:"#2A383F",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
         <div style={{fontWeight:700,marginBottom:4}}>Configurație imposibilă:</div>
         {vErrors.map((e,i)=><div key={i}>{e}</div>)}
