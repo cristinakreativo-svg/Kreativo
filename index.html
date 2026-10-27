@@ -3149,7 +3149,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       result, parts
     };
     if(editingCfgId){
-      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:cfg)}));
+      setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==editingCfgId?x:{...cfg,pozitie:x.pozitie})}));
       setSavedMsg(`Actualizat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
       setEditingCfgId(null);
     } else {
@@ -3444,12 +3444,66 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
   </div>;
 }
 
+// Poziționare montaj: "310 stânga - 2000 fereastră - 310 dreapta" -> segmente (valoare în mm + etichetă); null dacă nu se poate citi
+function parsePozitie(t){
+  const s=String(t||"").trim(); if(!s) return null;
+  const parts=s.split(/\s+[-–—]\s+|\s*[–—+;|]\s*/).map(x=>x.trim()).filter(Boolean);
+  const segs=[];
+  for(const x of parts){
+    let m=x.match(/^(\d+(?:[.,]\d+)?)\s*(?:mm)?\s*(.*)$/i), v,label;
+    if(m){ v=m[1]; label=m[2]; }
+    else { m=x.match(/^(.*?)\s*(\d+(?:[.,]\d+)?)\s*(?:mm)?$/i); if(!m) return null; v=m[2]; label=m[1]; }
+    v=parseFloat(String(v).replace(",",".")); if(!(v>0)) return null;
+    segs.push({v,label:label.trim()});
+  }
+  return segs.length>=1?{segs,sum:segs.reduce((a,x)=>a+x.v,0)}:null;
+}
+// Centralizator pentru montaj (fără costuri): cameră, dimensiuni, buc., poziționare, observații
+function buildCentralizatorMontajHtml(client){
+  const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const cfgs=client.configuratiiSina||[];
+  const zn=client.dataMontaj?["duminică","luni","marți","miercuri","joi","vineri","sâmbătă"][new Date(client.dataMontaj+"T12:00:00").getDay()]:"";
+  const dt=client.dataMontaj?zn+" "+client.dataMontaj.split("-").reverse().join(".")+(client.oraMontaj?", ora "+client.oraMontaj:""):"";
+  const totalBuc=cfgs.reduce((a,c)=>a+(Number(c.input&&c.input.quantity)||1),0);
+  const rows=cfgs.map((c,i)=>{
+    const pz=parsePozitie(c.pozitie);
+    const bar=pz?`<div style="display:flex;border:1.5px solid #222;margin-top:6px;">${pz.segs.map((g,k)=>`<div style="flex:${g.v};min-width:46px;padding:7px 4px;text-align:center;font-size:12px;background:${k%2?"#d9d9d9":"#f3f3f3"};${k?"border-left:1.5px solid #222;":""}"><b>${esc(String(g.v).replace(".",","))}</b>${g.label?"<br>"+esc(g.label):""}</div>`).join("")}</div>`:"";
+    const txt=c.pozitie&&!pz?`<div style="margin-top:4px;">${esc(c.pozitie)}</div>`:"";
+    const q=Number(c.input&&c.input.quantity)||1;
+    return `<tr>
+      <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;">${i+1}</td>
+      <td style="padding:8px;border:1px solid #444;font-weight:700;font-size:15px;">${esc(c.camera||"(fără cameră)")}</td>
+      <td style="padding:8px;border:1px solid #444;white-space:nowrap;">${esc(c.input.width)} × ${esc(c.input.height)} mm</td>
+      <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;">${q}</td>
+      <td style="padding:8px;border:1px solid #444;min-width:230px;">${bar||txt||'<span style="color:#888;">pe tot peretele</span>'}${bar&&c.pozitie?"":""}</td>
+      <td style="padding:8px;border:1px solid #444;">${esc(c.observatii||"")}</td>
+      <td style="padding:8px;border:1px solid #444;width:28px;"></td>
+    </tr>`;
+  }).join("");
+  return `<html><head><title>Centralizator montaj — ${esc(client.name)}</title></head><body style="font-family:sans-serif;padding:20px;color:#111;">
+    <h2 style="margin:0 0 4px;">Centralizator montaj — șine</h2>
+    <div style="font-size:14px;margin-bottom:2px;"><b>Client:</b> ${esc(client.name)}${client.telefon?" · "+esc(client.telefon):""}</div>
+    ${client.adresa?`<div style="font-size:14px;margin-bottom:2px;"><b>Adresa:</b> ${esc(client.adresa)}</div>`:""}
+    ${dt?`<div style="font-size:14px;margin-bottom:2px;"><b>Montaj:</b> ${esc(dt)}</div>`:""}
+    <div style="font-size:13px;color:#444;margin:6px 0 12px;">${cfgs.length} configurații · ${totalBuc} buc. · dimensiuni în mm (lățime × înălțime), pe bucată</div>
+    <table style="border-collapse:collapse;width:100%;font-size:13px;">
+      <thead><tr style="background:#e6e6e6;">
+        <th style="padding:8px;border:1px solid #444;">Nr.</th><th style="padding:8px;border:1px solid #444;text-align:left;">Cameră</th>
+        <th style="padding:8px;border:1px solid #444;">Dimensiuni</th><th style="padding:8px;border:1px solid #444;">Buc.</th>
+        <th style="padding:8px;border:1px solid #444;text-align:left;">Poziționare pe perete (mm)</th><th style="padding:8px;border:1px solid #444;text-align:left;">Observații</th><th style="padding:8px;border:1px solid #444;">✓</th>
+      </tr></thead><tbody>${rows}</tbody></table>
+    <div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div>
+  </body></html>`;
+}
 function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostComponente}){
   const [open,setOpen]=React.useState(false);
   const [obsText,setObsText]=React.useState(cfg.observatii||"");
   const delCfg=()=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>x.id!==cfg.id)}));
   const toggleProdus=(e)=>{e.stopPropagation();setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,produs:!x.produs})}));};
   const saveObs=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,observatii:obsText.trim()})})); };
+  const [pozText,setPozText]=React.useState(cfg.pozitie||"");
+  const savePoz=()=>{ setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).map(x=>x.id!==cfg.id?x:{...x,pozitie:pozText.trim()})})); };
+  const pozParsat=parsePozitie(pozText);
   const {errors:vErrors,warnings:vWarnings}=validateCoulisseInput(cfg.input);
   const cost=costProductieConfig(cfg, catalogCostComponente);
   return <div style={{border:`1px solid ${vErrors.length?"#2A383F":C.border}`,marginBottom:6,background:C.surface}}>
@@ -3461,6 +3515,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
         {vErrors.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#2A383F",padding:"2px 8px",marginLeft:8}}>imposibil</span>}
         {vErrors.length===0&&vWarnings.length>0&&<span style={{fontSize:10,fontWeight:700,color:"#1F2A30",background:"#A5B2B7",padding:"2px 8px",marginLeft:8}}>atenție</span>}
         {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5C6B65",padding:"2px 8px",marginLeft:8}}>observație</span>}
+        {cfg.pozitie&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#5F7078",padding:"2px 8px",marginLeft:8}}>poziționare</span>}
         {catalogCostComponente&&catalogCostComponente.length>0&&cost.total>0&&<span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost producție: {cost.total.toFixed(0)} lei{cost.lipsa.length?` (${cost.lipsa.length} coduri fără preț)`:""}</span>}
       </div>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
@@ -3471,6 +3526,16 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
         <textarea value={obsText} onChange={e=>setObsText(e.target.value)} placeholder="adaugă o observație (ex: atenție la colțul din stânga)..." rows={2}
           style={{width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",resize:"vertical",fontFamily:"inherit"}}/>
         {obsText!==(cfg.observatii||"")&&<button onClick={saveObs} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează observația</button>}
+      </div>
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:700,marginBottom:4,color:C.textMuted}}>Poziționare pe perete (pentru montaj)</div>
+        <input value={pozText} onChange={e=>setPozText(e.target.value)} placeholder="ex: 310 stânga - 2000 fereastră - 310 dreapta (gol = pe tot peretele)"
+          style={{width:"100%",boxSizing:"border-box",fontSize:13,border:`1px solid ${C.border}`,padding:"8px 10px",background:C.bg,outline:"none",fontFamily:"inherit"}}/>
+        {pozParsat&&<div style={{fontSize:11,marginTop:4,color:Math.abs(pozParsat.sum-Number(cfg.input.width))<0.5?"#2F6B2F":"#8A5A00"}}>
+          Total {pozParsat.sum} mm · lățimea șinei {cfg.input.width} mm{Math.abs(pozParsat.sum-Number(cfg.input.width))<0.5?" ✓":` — diferență ${Math.round((Number(cfg.input.width)-pozParsat.sum)*10)/10} mm`}
+        </div>}
+        {pozText.trim()&&!pozParsat&&<div style={{fontSize:11,marginTop:4,color:C.textMuted}}>Nu pot desena schema din text; se tipărește ca text simplu. Format pentru schemă: „valoare etichetă - valoare etichetă” (ex. 310 stânga - 2000 fereastră - 310 dreapta).</div>}
+        {pozText!==(cfg.pozitie||"")&&<button onClick={savePoz} style={{marginTop:6,fontSize:11,fontWeight:600,padding:"5px 12px",background:"#5C6B65",color:"#fff",border:"none",cursor:"pointer"}}>Salvează poziționarea</button>}
       </div>
       {vErrors.length>0&&<div style={{background:"#2A383F",color:"#fff",padding:"10px 14px",marginBottom:12,fontSize:12}}>
         <div style={{fontWeight:700,marginBottom:4}}>Configurație imposibilă:</div>
@@ -9164,7 +9229,11 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
         </div>}
         <ConsumContabilitate client={client} C={C} tday={tday}/>
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
-          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
+            <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
+            <div style={{flex:1}}/>
+            <button onClick={()=>printHtmlDoc(buildCentralizatorMontajHtml(client))} title="Tabel pentru montaj, fără costuri" style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>Printează centralizator montaj</button>
+          </div>
           {(client.configuratiiSina||[]).map(cfg=>
             <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"sina",cfg,clientId:client.id});setDanView("cfg");}} catalogCostComponente={catalogCostComponente} onPrint={()=>{
               const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
