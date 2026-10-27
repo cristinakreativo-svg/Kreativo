@@ -939,7 +939,7 @@ function kreativoSalveazaEditare(){
   alert("Salvat! Data viitoare când deschizi acest contract din aplicație, va apărea cu editarea făcută.");
 }
 <\/script>
-<div contenteditable="true" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
+<div contenteditable="true" onpaste="event.preventDefault();var t=(event.clipboardData||window.clipboardData).getData('text/plain').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ');document.execCommand('insertText',false,t)" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
 
 <div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
 <div style="flex:1;min-width:0">
@@ -1120,7 +1120,7 @@ function kreativoSalveazaEditare(){
   alert("Salvat! Data viitoare când deschizi acest contract din aplicație, va apărea cu editarea făcută.");
 }
 <\/script>
-<div contenteditable="true" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
+<div contenteditable="true" onpaste="event.preventDefault();var t=(event.clipboardData||window.clipboardData).getData('text/plain').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ');document.execCommand('insertText',false,t)" style="font:400 var(--fs,13px)/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
 
 <div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
 <div style="flex:1;min-width:0">
@@ -1404,7 +1404,7 @@ function kreativoSalveazaEditare(){
   alert("Salvat! Data viitoare când deschizi această ofertă din aplicație, va apărea cu editarea făcută.");
 }
 <\/script>
-<div contenteditable="true" style="font:400 13px/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
+<div contenteditable="true" onpaste="event.preventDefault();var t=(event.clipboardData||window.clipboardData).getData('text/plain').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ');document.execCommand('insertText',false,t)" style="font:400 13px/1.42 'Source Sans 3',Calibri,Helvetica,sans-serif;color:#2A2118;text-align:left;text-wrap:pretty;outline:none">
 
 <div style="background:#D4C9B8;padding:18px 20px 16px;margin:15px 0 0;display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
 <div style="flex:1;min-width:0">
@@ -3032,7 +3032,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
                 <option value="">— alege oferta, ca să preiei liniile din ea —</option>
                 {(client.oferte||[]).slice().reverse().map(o=><option key={o.id} value={o.id}>Ofertă {o.numar}{o.denumire?` · ${o.denumire}`:""} · {o.moneda==="EUR"?`${o.totalEur} €`:`${o.total} lei`}{o.acceptata?" · acceptată":""}</option>)}
               </select>
-              <button onClick={creeazaComandaDinOferta} disabled={!ofertaSelectataId} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:ofertaSelectataId?"#5C6B65":C.border,color:"#fff",border:"none",cursor:ofertaSelectataId?"pointer":"default",whiteSpace:"nowrap"}}>+ Din ofertă</button>
+              <button onClick={creeazaComandaDinOferta} disabled={!ofertaSelectataId} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:ofertaSelectataId?"#33444D":C.border,color:(ofertaSelectataId)?"#fff":C.textMuted,border:"none",cursor:ofertaSelectataId?"pointer":"default",whiteSpace:"nowrap"}}>+ Din ofertă</button>
             </>}
             <button onClick={creeazaComandaManuala} style={{fontSize:12,fontWeight:600,padding:"7px 14px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",whiteSpace:"nowrap"}}>+ Comandă manuală (fără ofertă)</button>
           </div>}
@@ -8824,7 +8824,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
             if(!materialName.trim()) return;
             const upd=rulouUpsertMaterial(savedMateriale,{name:materialName,thickness:Number(fabricThickness),weight:Number(fabricWeight)});
             setSavedMateriale(upd);
-          }} disabled={!materialName.trim()} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:materialName.trim()?"#5C6B65":C.border,color:"#fff",border:"none",cursor:materialName.trim()?"pointer":"default"}}>Salvează materialul (rămâne pentru altă dată)</button>
+          }} disabled={!materialName.trim()} style={{fontSize:11,fontWeight:600,padding:"5px 12px",background:materialName.trim()?"#5C6B65":C.border,color:(materialName.trim())?"#fff":C.textMuted,border:"none",cursor:materialName.trim()?"pointer":"default"}}>Salvează materialul (rămâne pentru altă dată)</button>
           {savedMateriale.length>0&&<div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
             {savedMateriale.map(m=>
               <span key={m.name} style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.textSub,background:C.bg,padding:"4px 4px 4px 10px"}}>
@@ -11778,50 +11778,50 @@ function AppInner({authRole,authEmail,onLogout}) {
       <button onClick={()=>window.location.reload()} style={{background:"#fff",color:"#B3402F",border:"none",padding:"7px 16px",fontWeight:700,cursor:"pointer",fontSize:13}}>Reîncarcă acum</button>
     </div>}
     {/* SIDEBAR */}
-    <div style={{width:210,flexShrink:0,background:"#D3DBD6",borderRight:"1px solid #C4CFCA",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
-      <div style={{padding:"24px 20px 18px",borderBottom:"1px solid #C4CFCA"}}>
+    <div style={{width:210,flexShrink:0,background:"#33444D",borderRight:"1px solid #26333B",display:"flex",flexDirection:"column",position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
+      <div style={{padding:"24px 20px 18px",borderBottom:"1px solid rgba(255,255,255,0.18)"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{display:"flex",gap:2.5}}>
-            <div style={{width:3,height:38,background:C.text}}/>
-            <div style={{width:1,height:38,background:C.text,opacity:0.35}}/>
+            <div style={{width:3,height:38,background:"#fff"}}/>
+            <div style={{width:1,height:38,background:"#fff",opacity:0.5}}/>
           </div>
           <div>
-            <div style={{fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:C.text,lineHeight:1.15}}>KREATIVO</div>
-            <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:C.textSub,lineHeight:1.15}}>STUDIO</div>
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:14,fontWeight:500,letterSpacing:"0.14em",color:"#fff",lineHeight:1.15}}>KREATIVO</div>
+            <div style={{fontFamily:"'Jost',sans-serif",fontSize:8,fontWeight:300,letterSpacing:"0.3em",color:"rgba(255,255,255,0.75)",lineHeight:1.15}}>STUDIO</div>
           </div>
         </div>
-        <div style={{fontSize:9,color:C.textSub,textTransform:"uppercase",letterSpacing:"0.12em",marginTop:12,fontWeight:500}}>Panou de control · 3P Design</div>
-        {staleTab?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● date vechi · salvare oprită</div>:protectMode?<div style={{fontSize:9,color:C.danger,marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● mod protejat · salvare blocată</div>:
-        !supabaseOk&&<div style={{fontSize:9,color:C.textSub,marginTop:8,letterSpacing:"0.08em"}}>● offline · date locale</div>}
+        <div style={{fontSize:9,color:"rgba(255,255,255,0.8)",textTransform:"uppercase",letterSpacing:"0.12em",marginTop:12,fontWeight:500}}>Panou de control · 3P Design</div>
+        {staleTab?<div style={{fontSize:9,color:"#FFB4A9",marginTop:8,letterSpacing:"0.08em",fontWeight:600}}>● date vechi · salvare oprită</div>:protectMode?<div style={{fontSize:9,color:"#FFB4A9",marginTop:8,letterSpacing:"0.08em",fontWeight:600}}>● mod protejat · salvare blocată</div>:
+        !supabaseOk&&<div style={{fontSize:9,color:"rgba(255,255,255,0.8)",marginTop:8,letterSpacing:"0.08em"}}>● offline · date locale</div>}
         {!staleTab&&!protectMode&&supabaseOk&&(savingKeys.size>0?
-          <div style={{fontSize:9,color:"#33444D",marginTop:8,letterSpacing:"0.08em",fontWeight:500}}>● se salvează…</div>:
-          <div style={{fontSize:9,color:C.textMuted,marginTop:8,letterSpacing:"0.08em"}}>✓ salvat</div>)}
+          <div style={{fontSize:9,color:"#fff",marginTop:8,letterSpacing:"0.08em",fontWeight:600}}>● se salvează…</div>:
+          <div style={{fontSize:9,color:"rgba(255,255,255,0.75)",marginTop:8,letterSpacing:"0.08em"}}>✓ salvat</div>)}
       </div>
       <div style={{flex:1,padding:"14px 0"}}>
         {GRUPURI.flatMap(g=>g.items).map(t=>{
           const subs=t.sub||[];
           const deschis=subs.length>0&&(tab===t.id||subs.some(x=>x.id===tab));
-          const btnStil=(act,nivel)=>({display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:nivel?"7px 20px 7px 36px":"9px 20px",cursor:"pointer",border:"none",borderLeft:act?`3px solid ${C.text}`:"3px solid transparent",background:act?"#B9C6C0":"transparent",color:C.text,fontWeight:act?600:500,fontSize:nivel?12:13,letterSpacing:"0.02em"});
+          const btnStil=(act,nivel)=>({display:"flex",alignItems:"center",width:"100%",textAlign:"left",padding:nivel?"7px 20px 7px 36px":"9px 20px",cursor:"pointer",border:"none",borderLeft:act?`3px solid #fff`:"3px solid transparent",background:act?"#4C6577":"transparent",color:"#fff",fontWeight:act?600:500,fontSize:nivel?12:13,letterSpacing:"0.02em"});
           return <React.Fragment key={t.id}>
             <button onClick={()=>setTab(t.id)} style={btnStil(tab===t.id,0)}>
               <span style={{flex:1}}>{t.l}</span>
-              {t.id==="recurente"&&recAzi.length>0?<span style={{background:C.danger,color:"#fff",fontSize:9,padding:"1px 6px",fontWeight:700}}>{recAzi.length}</span>:null}
+              {t.id==="recurente"&&recAzi.length>0?<span style={{background:"#B5504A",color:"#fff",fontSize:9,padding:"1px 6px",fontWeight:700}}>{recAzi.length}</span>:null}
               {subs.length>0?<span style={{fontSize:10,opacity:0.6}}>{deschis?"▾":"▸"}</span>:null}
             </button>
             {deschis&&subs.map(x=><button key={x.id} onClick={()=>setTab(x.id)} style={btnStil(tab===x.id,1)}><span style={{flex:1}}>{x.l}</span></button>)}
           </React.Fragment>;
         })}
       </div>
-      <div style={{padding:"14px 20px",borderTop:"1px solid #C4CFCA"}}>
+      <div style={{padding:"14px 20px",borderTop:"1px solid rgba(255,255,255,0.18)"}}>
         <div style={{display:"flex",gap:6,marginBottom:8}}>
-          <button onClick={exportDate} style={{flex:1,padding:"7px 0",border:"1px solid #8FA0A6",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
-          <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid #8FA0A6",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
+          <button onClick={exportDate} style={{flex:1,padding:"7px 0",border:"1px solid rgba(255,255,255,0.45)",background:"transparent",cursor:"pointer",fontSize:10,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>↓ Export</button>
+          <button onClick={()=>importRef.current?.click()} style={{flex:1,padding:"7px 0",border:"1px solid rgba(255,255,255,0.45)",background:"transparent",cursor:"pointer",fontSize:10,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>↑ Import</button>
           <input ref={importRef} type="file" accept=".json" onChange={importDate} style={{display:"none"}}/>
         </div>
-        <button onClick={onLogout} title={authEmail} style={{width:"100%",marginBottom:8,padding:"7px 0",border:"1px solid #8FA0A6",background:"transparent",cursor:"pointer",fontSize:10,color:C.text,letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
-        <button onClick={configureazaAutoBackup} style={{width:"100%",padding:"7px 0",border:"1px solid #8FA0A6",background:autoBackupStatus?"#5C6B65":"transparent",color:autoBackupStatus?"#fff":C.text,cursor:"pointer",fontSize:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{autoBackupStatus?"Backup automat activ":"Configurează backup automat"}</button>
-        {autoBackupStatus&&<div style={{fontSize:9,color:C.textSub,marginTop:6,letterSpacing:"0.04em"}}>→ {autoBackupStatus}{autoBackupLast?` · ultima salvare: ${autoBackupLast}`:""}</div>}
-        {autoBackupNeedsClick&&<button onClick={reactiveazaAutoBackup} style={{width:"100%",marginTop:6,padding:"6px 0",border:"1px solid #B5504A",background:"transparent",color:"#B5504A",cursor:"pointer",fontSize:9,letterSpacing:"0.05em",fontWeight:600}}>⚠ Reactivează backup automat (un click)</button>}
+        <button onClick={onLogout} title={authEmail} style={{width:"100%",marginBottom:8,padding:"7px 0",border:"1px solid rgba(255,255,255,0.45)",background:"transparent",cursor:"pointer",fontSize:10,color:"#fff",letterSpacing:"0.06em",textTransform:"uppercase"}}>Ieșire</button>
+        <button onClick={configureazaAutoBackup} style={{width:"100%",padding:"7px 0",border:"1px solid rgba(255,255,255,0.45)",background:autoBackupStatus?"#4C6577":"transparent",color:"#fff",cursor:"pointer",fontSize:10,letterSpacing:"0.06em",textTransform:"uppercase"}}>{autoBackupStatus?"Backup automat activ":"Configurează backup automat"}</button>
+        {autoBackupStatus&&<div style={{fontSize:9,color:"rgba(255,255,255,0.75)",marginTop:6,letterSpacing:"0.04em"}}>→ {autoBackupStatus}{autoBackupLast?` · ultima salvare: ${autoBackupLast}`:""}</div>}
+        {autoBackupNeedsClick&&<button onClick={reactiveazaAutoBackup} style={{width:"100%",marginTop:6,padding:"6px 0",border:"1px solid #FFB4A9",background:"transparent",color:"#FFB4A9",cursor:"pointer",fontSize:9,letterSpacing:"0.05em",fontWeight:600}}>⚠ Reactivează backup automat (un click)</button>}
       </div>
     </div>
     {/* CONȚINUT */}
