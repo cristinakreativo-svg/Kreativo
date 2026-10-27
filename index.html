@@ -11576,9 +11576,10 @@ function AppInner({authRole,authEmail,onLogout}) {
         <div style={{fontSize:11,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Croitorie · Kreativo Studio</div>
       </div>
       <div style={{display:"flex",gap:6,marginBottom:16}}>
-        {[["nico","Croitorie"],["declaratii","Declarații"]].map(([v,l])=><button key={v} onClick={()=>setNicoView(v)} style={{padding:"7px 14px",border:`1px solid ${nicoView===v?C.accent:C.border}`,background:nicoView===v?C.accentLight:"transparent",color:nicoView===v?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:nicoView===v?600:400}}>{l}</button>)}
+        {[["nico","Croitorie"],["declaratii","Declarații"],["banca","Bancă"]].map(([v,l])=><button key={v} onClick={()=>setNicoView(v)} style={{padding:"7px 14px",border:`1px solid ${nicoView===v?C.accent:C.border}`,background:nicoView===v?C.accentLight:"transparent",color:nicoView===v?C.accent:C.textSub,cursor:"pointer",fontSize:12,fontWeight:nicoView===v?600:400}}>{l}</button>)}
       </div>
-      {nicoView==="declaratii"?<div style={{maxWidth:900}}><DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={false} mergiLa={()=>{}}/></div>:<TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale} readOnly={true}/>}
+      {nicoView==="declaratii"?<div style={{maxWidth:900}}><DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={true} mergiLa={setNicoView}/></div>:
+      nicoView==="banca"?<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>:<TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale} readOnly={true}/>}
     </div>;
   }
 
