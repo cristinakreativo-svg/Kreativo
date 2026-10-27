@@ -2592,10 +2592,10 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
   if(readOnly){
     const Camp=({et,val})=>val?<div style={{marginRight:18,marginBottom:4}}><span style={{fontSize:12,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.04em"}}>{et} </span><span style={{fontSize:20,fontWeight:700,color:C.text}}>{val}</span></div>:null;
     const Sec=({t})=><div style={{fontSize:13,fontWeight:700,color:C.text,textTransform:"uppercase",letterSpacing:"0.05em",margin:"16px 0 8px",paddingBottom:4,borderBottom:`2px solid ${C.accent}`}}>{t}</div>;
-    return <div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:10}}>
-      <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"14px 14px",cursor:"pointer",background:C.bg}}>
+    return <div style={{border:`2px solid #B5504A`,background:C.surface,marginBottom:10}}>
+      <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"14px 14px",cursor:"pointer",background:"#F6ECE8",borderLeft:"8px solid #B5504A"}}>
         <div style={{flex:1}}>
-          <div style={{fontSize:17,fontWeight:700,color:C.text}}>Comandă execuție nr. {comanda.numar}</div>
+          <div style={{fontSize:21,fontWeight:800,color:C.text}}>Comandă execuție nr. {comanda.numar}</div>
           <div style={{fontSize:13,color:C.textMuted,marginTop:2}}>{fmtD(comanda.dataCreat)} · {comanda.camere.reduce((s,c)=>s+c.linii.length,0)} linii</div>
         </div>
         <span style={{fontSize:16,color:C.textMuted}}>{open?"▾":"▸"}</span>
@@ -2630,11 +2630,11 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
       </div>}
     </div>;
   }
-  return <div style={{border:`1px solid ${C.border}`,background:C.surface,marginBottom:8}}>
-    <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
+  return <div style={{border:`2px solid #B5504A`,background:C.surface,marginBottom:10}}>
+    <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"14px 14px",cursor:"pointer",background:"#F6ECE8",borderLeft:"8px solid #B5504A"}}>
       <div style={{flex:1}}>
-        <span style={{fontSize:13,fontWeight:600,color:C.text}}>Comandă execuție nr. {comanda.numar}</span>
-        <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{fmtD(comanda.dataCreat)} · {comanda.camere.reduce((s,c)=>s+c.linii.length,0)} linii{!comanda.ofertaId?" · manuală":""}</span>
+        <span style={{fontSize:20,fontWeight:800,color:C.text}}>Comandă execuție nr. {comanda.numar}</span>
+        <span style={{fontSize:13,color:C.textSub||C.textMuted,marginLeft:10}}>{fmtD(comanda.dataCreat)} · {comanda.camere.reduce((s,c)=>s+c.linii.length,0)} linii{!comanda.ofertaId?" · manuală":""}</span>
       </div>
       <button onClick={e=>{e.stopPropagation();delComanda();}} style={{fontSize:14,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer",padding:"2px 6px"}} title="Șterge comanda">🗑</button>
       <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
@@ -3025,7 +3025,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
         </div>
 
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comandă execuție — perdele, draperii, stor roman</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,fontSize:14,fontWeight:700,color:"#fff",background:"#33444D",textTransform:"uppercase",letterSpacing:"0.05em",padding:"9px 12px",marginBottom:10,borderLeft:"6px solid #B5504A"}}>Comandă execuție — perdele, draperii, stor roman<span style={{marginLeft:"auto",fontSize:11,fontWeight:700,background:"#B5504A",color:"#fff",padding:"3px 9px",letterSpacing:"0.04em"}}>🖨 DE PRINTAT</span></div>
           {!readOnly&&<div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
             {(client.oferte||[]).length>0&&<>
               <select value={ofertaSelectataId} onChange={e=>setOfertaSelectataId(e.target.value)} style={{flex:1,minWidth:160,fontSize:12,border:`1px solid ${C.border}`,padding:"7px 8px",background:C.surface,outline:"none"}}>
@@ -3042,7 +3042,7 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
         </div>
 
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi croitorie</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,fontSize:14,fontWeight:700,color:"#fff",background:"#33444D",textTransform:"uppercase",letterSpacing:"0.05em",padding:"9px 12px",marginBottom:10,borderLeft:"6px solid #B5504A"}}>Comenzi croitorie<span style={{marginLeft:"auto",fontSize:11,fontWeight:700,background:"#B5504A",color:"#fff",padding:"3px 9px",letterSpacing:"0.04em"}}>🖨 DE PRINTAT</span></div>
           <ComenziNico client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD}/>
         </div>
 
