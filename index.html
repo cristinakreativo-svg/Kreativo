@@ -3054,10 +3054,10 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danPoze" folder="dan-poze" accept="image/*,.pdf" buttonLabel="+ fă poză / adaugă măsurătoare" printTitle="Poze și măsurători"/>
         </div>
 
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Șină / sisteme de produs (de la Dan)</div>
-          <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
-        </div>
+        {(client.danComenzi||[]).length>0&&<div style={{marginBottom:16}}>
+          <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Comenzi vechi de șine / sisteme (încărcate înainte de configuratoare)</div>
+          <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă" faraAdaugare={true}/>
+        </div>}
 
         <div>
           <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Consum materiale</div>
@@ -9052,7 +9052,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
   </div>;
 }
 
-function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,buttonLabel,onlyImages,printTitle}){
+function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,buttonLabel,onlyImages,printTitle,faraAdaugare}){
   const [uploading,setUploading]=React.useState(false);
   const [uploadProgress,setUploadProgress]=React.useState("");
   const inputRef=React.useRef(null);
@@ -9119,7 +9119,7 @@ function ComenziDan({client,ci,setClients,C,sb,tday,fmtD,field,folder,accept,but
       </div>
     </div>}
     <input ref={inputRef} type="file" accept={accept} multiple style={{display:"none"}} onChange={handleUpload}/>
-    <button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#fff",border:"none",padding:"7px 12px",background:"#33444D",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?`Se încarcă...${uploadProgress?" "+uploadProgress:""}`:buttonLabel}</button>
+    {!faraAdaugare&&<button onClick={()=>inputRef.current?.click()} disabled={uploading} style={{fontSize:12,color:"#fff",border:"none",padding:"7px 12px",background:"#33444D",cursor:uploading?"default":"pointer",width:"100%"}}>{uploading?`Se încarcă...${uploadProgress?" "+uploadProgress:""}`:buttonLabel}</button>}
   </div>;
 }
 
@@ -11740,6 +11740,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Nico</div>
         <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Croitorie · Kreativo Studio</div>
+        <div style={{fontSize:11,marginTop:6,fontWeight:700,color:staleTab||protectMode?"#B5504A":C.accent}}>{staleTab?"● date vechi — reîncarcă pagina (Ctrl+F5), salvarea e oprită":protectMode?"● mod protejat — salvare blocată":!supabaseOk?"● offline — nu se salvează":savingKeys.size>0?"● se salvează…":"✓ salvat automat"}</div>
       </div>
       <div style={{display:"flex",gap:6,marginBottom:16}}>
         {[["nico","Croitorie"],["declaratii","Declarații"],["banca","Bancă"]].map(([v,l])=><button key={v} onClick={()=>setNicoView(v)} style={{padding:"7px 14px",border:`1px solid ${nicoView===v?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:nicoView===v?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:nicoView===v?600:400}}>{l}</button>)}
@@ -11756,6 +11757,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       <div style={{marginBottom:20}}>
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Dan</div>
         <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Montaj · Kreativo Studio</div>
+        <div style={{fontSize:11,marginTop:6,fontWeight:700,color:staleTab||protectMode?"#B5504A":C.accent}}>{staleTab?"● date vechi — reîncarcă pagina (Ctrl+F5), salvarea e oprită":protectMode?"● mod protejat — salvare blocată":!supabaseOk?"● offline — nu se salvează":savingKeys.size>0?"● se salvează…":"✓ salvat automat"}</div>
       </div>
       <div style={{display:"flex",gap:6,marginBottom:16}}>
         <button onClick={()=>setDanView("dan")} style={{padding:"7px 14px",border:`1px solid ${danView==="dan"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="dan"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="dan"?500:400}}>Montaje</button>
@@ -12386,11 +12388,10 @@ function AppInner({authRole,authEmail,onLogout}) {
               <button onClick={()=>addCliTask(ci)} style={btnP()}>OK</button>
               <button onClick={()=>setAddingTo(null)} style={btnS}>✕</button>
             </div>:<div style={{...row,justifyContent:"space-between",marginTop:8,marginBottom:8}}>
-              <button onClick={()=>setAddingTo(ci)} style={{...btnS,fontSize:12,padding:"4px 12px"}}>+ sarcină</button>
+              <button onClick={()=>setAddingTo(ci)} style={{background:"#33444D",color:"#fff",border:"none",fontSize:13,fontWeight:700,padding:"8px 18px",cursor:"pointer"}}>+ sarcină</button>
               <button onClick={()=>delCli(ci)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge client</button>
             </div>}
-            <ClientMotoare client={client} motoare={motoare} onAdd={(model,qty)=>addMotorCli(ci,model,qty)} onRemove={model=>remMotorCli(ci,model)}/>
-            {(client.motoare||[]).length>0&&<button onClick={()=>{if(window.confirm(`Marchezi motoarele lui ${client.name} ca livrate? Se scad din stoc și se înregistrează în istoric.`)) livreazaMotoare(ci);}} style={{...btnP(C.accent),width:"100%",marginTop:8,fontSize:12}}>✓ Marchează motoare livrate</button>}
+            {/* Motoare MotionBlinds: secțiune scoasă din fișa clientului (se reface ca gestiune scăzută din producția Dan + Nicoleta). Datele client.motoare rămân neatinse. */}
             {/* Log discuții */}
             <LogDiscutii id={client.id} log={log} setLog={setLog} C={C} inp={inp} btnP={btnP} gid={gid} tday={tday} fmtD={fmtD}/>
             {tab==="oferte"&&<div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`}}>
@@ -12535,7 +12536,7 @@ function AppInner({authRole,authEmail,onLogout}) {
               <button onClick={()=>addPrTask(pi)} style={btnP(color)}>OK</button>
               <button onClick={()=>setAddingToPr(null)} style={btnS}>✕</button>
             </div>:<div style={{...row,justifyContent:"space-between",marginTop:8,marginBottom:8}}>
-              <button onClick={()=>setAddingToPr(pi)} style={{...btnS,fontSize:12,padding:"4px 12px"}}>+ sarcină</button>
+              <button onClick={()=>setAddingToPr(pi)} style={{background:"#33444D",color:"#fff",border:"none",fontSize:13,fontWeight:700,padding:"8px 18px",cursor:"pointer"}}>+ sarcină</button>
               <button onClick={()=>delPr(pi)} style={{fontSize:12,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>șterge proiect</button>
             </div>}
           </div>}
