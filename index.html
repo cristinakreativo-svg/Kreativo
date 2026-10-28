@@ -2279,16 +2279,19 @@ function AdminTaskRow({task,onToggle,onDelete,onRespChange,onDateChange}) {
   </div>;
 }
 
-function CalItem({item,onComplete,onReschedule}) {
+function CalItem({item,onComplete,onReschedule,prio,onPrio}) {
   const [ed,setEd]=useState(false);
   const [nd,setNd]=useState("");
   const [nt,setNt]=useState(null);
-  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:item.isMontaj?"#F2EDF7":item.isDan?"#EAF0F6":C.surface,border:`1px solid ${item.isMontaj?"#8E75A8":item.isDan?"#5B7FA0":item.isRecurent?"#B9C6C0":C.border}`,borderLeft:item.isMontaj?"5px solid #8E75A8":item.isDan?"5px solid #5B7FA0":undefined,marginBottom:6}}>
+  return <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:item.isMontaj?"#F2EDF7":item.isDan?"#EAF0F6":C.surface,border:`1px solid ${item.isMontaj?"#8E75A8":item.isDan?"#5B7FA0":item.isRecurent?"#B9C6C0":C.border}`,borderLeft:item.isMontaj?"5px solid #8E75A8":item.isDan?"5px solid #5B7FA0":undefined,boxShadow:prio>=3?"inset 6px 0 0 #33444D":prio===2?"inset 4px 0 0 #33444D":prio===1?"inset 2px 0 0 #33444D":"none",marginBottom:6}}>
     {item.isMontaj?<span title="Montaj" style={{width:15,textAlign:"center",fontSize:13,flexShrink:0}}>🔧</span>:<input type="checkbox" checked={false} onChange={onComplete} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>}
     <div style={{flex:1}}>
-      <div style={{fontSize:13,color:C.text}}>{item.title}</div>
+      <div style={{fontSize:13,color:C.text,fontWeight:prio>=3?800:prio===2?700:400}}>{item.title}</div>
       <div style={{fontSize:11,color:C.textMuted}}>{item.isDan?"Sarcină Dan":item.source}{item.loc?` · ${item.loc}`:""}{item.time?` · ${item.time}`:""}</div>
     </div>
+    {onPrio&&<span title="Importanță (apasă pe stea; apasă din nou pe aceeași ca s-o scoți)" style={{display:"inline-flex",flexShrink:0,gap:0}}>
+      {[1,2,3].map(n=><button key={n} onClick={()=>onPrio(prio===n?0:n)} style={{background:"none",border:"none",cursor:"pointer",padding:"0 1px",fontSize:19,lineHeight:1,color:(prio||0)>=n?"#33444D":"#B8C4C9"}}>{(prio||0)>=n?"★":"☆"}</button>)}
+    </span>}
     {!item.isRecurent&&(ed?
       <div style={{display:"flex",gap:4,alignItems:"center"}}>
         <input type="date" autoFocus defaultValue={item.date} onChange={e=>setNd(e.target.value)}
@@ -11639,15 +11642,20 @@ function AppInner({authRole,authEmail,onLogout}) {
 
   const calItems=buildCal();
   // Ordine manuală (după importanță) pentru listele din Focus — se salvează în „mit", păstrată între zile
+  // Importanță (stele) pe sarcini: data.prio = { cheie: 1..3 }. Cheia sarcinilor de la clienți/proiecte e după TEXT (nu după poziție), ca să nu se mute stelele când ștergi alte sarcini.
+  const prioMap=(data&&data.prio)||{};
+  const prioKey=(it)=>(it.source==="Client"||it.source==="Personal"&&it.proiectName)?("t|"+(it.title||"")):String(it.id);
+  const prioOf=(it)=>prioMap[prioKey(it)]||0;
+  const setPrio=(it,n)=>setData(d=>{const k=prioKey(it);const pr={...((d&&d.prio)||{})};if(n>0)pr[k]=n;else delete pr[k];return {...d,prio:pr};});
   const ordMap=(mit&&mit.ord)||{};
-  const ordSort=(arr,fallback)=>arr.slice().sort((x,y)=>{const rx=ordMap[x.id],ry=ordMap[y.id];if(rx!==undefined&&ry!==undefined)return rx-ry;if(rx!==undefined)return -1;if(ry!==undefined)return 1;return fallback(x,y);});
+  const ordSort=(arr,fallback)=>arr.slice().sort((x,y)=>{const rx=ordMap[x.id],ry=ordMap[y.id];if(rx!==undefined&&ry!==undefined)return rx-ry;if(rx!==undefined)return -1;if(ry!==undefined)return 1;const px=prioOf(x),py=prioOf(y);if(px!==py)return py-px;return fallback(x,y);});
   const ordMove=(list,i,dir)=>{const j=i+dir;if(j<0||j>=list.length)return;const ids=list.map(x=>x.id);const t=ids[i];ids[i]=ids[j];ids[j]=t;setMit(p=>{const ord={...(p.ord||{})};ids.forEach((id,k)=>{ord[id]=k;});return {...p,ord};});};
   const rowOrd=(list,i,item)=><div key={item.id||i} style={{display:"flex",alignItems:"stretch",gap:6}}>
     <div style={{display:"flex",flexDirection:"column",justifyContent:"center",gap:2,marginBottom:6}}>
       <button title="Mai important (sus)" disabled={i===0} onClick={()=>ordMove(list,i,-1)} style={{fontSize:10,lineHeight:1,padding:"3px 6px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:i===0?"default":"pointer",opacity:i===0?0.3:1}}>▲</button>
       <button title="Mai puțin important (jos)" disabled={i===list.length-1} onClick={()=>ordMove(list,i,1)} style={{fontSize:10,lineHeight:1,padding:"3px 6px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:i===list.length-1?"default":"pointer",opacity:i===list.length-1?0.3:1}}>▼</button>
     </div>
-    <div style={{flex:1,minWidth:0}}><CalItem item={item} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/></div>
+    <div style={{flex:1,minWidth:0}}><CalItem item={item} prio={prioOf(item)} onPrio={(n)=>setPrio(item,n)} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/></div>
   </div>;
   const t3=top3();const del=delegated();
   const todayItems=calItems.filter(i=>isToday(i.date));
@@ -12147,7 +12155,7 @@ function AppInner({authRole,authEmail,onLogout}) {
               {!isT&&!isPast&&days!==null&&days<=3&&<div style={{fontSize:11,background:C.dangerLight,color:C.danger,padding:"2px 8px"}}>În {days} zile</div>}
               {isPast&&<div style={{fontSize:10,color:C.textMuted,letterSpacing:"0.06em",textTransform:"uppercase"}}>trecut</div>}
             </div>
-            {items.slice().sort((a,b)=>{if(a.time&&!b.time)return -1;if(!a.time&&b.time)return 1;if(a.time&&b.time)return a.time<b.time?-1:1;return 0;}).map((item,i)=><CalItem key={i} item={item} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/>)}
+            {items.slice().sort((a,b)=>{const pa=prioOf(a),pb=prioOf(b);if(pa!==pb)return pb-pa;if(a.time&&!b.time)return -1;if(!a.time&&b.time)return 1;if(a.time&&b.time)return a.time<b.time?-1:1;return 0;}).map((item,i)=><CalItem key={prioKey(item)+"|"+i} item={item} prio={prioOf(item)} onPrio={(n)=>setPrio(item,n)} onComplete={()=>compCal(item)} onReschedule={(nd,nt)=>reschedCal(item,nd,nt)}/>)}
           </div>;
         });
       })()}
