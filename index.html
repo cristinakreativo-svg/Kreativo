@@ -6508,6 +6508,19 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     }
     return {...c, nrGeamuri:nr, geamuri};
   }));
+  const inaltM140=(g)=>{ const v=Number(String(g.inaltime==null?"":g.inaltime).replace(",","."))||0; return v>=20?v/100:v; };
+  const total140=(c,bg)=>Math.round(c.geamuri.reduce((sum,g)=>{ const n=Number(String((bg||{})[g.id]||"").replace(",","."))||0; return n>0&&inaltM140(g)>0?sum+(inaltM140(g)+0.15)*n:sum; },0)*100)/100;
+  const setBuc140=(camId,prodId,geamId,val)=>setCamere(p=>p.map(c=>{
+    if(c.id!==camId) return c;
+    return {...c,produse:c.produse.map(pr=>{
+      if(pr.id!==prodId) return pr;
+      const bg={...(pr.bucGeam||{}),[geamId]:val};
+      const t=total140(c,bg);
+      const upd={...pr,bucGeam:bg,cantitate:t>0?String(t):pr.cantitate};
+      if(pr.dublata&&!pr.cantitate2Custom&&t>0) upd.cantitate2=String(t);
+      return upd;
+    })};
+  }));
   const updGeam=(camId,geamId,field,val)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,geamuri:c.geamuri.map(g=>g.id!==geamId?g:{...g,[field]:val})}));
   const addProdus=(camId)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:[...c.produse,golProdus()]}));
   const delProdus=(camId,prodId)=>setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.length<=1?c.produse:c.produse.filter(pr=>pr.id!==prodId)}));
@@ -6698,7 +6711,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const valoareSinaManuala=(pr)=>Math.round(pretBucSinaManuala(pr)*(Number(pr.cantitate)||1));
   const normTxt=(t)=>String(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const valoareLinie=(pr)=>esteSinaManuala(pr)?valoareSinaManuala(pr):Math.round(valoareMaterial(pr))+Math.round(valoareBanda(pr))+Math.round(valoareManopera(pr))+Math.round(valoareBenziManopera(pr))+Math.round(valoareMecanism(pr))+Math.round(valoareLining(pr))+Math.round(valoareMontaj(pr));
-  const sumaLungimi=(c)=>c.geamuri.reduce((s,g)=>s+(Number(g.lungime)||0),0);
+  const sumaLungimi=(c)=>Math.round(c.geamuri.reduce((s,g)=>s+(Number(String(g.lungime).replace(",","."))||0),0)*100)/100;
   const subtotalCamera=(c)=>c.produse.reduce((s,pr)=>s+valoareLinie(pr),0);
   const valoareLinieM=(pr)=>MON.cur==="lei"?valoareLinie(pr):(esteSinaManuala(pr)?mv(valoareSinaManuala(pr)):Math.round((mv(valoareMaterial1(pr))+mv(valoareMaterial2(pr))+mv(valoareBanda(pr))+mv(valoareManopera(pr))+mv(valoareBenziManopera(pr))+mv(valoareMecanism(pr))+mv(valoareLining(pr))+mv(valoareMontaj(pr)))*100)/100);
   const subtotalCameraM=(c)=>MON.cur==="lei"?subtotalCamera(c):Math.round(c.produse.reduce((s,pr)=>s+valoareLinieM(pr),0)*100)/100;
@@ -7265,6 +7278,15 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
             <span style={{fontSize:13,fontWeight:600,color:C.text,textAlign:"right"}}>{valoareMaterial1(pr).toFixed(0)} lei</span>
             {c.produse.length>1&&<button onClick={()=>delProdus(c.id,pr.id)} style={{fontSize:16,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>×</button>}
           </div>
+          {esteTextil(pr)&&<div style={{marginTop:8,padding:"6px 8px",background:C.surface,border:`1px solid ${C.border}`}}>
+            <label style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,color:C.text,cursor:"pointer"}}><input type="checkbox" checked={!!pr.stofa140} onChange={e=>updProdus(c.id,pr.id,"stofa140",e.target.checked)} style={{width:18,height:18}}/>140 <span style={{fontWeight:400,color:C.textMuted,fontSize:12}}>(stofă lată 140 cm — calcul pe bucăți)</span></label>
+            {pr.stofa140&&<div style={{marginTop:8}}>
+              <div style={{display:"flex",flexWrap:"wrap",gap:10}}>
+                {c.geamuri.map(g=><label key={g.id} style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:C.textSub}}>Geam {g.nr}{inaltM140(g)>0?" ("+String(Math.round(inaltM140(g)*100)/100).replace(".",",")+" m)":" (fără înălțime)"}: <input type="number" min="0" value={(pr.bucGeam||{})[g.id]||""} onChange={e=>setBuc140(c.id,pr.id,g.id,e.target.value)} placeholder="buc" style={{...selStyle,width:64}}/></label>)}
+              </div>
+              <div style={{fontSize:12,color:C.textMuted,marginTop:6}}>Material propus = Σ (înălțime + 15 cm) × bucăți = <b style={{color:C.text}}>{String(total140(c,pr.bucGeam)).replace(".",",")} m</b> <span> — se trece singur în Cantitate; o poți schimba manual.</span></div>
+            </div>}
+          </div>}
           {esteTextil(pr)&&pr.dublata&&<div style={{marginTop:8}}>
           <div style={{display:"grid",gridTemplateColumns:"100px 1fr 110px 80px 90px 80px auto",gap:8,alignItems:"center"}}>
             <span style={{fontSize:11,color:C.textMuted,fontWeight:600}}>Material 2 (dublură)</span>
