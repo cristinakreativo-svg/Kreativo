@@ -5450,7 +5450,9 @@ function vopPotrivire(denFact, items){
     if(cod==="046"&&baza==="") baza="Alb";
   }
   const c=items.filter(x=>String(x.cod)===cod&&x.baza===baza&&(x.amb==null?amb==null:x.amb===amb));
-  return c.length===1?c[0]:null;
+  if(c.length===1) return c[0];
+  if(!c.length&&amb!=null){ const c2=items.filter(x=>String(x.cod)===cod&&x.amb==null&&(x.baza===baza||!x.baza||x.baza==="—")); if(c2.length===1) return c2[0]; }
+  return null;
 }
 const vopAzi = ()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");};
 const vopFmtData = (d)=>{ if(!d) return ""; const p=String(d).split("-"); return p.length===3?p[2]+"."+p[1]+"."+p[0]:d; };
@@ -5703,7 +5705,7 @@ function VopImportOferta({lista,C,inpS,btn,onSave,onCancel}){
     try{
       const r=await citesteOfertaContabilitate(file);
       if(!r.linii.length){ setMsg("Nu am găsit produse în ofertă."); return; }
-      setOf({nr:r.nr,client:r.client,obs:"",linii:r.linii.map(l=>{const it=vopPotrivire("BM SUA "+l.den,lista);return it?{itemId:it.id,cant:l.cant,codCuloare:l.obs}:{itemId:"",altDen:l.den,cant:l.cant,codCuloare:l.obs};})});
+      setOf({nr:r.nr,client:r.client,obs:"",linii:r.linii.filter(l=>!/^\s*COLORANT/i.test(l.den||"")).map(l=>{const it=vopPotrivire("BM SUA "+l.den,lista);return it?{itemId:it.id,cant:l.cant,codCuloare:l.obs}:{itemId:"",altDen:l.den,cant:l.cant,codCuloare:l.obs};})});
       setMsg("");
     }catch(e){ setMsg("Eroare la citire: "+(e&&e.message||e)); }
   };
@@ -5917,6 +5919,19 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   };
   const stareCmd=(id,stare)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(c=>c.id===id?{...c,stare,dataFin:stare==="finalizata"?vopAzi():""}:c));
   const stergeCmd=(c)=>{ if(!window.confirm("Ștergi comanda nr. "+c.numar+" ("+c.client+")? Cantitățile se întorc în stoc.")) return; setComenzi(p=>(Array.isArray(p)?p:[]).filter(z=>z.id!==c.id)); setMiscari(p=>(Array.isArray(p)?p:[]).filter(m=>m.comandaId!==c.id)); };
+  const waRadu=(c)=>{
+    let nr="";try{nr=localStorage.getItem("radu_wa")||"";}catch(e){} if(!nr) nr="40746198190";
+    if(!nr){ const v=window.prompt("Numărul de WhatsApp al lui Radu (ex: 0740123456). Se reține pe acest calculator; îl poți schimba oricând cu butonul ✎.","");
+      if(v===null) return; nr=String(v).replace(/[^0-9]/g,""); if(!nr) return;
+      if(nr.length===10&&nr[0]==="0") nr="4"+nr; else if(nr.length===9) nr="40"+nr;
+      try{localStorage.setItem("radu_wa",nr);}catch(e){} }
+    const rows=(c.linii||[]).map(l=>{const x=lista.find(z=>z.id===l.itemId);return "• "+l.cant+" × "+(x?(x.cod+" "+x.den+(x.baza?" "+x.baza:"")+" · "+x.fin+" · "+fmtAmb(x.amb)):(l.altDen||"produs"))+(l.codCuloare?" · culoare "+l.codCuloare:"");}).join("\n");
+    const txt="Radu, comandă nouă Nr. "+c.numar+" – "+c.client+(c.oferta?" (ofertă "+c.oferta+")":"")+":\n"+rows+(c.obs?"\nObs: "+c.obs:"")+"\nO găsești în aplicație, la Radu → Comenzi active.";
+    window.open("https://wa.me/"+nr+"?text="+encodeURIComponent(txt),"_blank");
+  };
+  const schimbaWa=()=>{ const v=window.prompt("Număr WhatsApp Radu (gol = șterge):","");
+    if(v===null) return; let nr=String(v).replace(/[^0-9]/g,""); if(nr.length===10&&nr[0]==="0") nr="4"+nr; else if(nr.length===9) nr="40"+nr;
+    try{ if(nr) localStorage.setItem("radu_wa",nr); else localStorage.removeItem("radu_wa"); }catch(e){} };
   const CardCmd=({c})=>{
     const fin=c.stare==="finalizata";
     return <div style={{border:`1px solid ${C.border}`,background:C.surface,padding:14,marginBottom:10,opacity:fin?0.85:1}}>
@@ -5931,6 +5946,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
       {c.obs&&<div style={{fontSize:12,color:C.textSub,marginBottom:8}}>Observații: {c.obs}</div>}
       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
         <button onClick={()=>vopTiparesteComanda(c,lista)} style={btn(true)}>Printează</button>
+        {!fin&&!rolRadu&&<span style={{display:"inline-flex",gap:2}}><button onClick={()=>waRadu(c)} style={{...btn(true),background:"#25804A",borderColor:"#25804A",color:"#fff"}}>WhatsApp → Radu</button><button onClick={schimbaWa} title="Schimbă numărul lui Radu" style={{...btn(false),padding:"6px 8px"}}>✎</button></span>}
         {!fin&&<label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.text,cursor:"pointer",padding:"6px 10px",border:`1px solid ${C.border}`}}><input type="checkbox" checked={false} onChange={()=>stareCmd(c.id,"finalizata")} style={{width:20,height:20}}/>Comandă finalizată (pigmentată)</label>}
         {fin&&<button onClick={()=>stareCmd(c.id,"activa")} style={btn(false)}>Redeschide</button>}
         {!rolRadu&&<button onClick={()=>setEditId(c.id)} style={btn(false)}>Modifică</button>}
