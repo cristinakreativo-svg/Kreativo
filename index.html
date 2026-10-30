@@ -233,6 +233,9 @@ const MOTORS = {
   "Manual":    {prefix:"CC-F0", railOffset:11,  beltOffset:0,   firstBracket:50,  endcapW:12, codeAdd:""},
 };
 
+const parseCalNr=(v)=>{ const t=String(v==null?"":v).trim().replace(/,/g,"."); if(!t) return {nr:"",split:""}; const m=t.match(/^(\d+(?:\.\d+)?)\s*[+\/]\s*(\d+(?:\.\d+)?)$/); if(m){ const a=Number(m[1]), b=Number(m[2]); return {nr:a+b,split:a+" stânga + "+b+" dreapta"}; } const n=Number(t); return {nr:isNaN(n)?"":n,split:""}; };
+const calTxt=(c)=>c&&c.calaretiTip?(c.calaretiTip+(c.calaretiNr!==""&&c.calaretiNr!=null?" · "+c.calaretiNr+" buc."+(c.calaretiSplit?" ("+c.calaretiSplit+")":""):"")):"";
+const gliderEticheta=(k)=>k==="Pleat"?"Normali":k;
 const GLIDER_TYPES = {
   "Pleat":                 {code:"PLE",  digit:1, type:"pleat", perMeter:10, pitch:10.5},
   "Wave 80mm":             {code:"WA80", digit:2, type:"wave",  spacing:80,  pitch:12.5},
@@ -3119,7 +3122,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
         <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
         <div style="line-height:1.9;">
-          Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Motor: ${cfg.input.motorKey}<br/>Călăreț: ${cfg.input.gliderKey}<br/>Împachetare: ${cfg.input.packKey}<br/>Culoare: ${cfg.input.colourKey}<br/>Segmente șină: ${cfg.input.railSegments}<br/>Cantitate: ${cfg.input.quantity}
+          Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Motor: ${cfg.input.motorKey}<br/>Călăreț: ${gliderEticheta(cfg.input.gliderKey)}<br/>Împachetare: ${cfg.input.packKey}<br/>Culoare: ${cfg.input.colourKey}<br/>Segmente șină: ${cfg.input.railSegments}<br/>Cantitate: ${cfg.input.quantity}
         </div>
       </div>
       <p><b>Rezultat calcul:</b> Șină de tăiat: ${railCutLabel(cfg.result.rail,cfg.input.railSegments)} · Curea: ${cfg.result.belt}mm · Călărei/buc: ${gliderCountLabel(cfg.result.gliders,cfg.input.packKey)} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets} · Stackwidth: ${Math.round(cfg.result.stackwidth)}mm</p>
@@ -3234,7 +3237,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       </div>
       <div><label style={lblStyle}>Tip călăreț</label>
         <select value={gliderKey} onChange={e=>setGliderKey(e.target.value)} style={selStyle}>
-          {Object.keys(GLIDER_TYPES).map(g=><option key={g} value={g}>{g}</option>)}
+          {Object.keys(GLIDER_TYPES).map(g=><option key={g} value={g}>{gliderEticheta(g)}</option>)}
         </select>
       </div>
       <div><label style={lblStyle}>Parte împachetare</label>
@@ -3344,7 +3347,7 @@ const buildSinaAltaPrintHtml=(cfg)=>`<html><head><title>Comandă șină</title><
   <p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>
   ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${String(cfg.observatii).replace(/</g,"&lt;")}</p>`:""}
   <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;line-height:1.9;">
-    Tip: ${cfg.canale}<br/>Lungime: ${cfg.lungime} mm<br/>Cantitate: ${cfg.cantitate} buc.<br/>Culoare: ${cfg.culoare||"—"}<br/>Montaj: ${cfg.montaj||"—"}${cfg.pozitie?`<br/>Poziționare (mm): ${String(cfg.pozitie).replace(/</g,"&lt;")}`:""}${cfg.calaretiTip?`<br/>Călăreți: ${cfg.calaretiTip}${cfg.calaretiNr!==""&&cfg.calaretiNr!=null?" · "+cfg.calaretiNr+" buc.":""}`:""}${cfg.furnizor?`<br/>Furnizor / model: ${String(cfg.furnizor).replace(/</g,"&lt;")}`:""}
+    Tip: ${cfg.canale}<br/>Lungime: ${cfg.lungime} mm<br/>Cantitate: ${cfg.cantitate} buc.<br/>Culoare: ${cfg.culoare||"—"}<br/>Montaj: ${cfg.montaj||"—"}${cfg.pozitie?`<br/>Poziționare (mm): ${String(cfg.pozitie).replace(/</g,"&lt;")}`:""}${cfg.calaretiTip?`<br/>Călăreți: ${calTxt(cfg)}`:""}${cfg.furnizor?`<br/>Furnizor / model: ${String(cfg.furnizor).replace(/</g,"&lt;")}`:""}
   </div></body></html>`;
 
 function SinaAltaRow({cfg,clientId,setClients,C,onEdit,clientName}){
@@ -3365,7 +3368,7 @@ function SinaAltaRow({cfg,clientId,setClients,C,onEdit,clientName}){
     {open&&<div style={{padding:"12px 14px"}}>
       {cfg.observatii&&<div style={{background:"#33444D",color:"#fff",padding:"8px 12px",fontSize:12,marginBottom:10,whiteSpace:"pre-wrap"}}>{cfg.observatii}</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:12}}>
-        {[["Tip",cfg.canale],["Lungime",cfg.lungime+" mm"],["Cantitate",cfg.cantitate+" buc."],["Culoare",cfg.culoare||"—"],["Montaj",cfg.montaj||"—"],["Poziționare",cfg.pozitie||"pe tot peretele"],["Călăreți",cfg.calaretiTip?(cfg.calaretiTip+(cfg.calaretiNr!==""&&cfg.calaretiNr!=null?" · "+cfg.calaretiNr+" buc.":"")):"—"],["Furnizor / model",cfg.furnizor||"—"]].map(([l,v])=>
+        {[["Tip",cfg.canale],["Lungime",cfg.lungime+" mm"],["Cantitate",cfg.cantitate+" buc."],["Culoare",cfg.culoare||"—"],["Montaj",cfg.montaj||"—"],["Poziționare",cfg.pozitie||"pe tot peretele"],["Călăreți",calTxt(cfg)||"—"],["Furnizor / model",cfg.furnizor||"—"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div><div style={{fontSize:13,fontWeight:600,color:C.text}}>{v}</div></div>)}
       </div>
       <div style={{display:"flex",gap:8}}>
@@ -3412,7 +3415,7 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
     const existent=editingId?((clientObj&&clientObj.configuratiiSinaAlta)||[]).find(x=>x.id===editingId):null;
     const etP=pEt.trim()||"fereastră"; const pozParts=[]; if(nzA(pSt)) pozParts.push(nzA(pSt)+" stânga"); if(nzA(pMj)) pozParts.push(nzA(pMj)+" "+etP); if(nzA(pDr)) pozParts.push(nzA(pDr)+" dreapta");
     const pozGoala=!pSt.trim()&&!pMj.trim()&&!pDr.trim();
-    const cfg={...(existent||{}), id:editingId||gid(), camera:camera.trim(), observatii:observatii.trim(), canale, lungime:Number(lungime), cantitate:Number(cantitate), culoare:culoare.trim(), montaj, furnizor:furnizor.trim(), calaretiTip:calTip, calaretiNr:calNr===""?"":Number(calNr), poz:pozGoala?null:{st:pSt.trim(),mj:pMj.trim(),dr:pDr.trim(),et:pEt.trim()||"fereastră"}, pozitie:pozParts.join(" - "), dataCreat:(existent&&existent.dataCreat)||tday()};
+    const cfg={...(existent||{}), id:editingId||gid(), camera:camera.trim(), observatii:observatii.trim(), canale, lungime:Number(lungime), cantitate:Number(cantitate), culoare:culoare.trim(), montaj, furnizor:furnizor.trim(), calaretiTip:calTip, calaretiNr:parseCalNr(calNr).nr, calaretiSplit:parseCalNr(calNr).split, poz:pozGoala?null:{st:pSt.trim(),mj:pMj.trim(),dr:pDr.trim(),et:pEt.trim()||"fereastră"}, pozitie:pozParts.join(" - "), dataCreat:(existent&&existent.dataCreat)||tday()};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSinaAlta:editingId?(c.configuratiiSinaAlta||[]).map(x=>x.id!==editingId?x:cfg):[...(c.configuratiiSinaAlta||[]),cfg]}));
     setSavedMsg(`${editingId?"Actualizat":"Salvat"} la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
     reset();
@@ -3420,7 +3423,7 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
   };
   const incarca=(cfg)=>{
     setCamera(cfg.camera||""); setObservatii(cfg.observatii||""); setCanale(cfg.canale||"1 canal"); setLungime(cfg.lungime); setCantitate(cfg.cantitate||1);
-    setCuloare(cfg.culoare||""); setMontaj(cfg.montaj||"Tavan"); setFurnizor(cfg.furnizor||""); setCalTip(cfg.calaretiTip||""); setCalNr(cfg.calaretiNr==null?"":cfg.calaretiNr); { const z=cfg.poz||{}; setPSt(z.st!=null?String(z.st):""); setPMj(z.mj!=null?String(z.mj):""); setPDr(z.dr!=null?String(z.dr):""); setPEt(z.et||"fereastră"); } setEditingId(cfg.id);
+    setCuloare(cfg.culoare||""); setMontaj(cfg.montaj||"Tavan"); setFurnizor(cfg.furnizor||""); setCalTip(cfg.calaretiTip||""); setCalNr(cfg.calaretiSplit?cfg.calaretiSplit.replace(/\s*stânga\s*\+\s*/," + ").replace(/\s*dreapta/,"").replace(/ \+ /,"+"):(cfg.calaretiNr==null?"":String(cfg.calaretiNr))); { const z=cfg.poz||{}; setPSt(z.st!=null?String(z.st):""); setPMj(z.mj!=null?String(z.mj):""); setPDr(z.dr!=null?String(z.dr):""); setPEt(z.et||"fereastră"); } setEditingId(cfg.id);
   };
   React.useEffect(()=>{
     if(pendingEditCfg && pendingEditCfg.type==="sinaalta"){
@@ -3467,7 +3470,7 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
       <div><label style={lblStyle}>Tip călăreți</label>
         <select value={calTip} onChange={e=>setCalTip(e.target.value)} style={selStyle}><option value="">— alege —</option><option value="Normali">Normali</option><option value="Wave 8 cm">Wave 8 cm</option><option value="Wave 6 cm">Wave 6 cm</option></select>
       </div>
-      <div><label style={lblStyle}>Nr. călăreți (buc.)</label><input type="number" min="0" value={calNr} onChange={e=>setCalNr(e.target.value)} placeholder="ex: 40" style={selStyle}/></div>
+      <div><label style={lblStyle}>Nr. călăreți (buc.)</label><input value={calNr} onChange={e=>setCalNr(e.target.value)} placeholder="ex: 40  sau  20+20" style={selStyle}/><div style={{fontSize:10,color:C.textMuted,marginTop:3}}>{parseCalNr(calNr).split?"= "+parseCalNr(calNr).nr+" buc. ("+parseCalNr(calNr).split+")":"scrie 20+20 pentru stânga + dreapta"}</div></div>
       <div><label style={lblStyle}>Furnizor / model (opțional)</label><input value={furnizor} onChange={e=>setFurnizor(e.target.value)} style={selStyle}/></div>
     </div>
     <div style={{marginBottom:16,padding:"10px 12px",background:"#FBF6E4",border:"2px solid #33444D"}}>
@@ -3511,17 +3514,17 @@ function parsePozitie(t){
   }
   return segs.length>=1?{segs,sum:segs.reduce((a,x)=>a+x.v,0)}:null;
 }
-// Călărei pentru montaj: tip (Pleat / Wave 8 / Wave 6) + număr total, cu împărțirea pe cele 2 părți la deschidere centrală
+// Călărei pentru montaj: tip (Normali / Wave 8 / Wave 6) + număr total, cu împărțirea pe cele 2 părți la deschidere centrală
 function calaretiMontaj(c){
   const inp=c.input||{}, g=c.result&&c.result.gliders; if(!g) return null;
   const pk=PACK_SIDES[inp.packKey]||{};
   const nm=String(inp.gliderKey||"");
-  let tip=nm;
+  let tip=gliderEticheta(nm);
   if(/Wave 80/i.test(nm)) tip="Wave 8 (80 mm)"; else if(/Wave 60/i.test(nm)) tip="Wave 6 (60 mm)";
   let tot=pk.center?g*2:g, split=pk.center?g+" + "+g:"";
   const o=c.calOvr;
   if(o){
-    if(o.tip) tip=o.tip;
+    if(o.tip) tip=(o.tip==="Pleat"||o.tip==="Pleated")?"Normali":o.tip;
     const a=Number(o.a), b=Number(o.b);
     if(pk.center){ if(a>=0&&b>=0&&(o.a!==""||o.b!=="")){ tot=a+b; split=a+" + "+b; } }
     else if(o.a!==""&&a>=0){ tot=a; }
@@ -3556,7 +3559,7 @@ function buildCentralizatorMontajHtml(client){
   const altele=[];
   const td="padding:8px;border:1px solid #444;";
   const dm=(w,h)=>(w&&h)?esc(w)+" × "+esc(h)+" mm":"";
-  (client.configuratiiSinaAlta||[]).forEach(c=>altele.push({tip:"Șină non-Coulisse",camera:c.camera,dim:c.lungime?esc(c.lungime)+" mm (lungime)":"",q:Number(c.cantitate)||1,det:[c.canale,c.culoare,c.montaj&&("montaj "+String(c.montaj).toLowerCase()),c.calaretiTip&&("călăreți "+c.calaretiTip+(c.calaretiNr!==""&&c.calaretiNr!=null?": "+c.calaretiNr+" buc.":""))].filter(Boolean).map(esc).join(" · "),obs:c.observatii,poz:c.pozitie}));
+  (client.configuratiiSinaAlta||[]).forEach(c=>altele.push({tip:"Șină non-Coulisse",camera:c.camera,dim:c.lungime?esc(c.lungime)+" mm (lungime)":"",q:Number(c.cantitate)||1,det:[c.canale,c.culoare,c.montaj&&("montaj "+String(c.montaj).toLowerCase()),c.calaretiTip&&("călăreți "+c.calaretiTip+(c.calaretiNr!==""&&c.calaretiNr!=null?": "+c.calaretiNr+" buc."+(c.calaretiSplit?" ("+c.calaretiSplit+")":""):""))].filter(Boolean).map(esc).join(" · "),obs:c.observatii,poz:c.pozitie}));
   (client.configuratiiRoman||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Stor roman",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.mechKey,n.fabricKey,n.controlSide&&!(c.result&&c.result.isMotor)?"comandă "+n.controlSide:"",(n.options||[]).join(", ")].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
   (client.configuratiiRulou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Rulou",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.tube&&("tub "+n.tube),n.color,n.materialName].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
   (client.configuratiiPanou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Panou japonez",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.system,n.tracks&&(n.tracks+" canale"),n.colour,n.material].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
@@ -3682,7 +3685,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
           <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"2 1 180px"}}>Tip
             <input list="tipuri-calareti" value={cTip} onChange={e=>setCTip(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
-            <datalist id="tipuri-calareti"><option value="Pleat"/><option value="Wave 8 (80 mm)"/><option value="Wave 6 (60 mm)"/></datalist>
+            <datalist id="tipuri-calareti"><option value="Normali"/><option value="Wave 8 (80 mm)"/><option value="Wave 6 (60 mm)"/></datalist>
           </label>
           <label style={{display:"block",fontSize:11,color:C.textMuted,flex:"1 1 100px"}}>{calCenter?"Partea 1 (buc.)":"Număr (buc.)"}
             <input type="number" value={cA} onChange={e=>setCA(e.target.value)} style={{display:"block",width:"100%",boxSizing:"border-box",marginTop:3,fontSize:14,border:`2px solid #33444D`,padding:"8px 10px",background:"#fff",outline:"none",fontFamily:"inherit"}}/>
@@ -3711,7 +3714,7 @@ function ConfigSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalogCostC
 
       <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Date introduse</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:14}}>
-        {[["Lățime",cfg.input.width+" mm"],["Înălțime",cfg.input.height+" mm"],["Motor",cfg.input.motorKey],["Tip călăreț",cfg.input.gliderKey],["Împachetare",cfg.input.packKey],["Culoare",cfg.input.colourKey],["Segmente șină",cfg.input.railSegments],["Cantitate",cfg.input.quantity+" buc."]].map(([l,v])=>
+        {[["Lățime",cfg.input.width+" mm"],["Înălțime",cfg.input.height+" mm"],["Motor",cfg.input.motorKey],["Tip călăreț",gliderEticheta(cfg.input.gliderKey)],["Împachetare",cfg.input.packKey],["Culoare",cfg.input.colourKey],["Segmente șină",cfg.input.railSegments],["Cantitate",cfg.input.quantity+" buc."]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}>
             <div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div>
             <div style={{fontSize:13,fontWeight:600,color:C.text}}>{v}</div>
@@ -9438,7 +9441,7 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
           {(client.configuratiiSina||[]).map(cfg=>
             <ConfigSalvataRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} onEdit={()=>{setPendingEditCfg({type:"sina",cfg,clientId:client.id});setDanView("cfg");}} catalogCostComponente={catalogCostComponente} onPrint={()=>{
               const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
-              const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Călăreț: ${cfg.input.gliderKey} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină de tăiat: ${railCutLabel(cfg.result.rail,cfg.input.railSegments)} · Curea: ${cfg.result.belt}mm · Călărei/buc: ${gliderCountLabel(cfg.result.gliders,cfg.input.packKey)} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
+              const html=`<html><head><title>Comandă Coulisse ${cfg.result.articleCode}</title></head><body style="font-family:sans-serif;padding:20px;"><h2>Configurator Coulisse SmartCurtain</h2><p><b>Client:</b> ${client.name}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}<p><b>Cod articol:</b> ${cfg.result.articleCode}</p><p>Lățime: ${cfg.input.width}mm · Înălțime: ${cfg.input.height}mm · Motor: ${cfg.input.motorKey} · Călăreț: ${gliderEticheta(cfg.input.gliderKey)} · Împachetare: ${cfg.input.packKey} · Culoare: ${cfg.input.colourKey} · Cantitate: ${cfg.input.quantity}</p><p>Șină de tăiat: ${railCutLabel(cfg.result.rail,cfg.input.railSegments)} · Curea: ${cfg.result.belt}mm · Călărei/buc: ${gliderCountLabel(cfg.result.gliders,cfg.input.packKey)} · Cârlige/buc: ${cfg.result.hooks} · Console/buc: ${cfg.result.brackets}</p><table style="border-collapse:collapse;width:100%;margin-top:14px;"><tr><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">#</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Cod</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:left;">Descriere</th><th style="padding:6px 10px;border:1px solid #ccc;text-align:right;">Cantitate</th></tr>${rows}</table></body></html>`;
               printHtmlDoc(html);
             }}/>
           )}
