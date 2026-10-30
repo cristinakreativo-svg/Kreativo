@@ -3502,7 +3502,7 @@ function buildCentralizatorMontajHtml(client){
     const cl=calaretiMontaj(c);
     return `<tr>
       <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;">${i+1}</td>
-      <td style="padding:8px;border:1px solid #444;font-weight:700;font-size:15px;">${esc(c.camera||"(fără cameră)")}</td>
+      <td style="padding:8px;border:1px solid #444;font-weight:700;font-size:15px;">${esc(c.camera||"(fără cameră)")}<div style="font-size:10px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.04em;">Șină Coulisse</div></td>
       <td style="padding:8px;border:1px solid #444;white-space:nowrap;">${esc(c.input.width)} × ${esc(c.input.height)} mm</td>
       <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;">${q}</td>
       <td style="padding:8px;border:1px solid #444;">${cl?`<b>${esc(cl.tip)}</b><br><span style="font-size:15px;font-weight:700;">${cl.tot} buc.</span>${cl.split?` <b>(${cl.split})</b>`:""}<br><span style="font-size:11px;color:#444;">${esc(cl.imp)}</span>`:""}</td>
@@ -3511,19 +3511,37 @@ function buildCentralizatorMontajHtml(client){
       <td style="padding:8px;border:1px solid #444;width:28px;"></td>
     </tr>`;
   }).join("");
+  const altele=[];
+  const td="padding:8px;border:1px solid #444;";
+  const dm=(w,h)=>(w&&h)?esc(w)+" × "+esc(h)+" mm":"";
+  (client.configuratiiSinaAlta||[]).forEach(c=>altele.push({tip:"Șină non-Coulisse",camera:c.camera,dim:c.lungime?esc(c.lungime)+" mm (lungime)":"",q:Number(c.cantitate)||1,det:[c.canale,c.culoare,c.montaj&&("montaj "+String(c.montaj).toLowerCase())].filter(Boolean).map(esc).join(" · "),obs:c.observatii}));
+  (client.configuratiiRoman||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Stor roman",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.mechKey,n.fabricKey,n.controlSide&&!(c.result&&c.result.isMotor)?"comandă "+n.controlSide:"",(n.options||[]).join(", ")].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
+  (client.configuratiiRulou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Rulou",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.tube&&("tub "+n.tube),n.color,n.materialName].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
+  (client.configuratiiPanou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Panou japonez",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.system,n.tracks&&(n.tracks+" canale"),n.colour,n.material].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
+  const rowsAlt=altele.map((x,k)=>`<tr>
+      <td style="${td}text-align:center;font-weight:700;">${cfgs.length+k+1}</td>
+      <td style="${td}font-weight:700;font-size:15px;">${esc(x.camera||"(fără cameră)")}<div style="font-size:10px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:.04em;">${esc(x.tip)}</div></td>
+      <td style="${td}white-space:nowrap;">${x.dim}</td>
+      <td style="${td}text-align:center;font-weight:700;">${x.q}</td>
+      <td style="${td}">${x.det}</td>
+      <td style="${td}"><span style="color:#888;">pe tot peretele</span></td>
+      <td style="${td}">${esc(x.obs||"")}</td>
+      <td style="${td}width:28px;"></td>
+    </tr>`).join("");
+  const totalPoz=cfgs.length+altele.length, totalBucAll=totalBuc+altele.reduce((a,x)=>a+x.q,0);
   return `<html><head><title>Centralizator montaj — ${esc(client.name)}</title></head><body style="font-family:sans-serif;padding:20px;color:#111;">
-    <h2 style="margin:0 0 4px;">Centralizator montaj — șine</h2>
+    <h2 style="margin:0 0 4px;">Centralizator montaj</h2>
     <div style="font-size:14px;margin-bottom:2px;"><b>Client:</b> ${esc(client.name)}${client.telefon?" · "+esc(client.telefon):""}</div>
     ${client.adresa?`<div style="font-size:14px;margin-bottom:2px;"><b>Adresa:</b> ${esc(client.adresa)}</div>`:""}
     ${dt?`<div style="font-size:14px;margin-bottom:2px;"><b>Montaj:</b> ${esc(dt)}</div>`:""}
-    <div style="font-size:13px;color:#444;margin:6px 0 12px;">${cfgs.length} configurații · ${totalBuc} buc. · dimensiuni în mm (lățime × înălțime) · călăreții sunt pe bucată</div>
+    <div style="font-size:13px;color:#444;margin:6px 0 12px;">${totalPoz} poziții · ${totalBucAll} buc. · dimensiuni în mm (lățime × înălțime) · călăreții sunt pe bucată</div>
     <table style="border-collapse:collapse;width:100%;font-size:13px;">
       <thead><tr style="background:#e6e6e6;">
         <th style="padding:8px;border:1px solid #444;">Nr.</th><th style="padding:8px;border:1px solid #444;text-align:left;">Cameră</th>
         <th style="padding:8px;border:1px solid #444;">Dimensiuni</th><th style="padding:8px;border:1px solid #444;">Buc.</th>
-        <th style="padding:8px;border:1px solid #444;text-align:left;">Călărei / deschidere</th>
+        <th style="padding:8px;border:1px solid #444;text-align:left;">Călărei / detalii</th>
         <th style="padding:8px;border:1px solid #444;text-align:left;">Poziționare pe perete (mm)</th><th style="padding:8px;border:1px solid #444;text-align:left;">Observații</th><th style="padding:8px;border:1px solid #444;">✓</th>
-      </tr></thead><tbody>${rows}</tbody></table>
+      </tr></thead><tbody>${rows}${rowsAlt}</tbody></table>
     <div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div>
   </body></html>`;
 }
@@ -9366,6 +9384,7 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>}
         <ConsumContabilitate client={client} C={C} tday={tday}/>
+        {!(client.configuratiiSina||[]).length&&((client.configuratiiSinaAlta||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length+(client.configuratiiPanou||[]).length)>0&&<div style={{marginTop:16}}><button onClick={()=>printHtmlDoc(buildCentralizatorMontajHtml(client))} title="Tabel pentru montaj, fără costuri" style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>Printează centralizat montaj</button></div>}
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
             <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
