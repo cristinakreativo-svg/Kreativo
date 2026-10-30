@@ -3183,6 +3183,10 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
   };
 
   React.useEffect(()=>{
+    if(pendingEditCfg && pendingEditCfg.type==="sinaalta") setMod("alta");
+  },[pendingEditCfg]);
+
+  React.useEffect(()=>{
     if(pendingEditCfg && pendingEditCfg.type==="sina"){
       setClientId(pendingEditCfg.clientId);
       incarcaConfig(pendingEditCfg.cfg);
@@ -3195,7 +3199,7 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
       {[["coulisse","Coulisse SmartCurtain"],["alta","Altă șină (non-Coulisse) · 1 / 2 canale"]].map(([k,l])=>
         <button key={k} onClick={()=>setMod(k)} style={{padding:"7px 14px",border:`1px solid ${mod===k?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:mod===k?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:mod===k?600:400}}>{l}</button>)}
     </div>
-    {mod==="alta"&&<SinaAltaForm C={C} clients={clients} setClients={setClients} clientIdFixat={clientIdFixat} camereLista={camereLista} setCamereLista={setCamereLista}/>}
+    {mod==="alta"&&<SinaAltaForm C={C} clients={clients} setClients={setClients} clientIdFixat={clientIdFixat} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg}/>}
     {mod==="coulisse"&&<div>
     <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:14}}>Configurator șină Coulisse SmartCurtain</div>
     <div id="zona-editare-cfg" style={editingCfgId?{borderLeft:"5px solid #B5504A",background:"#F6ECE8",padding:"14px 16px 6px",marginBottom:16,fontFamily:"Georgia,'Times New Roman',serif",outline:"1px dashed #B5504A"}:{}}>
@@ -3340,7 +3344,7 @@ const buildSinaAltaPrintHtml=(cfg)=>`<html><head><title>Comandă șină</title><
   <p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>
   ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${String(cfg.observatii).replace(/</g,"&lt;")}</p>`:""}
   <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;line-height:1.9;">
-    Tip: ${cfg.canale}<br/>Lungime: ${cfg.lungime} mm<br/>Cantitate: ${cfg.cantitate} buc.<br/>Culoare: ${cfg.culoare||"—"}<br/>Montaj: ${cfg.montaj||"—"}${cfg.furnizor?`<br/>Furnizor / model: ${String(cfg.furnizor).replace(/</g,"&lt;")}`:""}
+    Tip: ${cfg.canale}<br/>Lungime: ${cfg.lungime} mm<br/>Cantitate: ${cfg.cantitate} buc.<br/>Culoare: ${cfg.culoare||"—"}<br/>Montaj: ${cfg.montaj||"—"}${cfg.calaretiTip?`<br/>Călăreți: ${cfg.calaretiTip}${cfg.calaretiNr!==""&&cfg.calaretiNr!=null?" · "+cfg.calaretiNr+" buc.":""}`:""}${cfg.furnizor?`<br/>Furnizor / model: ${String(cfg.furnizor).replace(/</g,"&lt;")}`:""}
   </div></body></html>`;
 
 function SinaAltaRow({cfg,clientId,setClients,C,onEdit,clientName}){
@@ -3361,7 +3365,7 @@ function SinaAltaRow({cfg,clientId,setClients,C,onEdit,clientName}){
     {open&&<div style={{padding:"12px 14px"}}>
       {cfg.observatii&&<div style={{background:"#33444D",color:"#fff",padding:"8px 12px",fontSize:12,marginBottom:10,whiteSpace:"pre-wrap"}}>{cfg.observatii}</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:0,marginBottom:12}}>
-        {[["Tip",cfg.canale],["Lungime",cfg.lungime+" mm"],["Cantitate",cfg.cantitate+" buc."],["Culoare",cfg.culoare||"—"],["Montaj",cfg.montaj||"—"],["Furnizor / model",cfg.furnizor||"—"]].map(([l,v])=>
+        {[["Tip",cfg.canale],["Lungime",cfg.lungime+" mm"],["Cantitate",cfg.cantitate+" buc."],["Culoare",cfg.culoare||"—"],["Montaj",cfg.montaj||"—"],["Călăreți",cfg.calaretiTip?(cfg.calaretiTip+(cfg.calaretiNr!==""&&cfg.calaretiNr!=null?" · "+cfg.calaretiNr+" buc.":"")):"—"],["Furnizor / model",cfg.furnizor||"—"]].map(([l,v])=>
           <div key={l} style={{marginBottom:8}}><div style={{fontSize:9,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{l}</div><div style={{fontSize:13,fontWeight:600,color:C.text}}>{v}</div></div>)}
       </div>
       <div style={{display:"flex",gap:8}}>
@@ -3373,7 +3377,7 @@ function SinaAltaRow({cfg,clientId,setClients,C,onEdit,clientName}){
   </div>;
 }
 
-function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereLista}){
+function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg}){
   const [clientId,setClientId]=React.useState(clientIdFixat||"");
   const [camera,setCamera]=React.useState("");
   const [observatii,setObservatii]=React.useState("");
@@ -3383,12 +3387,14 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
   const [culoare,setCuloare]=React.useState("");
   const [montaj,setMontaj]=React.useState("Tavan");
   const [furnizor,setFurnizor]=React.useState("Aluprof");
+  const [calTip,setCalTip]=React.useState("");
+  const [calNr,setCalNr]=React.useState("");
   const [editingId,setEditingId]=React.useState(null);
   const [savedMsg,setSavedMsg]=React.useState("");
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:5,display:"block"};
   const clientObj=clients&&clients.find(c=>c.id===clientId);
-  const reset=()=>{ setCamera(""); setObservatii(""); setLungime(""); setCantitate(1); setCuloare(""); setFurnizor("Aluprof"); setEditingId(null); };
+  const reset=()=>{ setCamera(""); setObservatii(""); setLungime(""); setCantitate(1); setCuloare(""); setFurnizor("Aluprof"); setCalTip(""); setCalNr(""); setEditingId(null); };
   const salveaza=()=>{
     if(!clientId){ alert("Alege întâi un client."); return; }
     if(!(Number(lungime)>0)){ alert("Completează lungimea șinei (mm)."); return; }
@@ -3396,7 +3402,7 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
     if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?")) return;
     if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())) setCamereLista(p=>[...p,camera.trim()]);
     const existent=editingId?((clientObj&&clientObj.configuratiiSinaAlta)||[]).find(x=>x.id===editingId):null;
-    const cfg={...(existent||{}), id:editingId||gid(), camera:camera.trim(), observatii:observatii.trim(), canale, lungime:Number(lungime), cantitate:Number(cantitate), culoare:culoare.trim(), montaj, furnizor:furnizor.trim(), dataCreat:(existent&&existent.dataCreat)||tday()};
+    const cfg={...(existent||{}), id:editingId||gid(), camera:camera.trim(), observatii:observatii.trim(), canale, lungime:Number(lungime), cantitate:Number(cantitate), culoare:culoare.trim(), montaj, furnizor:furnizor.trim(), calaretiTip:calTip, calaretiNr:calNr===""?"":Number(calNr), dataCreat:(existent&&existent.dataCreat)||tday()};
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSinaAlta:editingId?(c.configuratiiSinaAlta||[]).map(x=>x.id!==editingId?x:cfg):[...(c.configuratiiSinaAlta||[]),cfg]}));
     setSavedMsg(`${editingId?"Actualizat":"Salvat"} la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`);
     reset();
@@ -3404,8 +3410,15 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
   };
   const incarca=(cfg)=>{
     setCamera(cfg.camera||""); setObservatii(cfg.observatii||""); setCanale(cfg.canale||"1 canal"); setLungime(cfg.lungime); setCantitate(cfg.cantitate||1);
-    setCuloare(cfg.culoare||""); setMontaj(cfg.montaj||"Tavan"); setFurnizor(cfg.furnizor||""); setEditingId(cfg.id);
+    setCuloare(cfg.culoare||""); setMontaj(cfg.montaj||"Tavan"); setFurnizor(cfg.furnizor||""); setCalTip(cfg.calaretiTip||""); setCalNr(cfg.calaretiNr==null?"":cfg.calaretiNr); setEditingId(cfg.id);
   };
+  React.useEffect(()=>{
+    if(pendingEditCfg && pendingEditCfg.type==="sinaalta"){
+      setClientId(pendingEditCfg.clientId);
+      incarca(pendingEditCfg.cfg);
+      if(setPendingEditCfg) setPendingEditCfg(null);
+    }
+  },[pendingEditCfg]);
   return <div>
     <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,marginBottom:6}}>Comandă șină non-Coulisse (1 sau 2 canale)</div>
     <div style={{fontSize:12,color:C.textMuted,marginBottom:14}}>Fără calcul de piese — doar ce trebuie să știe Dan: tip, lungime, cantitate, culoare, montaj.</div>
@@ -3441,6 +3454,10 @@ function SinaAltaForm({C,clients,setClients,clientIdFixat,camereLista,setCamereL
       <div><label style={lblStyle}>Montaj</label>
         <select value={montaj} onChange={e=>setMontaj(e.target.value)} style={selStyle}><option value="Tavan">Tavan</option><option value="Perete">Perete</option></select>
       </div>
+      <div><label style={lblStyle}>Tip călăreți</label>
+        <select value={calTip} onChange={e=>setCalTip(e.target.value)} style={selStyle}><option value="">— alege —</option><option value="Normali">Normali</option><option value="Wave 8 cm">Wave 8 cm</option><option value="Wave 6 cm">Wave 6 cm</option></select>
+      </div>
+      <div><label style={lblStyle}>Nr. călăreți (buc.)</label><input type="number" min="0" value={calNr} onChange={e=>setCalNr(e.target.value)} placeholder="ex: 40" style={selStyle}/></div>
       <div><label style={lblStyle}>Furnizor / model (opțional)</label><input value={furnizor} onChange={e=>setFurnizor(e.target.value)} style={selStyle}/></div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
@@ -3514,7 +3531,7 @@ function buildCentralizatorMontajHtml(client){
   const altele=[];
   const td="padding:8px;border:1px solid #444;";
   const dm=(w,h)=>(w&&h)?esc(w)+" × "+esc(h)+" mm":"";
-  (client.configuratiiSinaAlta||[]).forEach(c=>altele.push({tip:"Șină non-Coulisse",camera:c.camera,dim:c.lungime?esc(c.lungime)+" mm (lungime)":"",q:Number(c.cantitate)||1,det:[c.canale,c.culoare,c.montaj&&("montaj "+String(c.montaj).toLowerCase())].filter(Boolean).map(esc).join(" · "),obs:c.observatii}));
+  (client.configuratiiSinaAlta||[]).forEach(c=>altele.push({tip:"Șină non-Coulisse",camera:c.camera,dim:c.lungime?esc(c.lungime)+" mm (lungime)":"",q:Number(c.cantitate)||1,det:[c.canale,c.culoare,c.montaj&&("montaj "+String(c.montaj).toLowerCase()),c.calaretiTip&&("călăreți "+c.calaretiTip+(c.calaretiNr!==""&&c.calaretiNr!=null?": "+c.calaretiNr+" buc.":""))].filter(Boolean).map(esc).join(" · "),obs:c.observatii}));
   (client.configuratiiRoman||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Stor roman",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.mechKey,n.fabricKey,n.controlSide&&!(c.result&&c.result.isMotor)?"comandă "+n.controlSide:"",(n.options||[]).join(", ")].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
   (client.configuratiiRulou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Rulou",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.tube&&("tub "+n.tube),n.color,n.materialName].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
   (client.configuratiiPanou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Panou japonez",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.system,n.tracks&&(n.tracks+" canale"),n.colour,n.material].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
@@ -9402,7 +9419,7 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
         {(client.configuratiiSinaAlta||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Șine non-Coulisse ({(client.configuratiiSinaAlta||[]).length})</div>
           {(client.configuratiiSinaAlta||[]).map(cfg=>
-            <SinaAltaRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} clientName={client.name}/>
+            <SinaAltaRow key={cfg.id} cfg={cfg} clientId={client.id} setClients={setClients} C={C} clientName={client.name} onEdit={()=>{setPendingEditCfg({type:"sinaalta",cfg,clientId:client.id});setDanView("cfg");}}/>
           )}
         </div>}
         {(client.configuratiiRoman||[]).length>0&&<div style={{marginTop:16}}>
