@@ -10554,6 +10554,97 @@ const DECL_PASI=[
   {id:"p4",t:"Verificare sold bancă euro",d:"Soldul din contabilitate pentru contul în euro este egal cu soldul din extrasul ING."},
   {id:"p5",t:"Verificare sold POS",d:"Soldul POS din contabilitate corespunde cu încasările din raportul POS."}
 ];
+
+// ============ CONSUMURI VOPSELE (Declarații) ============
+const CONSUM_VOP_COLORANTI=["MB1095","MG1095","MM1095","MO1095","MR2095","MR1095","MR3095","MS1095","MS2095","MW1095","MW1378","MY1095","MY2095","MY3095"];
+function ConsumuriVopsele({C}){
+  const [msg,setMsg]=React.useState("");
+  const [fisier,setFisier]=React.useState("");
+  const [rez,setRez]=React.useState(null);
+  const fmtN=(n,d)=>Number(n).toLocaleString("ro-RO",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const norm=(v)=>String(v==null?"":v).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim();
+  const num=(v)=>{ if(typeof v==="number") return v; const n=parseFloat(String(v==null?"":v).replace(/\./g,"").replace(",",".")); return isNaN(n)?0:n; };
+  const incarca=(file)=>{
+    if(!file) return;
+    if(typeof XLSX==="undefined"){ setMsg("Modulul Excel nu s-a încărcat (verifică internetul) — reîncearcă."); return; }
+    setMsg("Se citește..."); setRez(null); setFisier(file.name);
+    const rd=new FileReader();
+    rd.onerror=()=>setMsg("Fișierul nu poate fi citit.");
+    rd.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:""});
+        let h=-1;
+        for(let i=0;i<Math.min(rows.length,40);i++){ const t=rows[i].map(norm); if(t.includes("cod")&&t.some(x=>x.startsWith("cantitate facturata"))){ h=i; break; } }
+        if(h<0){ setMsg("Nu găsesc antetul (coloanele „Cod”, „Produs”, „Cantitate facturată”). Verifică fișierul."); return; }
+        const hd=rows[h].map(norm);
+        const ci=hd.indexOf("cod"), pi=hd.findIndex(x=>x==="produs"||x==="denumire"), qi=hd.findIndex(x=>x.startsWith("cantitate facturata")), vi=hd.findIndex(x=>x.startsWith("valoare"));
+        if(pi<0||vi<0){ setMsg("Lipsește coloana „Produs” sau „Valoare”."); return; }
+        const map=new Map(); let citite=0, sarite=0;
+        for(let i=h+1;i<rows.length;i++){
+          const r=rows[i]; const cod=String(r[ci]==null?"":r[ci]).trim().toUpperCase();
+          const q=num(r[qi]);
+          if(!cod||!(q!==0)){ if(cod||q) sarite++; continue; }
+          citite++;
+          const o=map.get(cod)||{cod,den:String(r[pi]||"").replace(/\*+\s*$/,"").trim(),q:0,val:0};
+          o.q+=q; o.val+=num(r[vi]); map.set(cod,o);
+        }
+        const lista=[...map.values()].sort((a,b)=>a.den.localeCompare(b.den,"ro",{numeric:true}));
+        if(!lista.length){ setMsg("Nu am găsit rânduri cu produse."); return; }
+        setRez({lista,citite,sarite});
+        setMsg("");
+      }catch(e){ setMsg("Eroare la citire: "+(e&&e.message||e)); }
+    };
+    rd.readAsArrayBuffer(file);
+  };
+  const t1=rez?rez.lista.map(o=>({cod:o.cod,den:o.den,q:Math.round(o.q*1000)/1000,pu:o.q?Math.round(o.val/o.q*100)/100:0,val:Math.round(o.val*100)/100})):[];
+  const t2=rez?rez.lista.map(o=>({cod:"M"+o.cod,den:o.den,q:Math.round(o.q*1000)/1000})):[];
+  const extra=CONSUM_VOP_COLORANTI.map(c=>({cod:c,den:"",q:0.001}));
+  const totQ=t1.reduce((a,x)=>a+x.q,0), totV=t1.reduce((a,x)=>a+x.val,0);
+  const exporta=()=>{
+    const wb=XLSX.utils.book_new();
+    const a=[["Cod","Denumire","Cantitate totală","Preț vânzare (fără TVA, unitar)","Valoare vânzare (fără TVA)"],...t1.map(x=>[x.cod,x.den,x.q,x.pu,x.val])];
+    const b=[["Cod","Denumire","Cantitate"],...t2.map(x=>[x.cod,x.den,x.q]),...extra.map(x=>[x.cod,x.den,x.q])];
+    const w1=XLSX.utils.aoa_to_sheet(a); w1["!cols"]=[{wch:14},{wch:42},{wch:16},{wch:22},{wch:22}];
+    const w2=XLSX.utils.aoa_to_sheet(b); w2["!cols"]=[{wch:14},{wch:42},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,w1,"Vânzări produse"); XLSX.utils.book_append_sheet(wb,w2,"Consum coduri M");
+    XLSX.writeFile(wb,"Consumuri_vopsele_"+new Date().toISOString().slice(0,10)+".xlsx");
+  };
+  const th={padding:"7px 10px",textAlign:"left",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",background:"#33444D",color:"#fff",fontWeight:600};
+  const td={padding:"6px 10px",borderBottom:`1px solid ${C.border}`,fontSize:13,color:C.text};
+  const tdr={...td,textAlign:"right",fontVariantNumeric:"tabular-nums"};
+  return <div style={{maxWidth:1000}}>
+    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Consumuri vopsele</div>
+    <div style={{fontSize:13,color:C.textSub,marginBottom:12}}>Încarcă Excelul cu vânzările (cu coloanele Cod, Produs, Cantitate facturată, Valoare). Programul adună produsele identice și face două tabele: vânzări și consum pe coduri M. Nimic nu se salvează în aplicație.</div>
+    <label style={{display:"inline-block",padding:"9px 16px",background:"#33444D",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>
+      + Încarcă Excel vânzări
+      <input type="file" accept=".xlsx,.xls,.csv" style={{display:"none"}} onChange={e=>{incarca(e.target.files&&e.target.files[0]); e.target.value="";}}/>
+    </label>
+    {fisier&&<span style={{marginLeft:10,fontSize:12,color:C.textMuted}}>{fisier}</span>}
+    {msg&&<div style={{marginTop:10,fontSize:13,color:msg.startsWith("Se citește")?C.textMuted:"#B3261E"}}>{msg}</div>}
+    {rez&&<div style={{marginTop:16}}>
+      <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
+        <div style={{fontSize:12,color:C.textMuted}}>{rez.citite} rânduri citite → {t1.length} produse distincte{rez.sarite?` · ${rez.sarite} rânduri ignorate (fără cod sau cantitate)`:""}</div>
+        <div style={{flex:1}}/>
+        <button onClick={exporta} style={{padding:"8px 16px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer",fontSize:12,fontWeight:600}}>↓ Descarcă Excel (2 foi)</button>
+      </div>
+      <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",margin:"6px 0"}}>Tabel 1 — vânzări pe produs (cantități adunate)</div>
+      <table style={{width:"100%",borderCollapse:"collapse",background:C.surface,marginBottom:18}}>
+        <thead><tr><th style={th}>Cod</th><th style={th}>Denumire</th><th style={{...th,textAlign:"right"}}>Cantitate totală</th><th style={{...th,textAlign:"right"}}>Preț vânzare unitar (fără TVA)</th><th style={{...th,textAlign:"right"}}>Valoare (fără TVA)</th></tr></thead>
+        <tbody>{t1.map(x=><tr key={x.cod}><td style={{...td,fontWeight:700}}>{x.cod}</td><td style={td}>{x.den}</td><td style={tdr}>{fmtN(x.q,x.q%1?3:0)}</td><td style={tdr}>{fmtN(x.pu,2)}</td><td style={tdr}>{fmtN(x.val,2)}</td></tr>)}
+        <tr><td style={{...td,fontWeight:700}} colSpan={2}>TOTAL</td><td style={{...tdr,fontWeight:700}}>{fmtN(totQ,totQ%1?3:0)}</td><td style={td}></td><td style={{...tdr,fontWeight:700}}>{fmtN(totV,2)}</td></tr></tbody>
+      </table>
+      <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",margin:"6px 0"}}>Tabel 2 — consum pe coduri M (fără preț)</div>
+      <table style={{width:"100%",borderCollapse:"collapse",background:C.surface}}>
+        <thead><tr><th style={th}>Cod</th><th style={th}>Denumire</th><th style={{...th,textAlign:"right"}}>Cantitate</th></tr></thead>
+        <tbody>{t2.map(x=><tr key={x.cod}><td style={{...td,fontWeight:700}}>{x.cod}</td><td style={td}>{x.den}</td><td style={tdr}>{fmtN(x.q,x.q%1?3:0)}</td></tr>)}
+        {extra.map(x=><tr key={"x"+x.cod} style={{background:"#EEF2F4"}}><td style={{...td,fontWeight:700}}>{x.cod}</td><td style={td}><span style={{color:C.textMuted,fontSize:12}}>colorant — fix</span></td><td style={tdr}>{fmtN(x.q,3)}</td></tr>)}</tbody>
+      </table>
+    </div>}
+  </div>;
+}
+
 function DeclaratiiTab({declaratii,setDeclaratii,C,esteAdmin,mergiLa}){
   const azi=tday();
   const lunaPrec=(()=>{let y=+azi.slice(0,4),m=+azi.slice(5,7)-1;if(m<1){m=12;y-=1;}return y+"-"+String(m).padStart(2,"0");})();
@@ -11829,7 +11920,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
     {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu"},{id:"recurente",l:"Recurente"}]},
-    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"}]:[]}]},
+    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
 
@@ -12705,6 +12796,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     </div>}
 
     {tab==="declaratii"&&<DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={authRole==="admin"} mergiLa={setTab}/>}
+    {tab==="consumvop"&&authRole==="admin"&&<div style={{maxWidth:1000}}><ConsumuriVopsele C={C}/></div>}
     {tab==="banca"&&authRole==="admin"&&<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>}
     {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
 
