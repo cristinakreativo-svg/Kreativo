@@ -2400,7 +2400,7 @@ function construiesteConsumBandaDinLinii(camere){
     (cam.linii||[]).filter(l=>(l.tip==="perdea"||l.tip==="draperie") && l.banda&&l.banda.trim()).forEach(l=>{
       const cheie=l.banda.trim().toLowerCase();
       if(!grupe[cheie]) grupe[cheie]={id:gid(), tipBanda:l.banda.trim(), cantitate:0, sursa:"auto"};
-      grupe[cheie].cantitate+=Number(l.l)||0;
+      grupe[cheie].cantitate+=(Number(String(l.l).replace(",","."))||0)*(Number(String(l.nrBucati).replace(",","."))||1);
     });
   });
   return Object.values(grupe).map(g=>({...g, cantitate:Math.round(g.cantitate*100)/100}));
@@ -2426,6 +2426,52 @@ function construiesteLiniiExecutie(oferta){
   }).filter(cam=>cam.linii.length>0);
 }
 
+const STD_CONSUM=[
+  {cod:"080810",denumire:"Bandă adezivată 1 cm",um:"m"},
+  {cod:"080820",denumire:"Bandă adezivată 2 cm",um:"m"},
+  {cod:"BSC",denumire:"Bandă scai",um:"m"},
+  {cod:"060202",denumire:"Bandă scai adezivat",um:"m"},
+  {cod:"1557840",denumire:"Dublură adezivată",um:"m"},
+  {cod:"DBA",denumire:"Dublură blackout adezivată",um:"m"},
+  {cod:"13-M",denumire:"Greutăți 13 g",um:"buc"},
+  {cod:"25-M",denumire:"Greutăți 25 g",um:"buc"},
+  {cod:"50-M",denumire:"Greutăți 50 g",um:"buc"}
+];
+function nicoCodMaterial(material,culoare){
+  const mat=String(material||"").replace(/\s+/g,"");
+  const col=String(culoare||"").trim();
+  const m=col.match(/^(\d+)/);
+  return mat+(m?m[1]:col.replace(/[^0-9A-Za-zăâîșțĂÂÎȘȚ]+/g,""));
+}
+function nicoCodBanda(tip){
+  const t=String(tip||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/^\s*banda\s+/,"").trim();
+  if(t==="wave mic") return "1218780";
+  if(t==="wave mare") return "1219480";
+  if(t==="wave normal") return "1228575";
+  if(t==="creata") return "8125-T-TR";
+  return "";
+}
+function exportaConsumNicoExcel(comanda,clientNume){
+  const consum=comanda.consumMateriale||{};
+  const nr=(v)=>{const n=parseFloat(String(v==null?"":v).replace(",","."));return isFinite(n)?n:0;};
+  const rows=[["Cod","Denumire","Cantitate"]];
+  const lipsa=[];
+  (consum.materiale||[]).forEach(it=>{
+    rows.push([nicoCodMaterial(it.material,it.culoare),[it.material,it.culoare].filter(Boolean).join(" "),nr(it.cantitate)]);
+  });
+  (consum.banda||[]).forEach(it=>{
+    const cod=nicoCodBanda(it.tipBanda); if(!cod) lipsa.push(it.tipBanda);
+    rows.push([cod,"Bandă "+String(it.tipBanda||"").replace(/^\s*band[aă]\s+/i,""),nr(it.cantitate)]);
+  });
+  (consum.standard||[]).forEach(it=>{ if(nr(it.cantitate)>0) rows.push([it.cod,it.denumire,nr(it.cantitate)]); });
+  (consum.liniiManuale||[]).forEach(it=>{ if(it.denumire||it.cantitate) rows.push(["",it.denumire||"",nr(it.cantitate)]); });
+  if(rows.length===1){ alert("Nu există nimic în consum de exportat."); return; }
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"]=[{wch:22},{wch:42},{wch:12}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Consum");
+  XLSX.writeFile(wb,`Consum_Nico_${(clientNume||"client").replace(/[^a-zA-Z0-9]+/g,"_")}_comanda${comanda.numar||""}_${tday()}.xlsx`);
+  if(lipsa.length) alert("Atenție: nu am cod pentru banda: "+lipsa.join(", ")+". Coloana Cod a rămas goală la acea linie.");
+}
 function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,oferteClient,catalogMateriale,readOnly}){
   const cap=(s)=>s?s.charAt(0).toUpperCase()+s.slice(1):s;
   const [open,setOpen]=React.useState(false);
@@ -2499,6 +2545,10 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
   const stergePozitieConsum=(grupa,itemId)=>{
     updConsum(grupa, consum[grupa].filter(it=>it.id!==itemId));
   };
+  const standardEff=consum.standard||STD_CONSUM.map(a=>({id:"std_"+a.cod,cod:a.cod,denumire:a.denumire,um:a.um,cantitate:""}));
+  const updStd=(id,val)=>updConsum("standard",standardEff.map(it=>it.id!==id?it:{...it,cantitate:val}));
+  const delStd=(id)=>updConsum("standard",standardEff.filter(it=>it.id!==id));
+  const readaugaStd=()=>updConsum("standard",STD_CONSUM.map(a=>standardEff.find(it=>it.cod===a.cod)||{id:"std_"+a.cod,cod:a.cod,denumire:a.denumire,um:a.um,cantitate:""}));
   const actualizeazaConsumBanda=()=>{
     updConsum("banda", construiesteConsumBandaDinLinii(comanda.camere));
   };
@@ -2582,6 +2632,14 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
         <tbody>${consum.liniiManuale.map(randManual).join("")}</tbody>
       </table>
     </div>`:"";
+    const stdPrint=standardEff.filter(it=>String(it.cantitate||"").trim()!=="");
+    const secStd=stdPrint.length?`<div style="margin-bottom:20px">
+      <div style="font:600 1em 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">Articole standard</div>
+      <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+        <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#5F7078;background:#EDF0ED"><td style="padding:6px 10px;border:1px solid #D3DBD6">Cod</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Denumire</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cantitate</td></tr></thead>
+        <tbody>${stdPrint.map(it=>`<tr><td style="padding:7px 10px;border:1px solid #D3DBD6">${it.cod}</td><td style="padding:7px 10px;border:1px solid #D3DBD6">${it.denumire}</td><td style="padding:7px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${it.cantitate} ${it.um||""}</td></tr>`).join("")}</tbody>
+      </table>
+    </div>`:"";
     const html=`<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><title>Consum materiale — comandă nr. ${comanda.numar||""}</title>
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
     <style>@page{size:A4;margin:0.5in}body{margin:0;background:#fff;font-family:'Source Sans 3',sans-serif}</style></head>
@@ -2590,8 +2648,8 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
         <div><div style="font:600 1.3em 'Source Sans 3',sans-serif;color:#2A2118">KREATIVO STUDIO</div><div style="font-size:.85em;color:#8A7A64">Consum materiale — comandă execuție nr. ${comanda.numar||""} · Client: ${clientNume}</div></div>
         <div style="font-size:.8em;color:#8A7A64">${fmtD(comanda.dataCreat)}</div>
       </div>
-      ${secMaterial}${secBanda}${secManual}
-      ${!secMaterial&&!secBanda&&!secManual?`<div style="color:#8A7A64;font-style:italic">Nimic calculat sau adăugat încă.</div>`:""}
+      ${secMaterial}${secBanda}${secStd}${secManual}
+      ${!secMaterial&&!secBanda&&!secStd&&!secManual?`<div style="color:#8A7A64;font-style:italic">Nimic calculat sau adăugat încă.</div>`:""}
       <div style="margin-top:24px;padding:10px 14px;border:1px solid ${consum.verificatNico?"#7A9A7A":"#D4C9B8"};background:${consum.verificatNico?"#DCE8DC":"#F7F3EA"};font-size:13px;font-weight:600;color:${consum.verificatNico?"#3A5A3A":"#5C4F3E"}">${consum.verificatNico?"✓ Verificat de Nico":"☐ Neverificat încă de Nico"}</div>
     </body></html>`;
     printHtmlDoc(html);
@@ -2788,6 +2846,22 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
           </div>
         )}
 
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:14,marginBottom:6}}>
+          <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>Articole standard — completează cantitatea sau șterge ce nu e necesar</div>
+          {standardEff.length<STD_CONSUM.length&&<button onClick={readaugaStd} style={{fontSize:11,fontWeight:600,padding:"4px 10px",background:"transparent",color:C.textSub,border:`1px dashed ${C.border}`,cursor:"pointer"}}>Readaugă articolele șterse</button>}
+        </div>
+        {standardEff.map(it=>
+          <div key={it.id} style={{display:"grid",gridTemplateColumns:"90px 1fr 90px 30px",gap:8,alignItems:"center",marginBottom:6}}>
+            <div style={{fontSize:12,fontWeight:600,color:C.textSub}}>{it.cod}</div>
+            <div style={{fontSize:12}}>{it.denumire}</div>
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <input value={it.cantitate} onChange={e=>updStd(it.id,e.target.value)} placeholder="0" style={{fontSize:12,border:`1px solid ${C.border}`,padding:"6px 8px",background:C.bg,outline:"none",width:60}}/>
+              <span style={{fontSize:11,color:C.textMuted}}>{it.um||""}</span>
+            </div>
+            <button onClick={()=>delStd(it.id)} style={{fontSize:13,color:C.textMuted,border:"none",background:"transparent",cursor:"pointer"}}>✕</button>
+          </div>
+        )}
+
         <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em",marginTop:14,marginBottom:6}}>Linii adăugate manual (Nicoleta)</div>
         {(consum.liniiManuale||[]).map(it=>
           <div key={it.id} style={{display:"grid",gridTemplateColumns:"1fr 90px 1fr 30px",gap:8,alignItems:"center",marginBottom:6}}>
@@ -2804,6 +2878,7 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
           <span style={{fontSize:12,fontWeight:600,color:consum.verificatNico?"#3A5A3A":C.text}}>{consum.verificatNico?"✓ Verificat de Nico":"Verificat de Nico"}</span>
         </label>
         <button onClick={printeazaConsum} style={{width:"100%",fontSize:12,fontWeight:600,padding:"8px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer",marginTop:8}}>Printează consumul</button>
+        <button onClick={()=>exportaConsumNicoExcel(comanda,clientNume)} style={{width:"100%",fontSize:12,fontWeight:600,padding:"8px",background:"transparent",color:"#33444D",border:"1px solid #33444D",cursor:"pointer",marginTop:6}}>Excel consum (cod, denumire, cantitate)</button>
       </div>
 
       <div style={{display:"flex",gap:8,marginTop:14}}>
@@ -3567,13 +3642,13 @@ function distSvgProfil(r,full){
   const X=(cm)=>m+cm*k;
   let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 206" width="100%" style="${full?"":"max-width:"+W+"px;"}font-family:sans-serif;display:block;">`;
   s+=`<text x="${m}" y="16" font-size="12" font-weight="700">Secțiune (vedere de sus, geamul în stânga)</text>`;
-  s+=`<line x1="${X(0)}" y1="${y0-12}" x2="${X(0)}" y2="${y0+h+12}" stroke="#000" stroke-width="5"/>`;
+  s+=`<defs><pattern id="hatchW" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#fff"/><line x1="0" y1="0" x2="0" y2="8" stroke="#000" stroke-width="2"/></pattern></defs><rect x="${X(0)-14}" y="${y0-12}" width="14" height="${h+24}" fill="url(#hatchW)" stroke="#000"/>`;
   s+=`<text x="${X(0)+6}" y="${y0-16}" font-size="11" text-anchor="start">perete / geam</text>`;
   s+=`<line x1="${X(r.D)}" y1="${y0-12}" x2="${X(r.D)}" y2="${y0+h+12}" stroke="#000" stroke-width="2" stroke-dasharray="5,3"/>`;
   s+=`<text x="${X(r.D)}" y="${y0-16}" font-size="11" text-anchor="end">margine scafă</text>`;
   [[r.o1,"1",false],[r.o2,"2",true]].forEach(([o,n,hat])=>{
-    s+=`<rect x="${X(o)}" y="${y0}" width="${Math.max(r.w*k,3)}" height="${h}" fill="${hat?"#888":"#000"}" stroke="#000"/>`;
-    s+=`<text x="${X(o)+Math.max(r.w*k,3)/2}" y="${y0+h/2+4}" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">${n}</text>`;
+    s+=`<rect x="${X(o)}" y="${y0}" width="${Math.max(r.w*k,3)}" height="${h}" fill="${hat?"#8c8c8c":"#d4d4d4"}" stroke="#000" stroke-width="1.5"/>`;
+    s+=`<text x="${X(o)+Math.max(r.w*k,3)/2}" y="${y0+h/2+4}" font-size="11" fill="${hat?"#fff":"#000"}" text-anchor="middle" font-weight="700">${n}</text>`;
   });
   const seg=[["a",0,r.o1],["w",r.o1,r.o1+r.w],["g",r.o1+r.w,r.o2],["w",r.o2,r.o2+r.w],["rămas",r.o2+r.w,r.D]];
   seg.forEach(([nm,x1,x2],i)=>{
@@ -3586,20 +3661,22 @@ function distSvgProfil(r,full){
   return s+`</svg>`;
 }
 function distSvgL(r){
-  const W=660, X0=84, Y0=64, vw=8, vo=[22,48];
+  const W=660, X0=84, Y0=80, vw=8, vo=[22,48];
   const k=Math.min((W-X0-24)/Math.max(r.Ll,1), 470/Math.max(r.Ls,1));
   const H=Math.max(Math.round(Y0+k*r.Ls+44), Y0+330);
   let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" style="font-family:sans-serif;display:block;">`;
+  s+=`<defs><pattern id="hatchW" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#fff"/><line x1="0" y1="0" x2="0" y2="8" stroke="#000" stroke-width="2"/></pattern></defs>`;
   s+=`<text x="10" y="22" font-size="14" font-weight="700">Vedere de sus — colț (grosimile șinelor nu sunt la scară)</text>`;
   const xe=X0+k*r.Ll, ye=Y0+k*r.Ls;
   s+=`<rect x="${X0}" y="${Y0}" width="${k*r.Ll}" height="66" fill="#eee"/><rect x="${X0}" y="${Y0}" width="66" height="${k*r.Ls}" fill="#eee"/>`;
-  s+=`<line x1="${X0}" y1="${Y0}" x2="${xe}" y2="${Y0}" stroke="#000" stroke-width="6"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${ye}" stroke="#000" stroke-width="6"/>`;
-  s+=`<text x="${(X0+xe)/2}" y="${Y0-14}" font-size="16" text-anchor="middle" font-weight="700">latura ${r.lunga} = ${distFmt(r.Ll)} cm (lungă)</text>`;
-  s+=`<text transform="translate(${X0-18},${(Y0+ye)/2}) rotate(-90)" font-size="16" text-anchor="middle" font-weight="700">latura ${r.lunga===1?2:1} = ${distFmt(r.Ls)} cm (scurtă)</text>`;
+  s+=`<rect x="${X0-16}" y="${Y0-16}" width="${xe-X0+16}" height="16" fill="url(#hatchW)" stroke="#000"/><rect x="${X0-16}" y="${Y0-16}" width="16" height="${ye-Y0+16}" fill="url(#hatchW)" stroke="#000"/>`;
+  s+=`<text x="${xe-4}" y="${Y0-22}" font-size="12" text-anchor="end">perete (hașurat)</text>`;
+  s+=`<text x="${(X0+xe)/2-50}" y="${Y0-24}" font-size="16" text-anchor="middle" font-weight="700">latura ${r.lunga} = ${distFmt(r.Ll)} cm (lungă)</text>`;
+  s+=`<text transform="translate(${X0-26},${(Y0+ye)/2}) rotate(-90)" font-size="16" text-anchor="middle" font-weight="700">latura ${r.lunga===1?2:1} = ${distFmt(r.Ls)} cm (scurtă)</text>`;
   r.layers.forEach((L,i)=>{
-    const v=vo[i], fill=i?"#888":"#000";
-    s+=`<rect x="${X0+v}" y="${Y0+v}" width="${vw}" height="${k*(r.Ls-r.cs)-v}" fill="${fill}" stroke="#000"/>`;
-    s+=`<rect x="${X0+v+vw}" y="${Y0+v}" width="${k*(r.Ll-r.cl)-v-vw}" height="${vw}" fill="${fill}" stroke="#000"/>`;
+    const v=vo[i], fill=i?"#8c8c8c":"#d4d4d4";
+    s+=`<rect x="${X0+v}" y="${Y0+v}" width="${vw}" height="${k*(r.Ls-r.cs)-v}" fill="${fill}" stroke="#000" stroke-width="1.8"/>`;
+    s+=`<rect x="${X0+v+vw}" y="${Y0+v}" width="${k*(r.Ll-r.cl)-v-vw}" height="${vw}" fill="${fill}" stroke="#000" stroke-width="1.8"/>`;
     s+=`<text x="${X0+84}" y="${Y0+104+i*44}" font-size="17" font-weight="700">${L.nume} — șina lungă: ${distFmt(L.lung)} cm</text><text x="${X0+84}" y="${Y0+121+i*44}" font-size="13">${L.fLung}</text>`;
     s+=`<text x="${X0+84}" y="${Y0+212+i*44}" font-size="17" font-weight="700">${L.nume} — șina scurtă: ${distFmt(L.scurt)} cm</text><text x="${X0+84}" y="${Y0+229+i*44}" font-size="13">${L.fScurt}</text>`;
   });
@@ -3627,6 +3704,17 @@ function buildDistanteHtml(client){
 function buildDistantePrintHtml(client){
   return `<html><head><title>Distanțe șine — ${(client.name||"")}</title><style>@page dist{size:A4 landscape;margin:8mm}body{margin:0;font-family:sans-serif;color:#111;}</style></head><body>${buildDistanteHtml(client)}</body></html>`;
 }
+function distVerifClient(cl,wins){
+  const rails=[
+    ...(cl.configuratiiSina||[]).map(c=>({txt:(c.camera||"?")+" — Coulisse "+(c.input&&c.input.width)+" mm",mm:distNz(c.input&&c.input.width),used:false})),
+    ...(cl.configuratiiSinaAlta||[]).map(c=>({txt:(c.camera||"?")+" — "+(c.lungime||"?")+" mm",mm:distNz(c.lungime),used:false}))
+  ];
+  const calc=[];
+  wins.forEach(w=>{ const r=calcDistSine(w); if(r.tip!=="L"||!(r.l1>0&&r.l2>0)) return;
+    r.layers.forEach(L=>{ calc.push({n:(w.camera||"geam")+" — "+L.nume+" lungă",mm:Math.round(L.lung*10)}); calc.push({n:(w.camera||"geam")+" — "+L.nume+" scurtă",mm:Math.round(L.scurt*10)}); }); });
+  calc.forEach(c=>{ const m=rails.find(x=>!x.used&&Math.abs(x.mm-c.mm)<=1); if(m){m.used=true;c.ok=true;c.rail=m.txt;} else c.ok=false; });
+  return {calc,extra:rails.filter(x=>!x.used),nRails:rails.length};
+}
 function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,clientIdFixat}){
   const [clientId,setClientId]=React.useState(clientIdFixat||"");
   const [editId,setEditId]=React.useState(null);
@@ -3639,12 +3727,8 @@ function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,client
   const set=(p)=>setF(x=>({...x,...p}));
   const r=calcDistSine(f);
   const campuri=[["D","Adâncime scafă (cm)"],["a","Geam → șina 1 (cm)"],["w","Lățime șină (cm)"],["g","Între șine (cm)"]];
-  const optiuniVerif=cl?[
-    ...(cl.configuratiiSina||[]).map(c=>({id:"c"+c.id,txt:(c.camera||"?")+" — Coulisse "+(c.input&&c.input.width)+" mm",mm:distNz(c.input&&c.input.width)})),
-    ...(cl.configuratiiSinaAlta||[]).map(c=>({id:"a"+c.id,txt:(c.camera||"?")+" — "+(c.lungime||"?")+" mm",mm:distNz(c.lungime)}))
-  ]:[];
-  const calcMm=r.tip==="L"?r.layers.flatMap(L=>[{n:L.nume+" lungă",mm:Math.round(L.lung*10)},{n:L.nume+" scurtă",mm:Math.round(L.scurt*10)}]):[];
-  const sel=optiuniVerif.filter(o=>(f.verifIds||[]).includes(o.id));
+  const fValid=f.tip==="L"&&distNz(f.l1)>0&&distNz(f.l2)>0;
+  const verif=cl?distVerifClient(cl,[...lista.filter(x=>x.id!==editId),...(fValid?[f]:[])]):null;
   const salveaza=()=>{
     if(!cl){alert("Alege clientul.");return;}
     if(!f.camera.trim()){alert("Completează camera / geamul.");return;}
@@ -3693,14 +3777,13 @@ function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,client
       <div dangerouslySetInnerHTML={{__html:(r.tip==="L"&&r.l1>0&&r.l2>0?distSvgL(r):"")+distSvgProfil(r)}}/>
     </div>}
 
-    {r.tip==="L"&&optiuniVerif.length>0&&<div style={{border:`1px dashed ${C.border}`,padding:10,marginBottom:12}}>
-      <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Verificare față de șinele din lucru (opțional)</div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:10,fontSize:12}}>
-        {optiuniVerif.map(o=><label key={o.id}><input type="checkbox" checked={(f.verifIds||[]).includes(o.id)} onChange={e=>set({verifIds:e.target.checked?[...(f.verifIds||[]),o.id]:(f.verifIds||[]).filter(x=>x!==o.id)})}/> {o.txt}</label>)}
-      </div>
-      {sel.length>0&&<div style={{marginTop:8,fontSize:12}}>
-        {calcMm.map(c=>{const ok=sel.some(o=>Math.abs(o.mm-c.mm)<=1);return <div key={c.n} style={{color:ok?"inherit":"#B5504A"}}>{ok?"✓":"✗"} {c.n}: calculat {c.mm} mm {ok?"— există în configurator":"— nu există nicio șină de această lungime"}</div>;})}
-        {sel.filter(o=>!calcMm.some(c=>Math.abs(o.mm-c.mm)<=1)).map(o=><div key={o.id} style={{color:"#B5504A"}}>✗ Configurator: {o.txt} — nu corespunde niciunei lungimi calculate</div>)}
+    {verif&&verif.calc.length>0&&<div style={{border:`1px dashed ${C.border}`,padding:10,marginBottom:12}}>
+      <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Verificare față de șinele create pentru acest client</div>
+      {verif.nRails===0&&<div style={{fontSize:12,color:"#B5504A"}}>Clientul nu are încă nicio șină în configuratoare.</div>}
+      {verif.nRails>0&&<div style={{fontSize:12,lineHeight:1.7}}>
+        {verif.calc.map((c,i)=><div key={i} style={{color:c.ok?"inherit":"#B5504A",fontWeight:c.ok?400:700}}>{c.ok?"✓":"✗"} {c.n}: {c.mm} mm {c.ok?<span style={{color:"#666"}}>— găsită: {c.rail}</span>:"— nu există nicio șină de această lungime în configuratoare"}</div>)}
+        {verif.extra.length>0&&<div style={{marginTop:6,color:"#666"}}>Șine create care nu corespund niciunei lungimi din tabel: {verif.extra.map(x=>x.txt).join("; ")}</div>}
+        {verif.calc.every(c=>c.ok)&&verif.extra.length===0&&<div style={{marginTop:6,fontWeight:700}}>Toate șinele create respectă tabelul.</div>}
       </div>}
     </div>}
 
