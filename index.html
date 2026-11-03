@@ -3552,17 +3552,20 @@ function calcDistSine(d){
     const Ll=lunga===1?l1:l2, Ls=lunga===1?l2:l1, cl=lunga===1?cA:cB, cs=lunga===1?cB:cA;
     res.l1=l1;res.l2=l2;res.lunga=lunga;res.Ll=Ll;res.Ls=Ls;res.cl=cl;res.cs=cs;res.cA=cA;res.cB=cB;
     [["Perdea",o1],["Draperie",o2]].forEach(([nume,o])=>{
-      res.layers.push({nume,off:o,lung:Ll-cl-o-w,scurt:Ls-cs-o});
+      const lung=Ll-cl-o-w, scurt=Ls-cs-o;
+      res.layers.push({nume,off:o,lung,scurt,
+        fLung:distFmt(Ll)+" − "+distFmt(cl)+" capăt − "+distFmt(o)+" perete − "+distFmt(w)+" șină = "+distFmt(lung),
+        fScurt:distFmt(Ls)+" − "+distFmt(cs)+" capăt − "+distFmt(o)+" perete = "+distFmt(scurt)});
     });
     if(!(l1>0&&l2>0)) errs.push("Completează latura 1 și latura 2.");
     res.layers.forEach(L=>{ if(l1>0&&l2>0&&(L.lung<=0||L.scurt<=0)) errs.push(L.nume+": lungime negativă — verifică laturile."); });
   }
   return res;
 }
-function distSvgProfil(r){
-  const W=600, m=40, D=Math.max(r.D, r.o2+r.w+1), k=(W-2*m)/D, y0=56, h=22;
+function distSvgProfil(r,full){
+  const W=full?440:600, m=full?30:40, D=Math.max(r.D, r.o2+r.w+1), k=(W-2*m)/D, y0=56, h=22;
   const X=(cm)=>m+cm*k;
-  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 206" width="100%" style="max-width:${W}px;font-family:sans-serif;">`;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 206" width="100%" style="${full?"":"max-width:"+W+"px;"}font-family:sans-serif;display:block;">`;
   s+=`<text x="${m}" y="16" font-size="12" font-weight="700">Secțiune (vedere de sus, geamul în stânga)</text>`;
   s+=`<line x1="${X(0)}" y1="${y0-12}" x2="${X(0)}" y2="${y0+h+12}" stroke="#000" stroke-width="5"/>`;
   s+=`<text x="${X(0)+6}" y="${y0-16}" font-size="11" text-anchor="start">perete / geam</text>`;
@@ -3583,46 +3586,46 @@ function distSvgProfil(r){
   return s+`</svg>`;
 }
 function distSvgL(r){
-  const W=600, X0=60, Y0=60, vw=6, vo=[16,34];
-  const k=Math.min(440/Math.max(r.Ll,1), 280/Math.max(r.Ls,1));
-  const H=Math.round(Y0+k*r.Ls+36);
-  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;font-family:sans-serif;">`;
-  s+=`<text x="10" y="18" font-size="12" font-weight="700">Vedere de sus — colț (grosimile șinelor nu sunt la scară)</text>`;
+  const W=660, X0=84, Y0=64, vw=8, vo=[22,48];
+  const k=Math.min((W-X0-24)/Math.max(r.Ll,1), 470/Math.max(r.Ls,1));
+  const H=Math.max(Math.round(Y0+k*r.Ls+44), Y0+330);
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" style="font-family:sans-serif;display:block;">`;
+  s+=`<text x="10" y="22" font-size="14" font-weight="700">Vedere de sus — colț (grosimile șinelor nu sunt la scară)</text>`;
   const xe=X0+k*r.Ll, ye=Y0+k*r.Ls;
-  s+=`<rect x="${X0}" y="${Y0}" width="${k*r.Ll}" height="46" fill="#eee" stroke="none"/><rect x="${X0}" y="${Y0}" width="46" height="${k*r.Ls}" fill="#eee" stroke="none"/>`;
-  s+=`<line x1="${X0}" y1="${Y0}" x2="${xe}" y2="${Y0}" stroke="#000" stroke-width="5"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${ye}" stroke="#000" stroke-width="5"/>`;
-  s+=`<text x="${(X0+xe)/2}" y="${Y0-12}" font-size="12" text-anchor="middle" font-weight="700">latura ${r.lunga} = ${distFmt(r.Ll)} cm (lungă)</text>`;
-  s+=`<text transform="translate(${X0-14},${(Y0+ye)/2}) rotate(-90)" font-size="12" text-anchor="middle" font-weight="700">latura ${r.lunga===1?2:1} = ${distFmt(r.Ls)} cm (scurtă)</text>`;
+  s+=`<rect x="${X0}" y="${Y0}" width="${k*r.Ll}" height="66" fill="#eee"/><rect x="${X0}" y="${Y0}" width="66" height="${k*r.Ls}" fill="#eee"/>`;
+  s+=`<line x1="${X0}" y1="${Y0}" x2="${xe}" y2="${Y0}" stroke="#000" stroke-width="6"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${ye}" stroke="#000" stroke-width="6"/>`;
+  s+=`<text x="${(X0+xe)/2}" y="${Y0-14}" font-size="16" text-anchor="middle" font-weight="700">latura ${r.lunga} = ${distFmt(r.Ll)} cm (lungă)</text>`;
+  s+=`<text transform="translate(${X0-18},${(Y0+ye)/2}) rotate(-90)" font-size="16" text-anchor="middle" font-weight="700">latura ${r.lunga===1?2:1} = ${distFmt(r.Ls)} cm (scurtă)</text>`;
   r.layers.forEach((L,i)=>{
     const v=vo[i], fill=i?"#888":"#000";
-    // șina scurtă (verticală), trece prin colț
     s+=`<rect x="${X0+v}" y="${Y0+v}" width="${vw}" height="${k*(r.Ls-r.cs)-v}" fill="${fill}" stroke="#000"/>`;
-    // șina lungă (orizontală), se oprește în cea scurtă
     s+=`<rect x="${X0+v+vw}" y="${Y0+v}" width="${k*(r.Ll-r.cl)-v-vw}" height="${vw}" fill="${fill}" stroke="#000"/>`;
-    s+=`<text x="${X0+64}" y="${Y0+70+i*18}" font-size="12" font-weight="700">${L.nume} — șina lungă: ${distFmt(L.lung)} cm</text>`;
-    s+=`<text x="${X0+64}" y="${Y0+130+i*18}" font-size="12" font-weight="700">${L.nume} — șina scurtă: ${distFmt(L.scurt)} cm</text>`;
+    s+=`<text x="${X0+84}" y="${Y0+104+i*44}" font-size="17" font-weight="700">${L.nume} — șina lungă: ${distFmt(L.lung)} cm</text><text x="${X0+84}" y="${Y0+121+i*44}" font-size="13">${L.fLung}</text>`;
+    s+=`<text x="${X0+84}" y="${Y0+212+i*44}" font-size="17" font-weight="700">${L.nume} — șina scurtă: ${distFmt(L.scurt)} cm</text><text x="${X0+84}" y="${Y0+229+i*44}" font-size="13">${L.fScurt}</text>`;
   });
-  s+=`<text x="${xe}" y="${Y0+48}" font-size="11" text-anchor="end">c = ${distFmt(r.cl)} cm la capăt</text>`;
-  s+=`<text x="${X0+8}" y="${ye+16}" font-size="11">c = ${distFmt(r.cs)} cm la capăt</text>`;
+  s+=`<text x="${xe}" y="${Y0+84}" font-size="15" text-anchor="end">c = ${distFmt(r.cl)} cm la capăt</text>`;
+  s+=`<text x="${X0+8}" y="${ye+24}" font-size="15">c = ${distFmt(r.cs)} cm la capăt</text>`;
   return s+`</svg>`;
 }
-function distSchitaHtml(d,r){
+function distSchitaHtml(d,r,cn){
   const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const tbl=r.tip==="L"?`<table style="border-collapse:collapse;font-size:13px;margin-top:6px;"><tr style="background:#e6e6e6;"><th style="border:1px solid #444;padding:6px 10px;text-align:left;">Strat</th><th style="border:1px solid #444;padding:6px 10px;">Distanța de la perete</th><th style="border:1px solid #444;padding:6px 10px;">Șina lungă (latura ${r.lunga})</th><th style="border:1px solid #444;padding:6px 10px;">Șina scurtă (latura ${r.lunga===1?2:1})</th></tr>${r.layers.map(L=>`<tr><td style="border:1px solid #444;padding:6px 10px;font-weight:700;">${L.nume}</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;">${distFmt(L.off)} cm</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;font-weight:700;font-size:15px;">${distFmt(L.lung)} cm</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;font-weight:700;font-size:15px;">${distFmt(L.scurt)} cm</td></tr>`).join("")}</table>`:"";
+  const tbl=r.tip==="L"?`<table style="border-collapse:collapse;font-size:13px;margin-top:6px;width:100%;"><tr style="background:#e6e6e6;"><th style="border:1px solid #444;padding:6px 10px;text-align:left;">Strat</th><th style="border:1px solid #444;padding:6px 10px;">Distanța de la perete</th><th style="border:1px solid #444;padding:6px 10px;">Șina lungă (latura ${r.lunga})</th><th style="border:1px solid #444;padding:6px 10px;">Șina scurtă (latura ${r.lunga===1?2:1})</th></tr>${r.layers.map(L=>`<tr><td style="border:1px solid #444;padding:6px 10px;font-weight:700;">${L.nume}</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;">${distFmt(L.off)} cm</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;font-weight:700;font-size:15px;">${distFmt(L.lung)} cm</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;font-weight:700;font-size:15px;">${distFmt(L.scurt)} cm</td></tr>`).join("")}</table>`:"";
   const txt=`<div style="font-size:13px;margin:4px 0;">Adâncime scafă <b>${distFmt(r.D)}</b> · geam → șina 1: <b>${distFmt(r.a)}</b> · lățime șină: <b>${distFmt(r.w)}</b> · între șine: <b>${distFmt(r.g)}</b> · rămas până la marginea scafei: <b>${distFmt(r.rest)}</b> cm</div>`;
-  return `<div style="page-break-inside:avoid;border:1px solid #444;padding:10px 12px;margin:0 0 14px;">
-    <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${esc(d.camera||"(fără cameră)")} — ${r.tip==="L"?"geam în L":"geam simplu"}</div>
-    ${txt}${d.nota?`<div style="font-size:12px;margin:2px 0;">Obs.: ${esc(d.nota)}</div>`:""}
-    ${r.errs.length?`<div style="color:#000;border:2px solid #000;padding:4px 8px;font-weight:700;font-size:12px;margin:4px 0;">ATENȚIE: ${esc(r.errs.join(" "))}</div>`:""}
-    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">${r.tip==="L"?`<div style="flex:1 1 380px;min-width:0;">${distSvgL(r)}</div>`:""}<div style="flex:1 1 380px;min-width:0;">${distSvgProfil(r)}${tbl}</div></div></div>`;
+  return `<div class="pgd" style="page:dist;page-break-after:always;break-after:page;">
+    <div style="font-size:20px;font-weight:700;margin-bottom:2px;">${cn?esc(cn)+" — ":""}${esc(d.camera||"(fără cameră)")} — ${r.tip==="L"?"geam în L":"geam simplu"}</div>
+    ${txt}${d.nota?`<div style="font-size:13px;margin:2px 0;">Obs.: ${esc(d.nota)}</div>`:""}
+    ${r.errs.length?`<div style="border:2px solid #000;padding:4px 8px;font-weight:700;font-size:13px;margin:4px 0;">ATENȚIE: ${esc(r.errs.join(" "))}</div>`:""}
+    ${r.tip==="L"
+      ?`<div style="display:flex;gap:16px;align-items:flex-start;margin-top:6px;"><div style="flex:0 0 61%;min-width:0;">${distSvgL(r)}</div><div style="flex:1 1 0;min-width:0;">${distSvgProfil(r,true)}<div style="margin-top:14px;">${tbl}<div style="font-size:12px;margin-top:8px;line-height:1.5;"><b>Cum s-au calculat lungimile (cm):</b><br>capăt = lăsat la perete la capătul liber al șinei; perete = distanța de la peretele geamului la șină; șină = lățimea șinei lungi, pe care se oprește șina lungă în colț (șina scurtă trece prin colț și o acoperă pe cea lungă).</div></div></div></div>`
+      :`<div style="margin-top:8px;max-width:760px;">${distSvgProfil(r,true)}</div>`}</div>`;
 }
 function buildDistanteHtml(client){
   const lst=client.distanteSine||[];
   if(!lst.length) return "";
-  return `<div style="page-break-before:always;"><h3 style="margin:0 0 8px;">Distanțe și schițe șine</h3>${lst.map(d=>distSchitaHtml(d,calcDistSine(d))).join("")}</div>`;
+  return `<style>@page dist{size:A4 landscape;margin:8mm}.pgd:last-child{page-break-after:auto!important;break-after:auto!important}</style><div>${lst.map(d=>distSchitaHtml(d,calcDistSine(d),client.name)).join("")}</div>`;
 }
 function buildDistantePrintHtml(client){
-  return `<html><head><title>Distanțe șine — ${(client.name||"")}</title></head><body style="font-family:sans-serif;padding:20px;color:#111;"><h2 style="margin:0 0 4px;">Distanțe șine — ${(client.name||"")}</h2>${client.adresa?`<div style="font-size:14px;margin-bottom:10px;">${client.adresa}</div>`:""}${buildDistanteHtml(client).replace("page-break-before:always;","").replace(/<h3[^>]*>Distanțe și schițe șine<\/h3>/,"")}<div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div></body></html>`;
+  return `<html><head><title>Distanțe șine — ${(client.name||"")}</title><style>@page dist{size:A4 landscape;margin:8mm}body{margin:0;font-family:sans-serif;color:#111;}</style></head><body>${buildDistanteHtml(client)}</body></html>`;
 }
 function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,clientIdFixat}){
   const [clientId,setClientId]=React.useState(clientIdFixat||"");
@@ -3686,6 +3689,7 @@ function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,client
       {r.errs.map((e,i)=><div key={i} style={{color:"#B5504A",fontWeight:700,fontSize:13,marginBottom:4}}>⚠ {e}</div>)}
       {r.tip==="L"&&r.layers.length>0&&r.l1>0&&r.l2>0&&<table style={{borderCollapse:"collapse",fontSize:13,marginBottom:8}}><thead><tr>{["Strat","De la perete","Șina lungă","Șina scurtă"].map(h=><th key={h} style={{border:`1px solid ${C.border}`,padding:"5px 10px",textAlign:"left"}}>{h}</th>)}</tr></thead><tbody>
         {r.layers.map(L=><tr key={L.nume}><td style={{border:`1px solid ${C.border}`,padding:"5px 10px",fontWeight:700}}>{L.nume}</td><td style={{border:`1px solid ${C.border}`,padding:"5px 10px"}}>{distFmt(L.off)} cm</td><td style={{border:`1px solid ${C.border}`,padding:"5px 10px",fontWeight:700}}>{distFmt(L.lung)} cm</td><td style={{border:`1px solid ${C.border}`,padding:"5px 10px",fontWeight:700}}>{distFmt(L.scurt)} cm</td></tr>)}</tbody></table>}
+      {r.tip==="L"&&r.l1>0&&r.l2>0&&<div style={{fontSize:12,marginBottom:8,lineHeight:1.6}}>{r.layers.map(L=><div key={L.nume}><b>{L.nume}</b> — lungă: {L.fLung} · scurtă: {L.fScurt}</div>)}<div style={{color:"#666"}}>capăt = lăsat la capătul liber; perete = distanța de la perete la șină; șină = lățimea șinei lungi (se oprește pe cea scurtă).</div></div>}
       <div dangerouslySetInnerHTML={{__html:(r.tip==="L"&&r.l1>0&&r.l2>0?distSvgL(r):"")+distSvgProfil(r)}}/>
     </div>}
 
