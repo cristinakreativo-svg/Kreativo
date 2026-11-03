@@ -3533,6 +3533,193 @@ function calaretiMontaj(c){
   return {tip,tot,split,imp,modif:!!o};
 }
 // Centralizator pentru montaj (fără costuri): cameră, dimensiuni, buc., poziționare, observații
+/* ===== Distanțe șine (scafă): calcul + schiță + tab ===== */
+function distNz(v){ const n=parseFloat(String(v==null?"":v).replace(",",".")); return isFinite(n)?n:0; }
+function distFmt(n){ if(n==null||!isFinite(n)) return "—"; const r=Math.round(n*10)/10; return String(r).replace(".",","); }
+function calcDistSine(d){
+  const D=distNz(d.D), a=distNz(d.a), w=distNz(d.w), g=distNz(d.g==null||d.g===""?5:d.g);
+  const errs=[];
+  const o1=a, o2=a+w+g;
+  const rest=D-a-w-g-w;
+  if(D>0 && rest<0) errs.push("Nu încap: lipsesc "+distFmt(-rest)+" cm în scafă (adâncime "+distFmt(D)+" cm, necesar "+distFmt(a+w+g+w)+" cm).");
+  const res={D,a,w,g,o1,o2,rest,errs,tip:d.tip==="L"?"L":"simplu",layers:[]};
+  if(res.tip==="L"){
+    const l1=distNz(d.l1), l2=distNz(d.l2);
+    let lunga=d.lunga==="1"||d.lunga==="2"?Number(d.lunga):(l2>l1?2:1);
+    const cA0=String(d.cA==null?"":d.cA).trim(), cB0=String(d.cB==null?"":d.cB).trim();
+    const cA=cA0!==""?distNz(cA0):(cB0!==""?distNz(cB0):0);
+    const cB=cB0!==""?distNz(cB0):(cA0!==""?distNz(cA0):0);
+    const Ll=lunga===1?l1:l2, Ls=lunga===1?l2:l1, cl=lunga===1?cA:cB, cs=lunga===1?cB:cA;
+    res.l1=l1;res.l2=l2;res.lunga=lunga;res.Ll=Ll;res.Ls=Ls;res.cl=cl;res.cs=cs;res.cA=cA;res.cB=cB;
+    [["Perdea",o1],["Draperie",o2]].forEach(([nume,o])=>{
+      res.layers.push({nume,off:o,lung:Ll-cl-o-w,scurt:Ls-cs-o});
+    });
+    if(!(l1>0&&l2>0)) errs.push("Completează latura 1 și latura 2.");
+    res.layers.forEach(L=>{ if(l1>0&&l2>0&&(L.lung<=0||L.scurt<=0)) errs.push(L.nume+": lungime negativă — verifică laturile."); });
+  }
+  return res;
+}
+function distSvgProfil(r){
+  const W=600, m=40, D=Math.max(r.D, r.o2+r.w+1), k=(W-2*m)/D, y0=56, h=22;
+  const X=(cm)=>m+cm*k;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 206" width="100%" style="max-width:${W}px;font-family:sans-serif;">`;
+  s+=`<text x="${m}" y="16" font-size="12" font-weight="700">Secțiune (vedere de sus, geamul în stânga)</text>`;
+  s+=`<line x1="${X(0)}" y1="${y0-12}" x2="${X(0)}" y2="${y0+h+12}" stroke="#000" stroke-width="5"/>`;
+  s+=`<text x="${X(0)+6}" y="${y0-16}" font-size="11" text-anchor="start">perete / geam</text>`;
+  s+=`<line x1="${X(r.D)}" y1="${y0-12}" x2="${X(r.D)}" y2="${y0+h+12}" stroke="#000" stroke-width="2" stroke-dasharray="5,3"/>`;
+  s+=`<text x="${X(r.D)}" y="${y0-16}" font-size="11" text-anchor="end">margine scafă</text>`;
+  [[r.o1,"1",false],[r.o2,"2",true]].forEach(([o,n,hat])=>{
+    s+=`<rect x="${X(o)}" y="${y0}" width="${Math.max(r.w*k,3)}" height="${h}" fill="${hat?"#888":"#000"}" stroke="#000"/>`;
+    s+=`<text x="${X(o)+Math.max(r.w*k,3)/2}" y="${y0+h/2+4}" font-size="11" fill="#fff" text-anchor="middle" font-weight="700">${n}</text>`;
+  });
+  const seg=[["a",0,r.o1],["w",r.o1,r.o1+r.w],["g",r.o1+r.w,r.o2],["w",r.o2,r.o2+r.w],["rămas",r.o2+r.w,r.D]];
+  seg.forEach(([nm,x1,x2],i)=>{
+    const yy=y0+h+44+(i%2)*16;
+    s+=`<line x1="${X(x1)}" y1="${yy-4}" x2="${X(x1)}" y2="${yy+4}" stroke="#000"/><line x1="${X(x2)}" y1="${yy-4}" x2="${X(x2)}" y2="${yy+4}" stroke="#000"/><line x1="${X(x1)}" y1="${yy}" x2="${X(x2)}" y2="${yy}" stroke="#000"/>`;
+    s+=`<text x="${(X(x1)+X(x2))/2}" y="${yy-6}" font-size="11" text-anchor="middle" font-weight="700">${nm} ${distFmt(x2-x1)}</text>`;
+  });
+  const yt=y0+h+44+34;
+  s+=`<line x1="${X(0)}" y1="${yt}" x2="${X(r.D)}" y2="${yt}" stroke="#000"/><text x="${(X(0)+X(r.D))/2}" y="${yt+14}" font-size="12" text-anchor="middle" font-weight="700">adâncime scafă ${distFmt(r.D)} cm</text>`;
+  return s+`</svg>`;
+}
+function distSvgL(r){
+  const W=600, X0=60, Y0=60, vw=6, vo=[16,34];
+  const k=Math.min(440/Math.max(r.Ll,1), 280/Math.max(r.Ls,1));
+  const H=Math.round(Y0+k*r.Ls+36);
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px;font-family:sans-serif;">`;
+  s+=`<text x="10" y="18" font-size="12" font-weight="700">Vedere de sus — colț (grosimile șinelor nu sunt la scară)</text>`;
+  const xe=X0+k*r.Ll, ye=Y0+k*r.Ls;
+  s+=`<rect x="${X0}" y="${Y0}" width="${k*r.Ll}" height="46" fill="#eee" stroke="none"/><rect x="${X0}" y="${Y0}" width="46" height="${k*r.Ls}" fill="#eee" stroke="none"/>`;
+  s+=`<line x1="${X0}" y1="${Y0}" x2="${xe}" y2="${Y0}" stroke="#000" stroke-width="5"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${ye}" stroke="#000" stroke-width="5"/>`;
+  s+=`<text x="${(X0+xe)/2}" y="${Y0-12}" font-size="12" text-anchor="middle" font-weight="700">latura ${r.lunga} = ${distFmt(r.Ll)} cm (lungă)</text>`;
+  s+=`<text transform="translate(${X0-14},${(Y0+ye)/2}) rotate(-90)" font-size="12" text-anchor="middle" font-weight="700">latura ${r.lunga===1?2:1} = ${distFmt(r.Ls)} cm (scurtă)</text>`;
+  r.layers.forEach((L,i)=>{
+    const v=vo[i], fill=i?"#888":"#000";
+    // șina scurtă (verticală), trece prin colț
+    s+=`<rect x="${X0+v}" y="${Y0+v}" width="${vw}" height="${k*(r.Ls-r.cs)-v}" fill="${fill}" stroke="#000"/>`;
+    // șina lungă (orizontală), se oprește în cea scurtă
+    s+=`<rect x="${X0+v+vw}" y="${Y0+v}" width="${k*(r.Ll-r.cl)-v-vw}" height="${vw}" fill="${fill}" stroke="#000"/>`;
+    s+=`<text x="${X0+64}" y="${Y0+70+i*18}" font-size="12" font-weight="700">${L.nume} — șina lungă: ${distFmt(L.lung)} cm</text>`;
+    s+=`<text x="${X0+64}" y="${Y0+130+i*18}" font-size="12" font-weight="700">${L.nume} — șina scurtă: ${distFmt(L.scurt)} cm</text>`;
+  });
+  s+=`<text x="${xe}" y="${Y0+48}" font-size="11" text-anchor="end">c = ${distFmt(r.cl)} cm la capăt</text>`;
+  s+=`<text x="${X0+8}" y="${ye+16}" font-size="11">c = ${distFmt(r.cs)} cm la capăt</text>`;
+  return s+`</svg>`;
+}
+function distSchitaHtml(d,r){
+  const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const tbl=r.tip==="L"?`<table style="border-collapse:collapse;font-size:13px;margin-top:6px;"><tr style="background:#e6e6e6;"><th style="border:1px solid #444;padding:6px 10px;text-align:left;">Strat</th><th style="border:1px solid #444;padding:6px 10px;">Distanța de la perete</th><th style="border:1px solid #444;padding:6px 10px;">Șina lungă (latura ${r.lunga})</th><th style="border:1px solid #444;padding:6px 10px;">Șina scurtă (latura ${r.lunga===1?2:1})</th></tr>${r.layers.map(L=>`<tr><td style="border:1px solid #444;padding:6px 10px;font-weight:700;">${L.nume}</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;">${distFmt(L.off)} cm</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;font-weight:700;font-size:15px;">${distFmt(L.lung)} cm</td><td style="border:1px solid #444;padding:6px 10px;text-align:center;font-weight:700;font-size:15px;">${distFmt(L.scurt)} cm</td></tr>`).join("")}</table>`:"";
+  const txt=`<div style="font-size:13px;margin:4px 0;">Adâncime scafă <b>${distFmt(r.D)}</b> · geam → șina 1: <b>${distFmt(r.a)}</b> · lățime șină: <b>${distFmt(r.w)}</b> · între șine: <b>${distFmt(r.g)}</b> · rămas până la marginea scafei: <b>${distFmt(r.rest)}</b> cm</div>`;
+  return `<div style="page-break-inside:avoid;border:1px solid #444;padding:10px 12px;margin:0 0 14px;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${esc(d.camera||"(fără cameră)")} — ${r.tip==="L"?"geam în L":"geam simplu"}</div>
+    ${txt}${d.nota?`<div style="font-size:12px;margin:2px 0;">Obs.: ${esc(d.nota)}</div>`:""}
+    ${r.errs.length?`<div style="color:#000;border:2px solid #000;padding:4px 8px;font-weight:700;font-size:12px;margin:4px 0;">ATENȚIE: ${esc(r.errs.join(" "))}</div>`:""}
+    ${r.tip==="L"?distSvgL(r):""}${distSvgProfil(r)}${tbl}</div>`;
+}
+function buildDistanteHtml(client){
+  const lst=client.distanteSine||[];
+  if(!lst.length) return "";
+  return `<div style="page-break-before:always;"><h3 style="margin:0 0 8px;">Distanțe și schițe șine</h3>${lst.map(d=>distSchitaHtml(d,calcDistSine(d))).join("")}</div>`;
+}
+function buildDistantePrintHtml(client){
+  return `<html><head><title>Distanțe șine — ${(client.name||"")}</title></head><body style="font-family:sans-serif;padding:20px;color:#111;"><h2 style="margin:0 0 4px;">Distanțe șine — ${(client.name||"")}</h2>${client.adresa?`<div style="font-size:14px;margin-bottom:10px;">${client.adresa}</div>`:""}${buildDistanteHtml(client).replace("page-break-before:always;","")}<div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div></body></html>`;
+}
+function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,clientIdFixat}){
+  const [clientId,setClientId]=React.useState(clientIdFixat||"");
+  const [editId,setEditId]=React.useState(null);
+  const gol={camera:"",tip:"simplu",D:"",a:"",w:"",g:"5",l1:"",l2:"",lunga:"auto",cA:"",cB:"",nota:"",verifIds:[]};
+  const [f,setF]=React.useState(gol);
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none",boxSizing:"border-box"};
+  const lbl={fontSize:10,color:C.muted||"#666",textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600,display:"block",marginBottom:3};
+  const cl=(clients||[]).find(c=>c.id===clientId);
+  const lista=(cl&&cl.distanteSine)||[];
+  const set=(p)=>setF(x=>({...x,...p}));
+  const r=calcDistSine(f);
+  const campuri=[["D","Adâncime scafă (cm)"],["a","Geam → șina 1 (cm)"],["w","Lățime șină (cm)"],["g","Între șine (cm)"]];
+  const optiuniVerif=cl?[
+    ...(cl.configuratiiSina||[]).map(c=>({id:"c"+c.id,txt:(c.camera||"?")+" — Coulisse "+(c.input&&c.input.width)+" mm",mm:distNz(c.input&&c.input.width)})),
+    ...(cl.configuratiiSinaAlta||[]).map(c=>({id:"a"+c.id,txt:(c.camera||"?")+" — "+(c.lungime||"?")+" mm",mm:distNz(c.lungime)}))
+  ]:[];
+  const calcMm=r.tip==="L"?r.layers.flatMap(L=>[{n:L.nume+" lungă",mm:Math.round(L.lung*10)},{n:L.nume+" scurtă",mm:Math.round(L.scurt*10)}]):[];
+  const sel=optiuniVerif.filter(o=>(f.verifIds||[]).includes(o.id));
+  const salveaza=()=>{
+    if(!cl){alert("Alege clientul.");return;}
+    if(!f.camera.trim()){alert("Completează camera / geamul.");return;}
+    const obj={...f,id:editId||("ds"+Date.now())};
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,distanteSine:editId?(c.distanteSine||[]).map(x=>x.id===editId?obj:x):[...(c.distanteSine||[]),obj]}));
+    if(setCamereLista&&!(camereLista||[]).some(cm=>cm.toLowerCase()===f.camera.trim().toLowerCase())) setCamereLista(p=>[...p,f.camera.trim()]);
+    setF(gol);setEditId(null);
+  };
+  return <div style={{maxWidth:900}}>
+    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:14}}>Distanțe șine (scafă)</div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+      <div><label style={lbl}>Client</label>
+        <select value={clientId} onChange={e=>{setClientId(e.target.value);setEditId(null);setF(gol);}} style={selStyle} disabled={!!clientIdFixat}>
+          <option value="">— alege client —</option>
+          {(clients||[]).slice().sort((a,b)=>a.name.localeCompare(b.name,"ro")).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select></div>
+      <div><label style={lbl}>Cameră / geam</label>
+        <input list="camere-dl-dist" value={f.camera} onChange={e=>set({camera:e.target.value})} placeholder="ex: living, geam colț" style={selStyle}/>
+        <datalist id="camere-dl-dist">{(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}</datalist></div>
+    </div>
+    <div style={{display:"flex",gap:14,marginBottom:12,fontSize:13}}>
+      <label><input type="radio" checked={f.tip==="simplu"} onChange={()=>set({tip:"simplu"})}/> Geam simplu</label>
+      <label><input type="radio" checked={f.tip==="L"} onChange={()=>set({tip:"L"})}/> Geam în L (colț)</label>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:12}}>
+      {campuri.map(([k,t])=><div key={k}><label style={lbl}>{t}</label><input value={f[k]} onChange={e=>set({[k]:e.target.value})} inputMode="decimal" style={selStyle}/></div>)}
+    </div>
+    {f.tip==="L"&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:12}}>
+      <div><label style={lbl}>Latura 1 (cm)</label><input value={f.l1} onChange={e=>set({l1:e.target.value})} inputMode="decimal" style={selStyle}/></div>
+      <div><label style={lbl}>Latura 2 (cm)</label><input value={f.l2} onChange={e=>set({l2:e.target.value})} inputMode="decimal" style={selStyle}/></div>
+      <div><label style={lbl}>Latura lungă</label>
+        <select value={f.lunga} onChange={e=>set({lunga:e.target.value})} style={selStyle}>
+          <option value="auto">Automat ({r.lunga===2?"latura 2":"latura 1"})</option><option value="1">Latura 1</option><option value="2">Latura 2</option>
+        </select></div>
+      <div><label style={lbl}>Las la capăt, latura 1 (cm)</label><input value={f.cA} onChange={e=>set({cA:e.target.value})} inputMode="decimal" style={selStyle}/></div>
+      <div><label style={lbl}>Las la capăt, latura 2 (cm)</label><input value={f.cB} onChange={e=>set({cB:e.target.value})} inputMode="decimal" style={selStyle}/></div>
+    </div>}
+    <div style={{marginBottom:12}}><label style={lbl}>Observații</label><input value={f.nota} onChange={e=>set({nota:e.target.value})} style={selStyle}/></div>
+
+    {distNz(f.D)>0&&<div style={{border:`1px solid ${C.border}`,background:C.surface,padding:12,marginBottom:12}}>
+      <div style={{fontSize:13,marginBottom:6}}>Rămas de la șina 2 la marginea scafei: <b style={{color:r.rest<0?"#B5504A":"inherit"}}>{distFmt(r.rest)} cm</b></div>
+      {r.errs.map((e,i)=><div key={i} style={{color:"#B5504A",fontWeight:700,fontSize:13,marginBottom:4}}>⚠ {e}</div>)}
+      {r.tip==="L"&&r.layers.length>0&&r.l1>0&&r.l2>0&&<table style={{borderCollapse:"collapse",fontSize:13,marginBottom:8}}><thead><tr>{["Strat","De la perete","Șina lungă","Șina scurtă"].map(h=><th key={h} style={{border:`1px solid ${C.border}`,padding:"5px 10px",textAlign:"left"}}>{h}</th>)}</tr></thead><tbody>
+        {r.layers.map(L=><tr key={L.nume}><td style={{border:`1px solid ${C.border}`,padding:"5px 10px",fontWeight:700}}>{L.nume}</td><td style={{border:`1px solid ${C.border}`,padding:"5px 10px"}}>{distFmt(L.off)} cm</td><td style={{border:`1px solid ${C.border}`,padding:"5px 10px",fontWeight:700}}>{distFmt(L.lung)} cm</td><td style={{border:`1px solid ${C.border}`,padding:"5px 10px",fontWeight:700}}>{distFmt(L.scurt)} cm</td></tr>)}</tbody></table>}
+      <div dangerouslySetInnerHTML={{__html:(r.tip==="L"&&r.l1>0&&r.l2>0?distSvgL(r):"")+distSvgProfil(r)}}/>
+    </div>}
+
+    {r.tip==="L"&&optiuniVerif.length>0&&<div style={{border:`1px dashed ${C.border}`,padding:10,marginBottom:12}}>
+      <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",marginBottom:6}}>Verificare față de șinele din lucru (opțional)</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:10,fontSize:12}}>
+        {optiuniVerif.map(o=><label key={o.id}><input type="checkbox" checked={(f.verifIds||[]).includes(o.id)} onChange={e=>set({verifIds:e.target.checked?[...(f.verifIds||[]),o.id]:(f.verifIds||[]).filter(x=>x!==o.id)})}/> {o.txt}</label>)}
+      </div>
+      {sel.length>0&&<div style={{marginTop:8,fontSize:12}}>
+        {calcMm.map(c=>{const ok=sel.some(o=>Math.abs(o.mm-c.mm)<=1);return <div key={c.n} style={{color:ok?"inherit":"#B5504A"}}>{ok?"✓":"✗"} {c.n}: calculat {c.mm} mm {ok?"— există în configurator":"— nu există nicio șină de această lungime"}</div>;})}
+        {sel.filter(o=>!calcMm.some(c=>Math.abs(o.mm-c.mm)<=1)).map(o=><div key={o.id} style={{color:"#B5504A"}}>✗ Configurator: {o.txt} — nu corespunde niciunei lungimi calculate</div>)}
+      </div>}
+    </div>}
+
+    <div style={{display:"flex",gap:10,marginBottom:20}}>
+      <button onClick={salveaza} style={{padding:"8px 18px",border:"none",background:C.accent,color:"#fff",cursor:"pointer",fontSize:12,fontWeight:600}}>{editId?"Actualizează":"Salvează geam"}</button>
+      {editId&&<button onClick={()=>{setEditId(null);setF(gol);}} style={{padding:"8px 14px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer",fontSize:12}}>Renunță</button>}
+    </div>
+
+    {cl&&<div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+        <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>Geamuri salvate ({lista.length})</div><div style={{flex:1}}/>
+        {lista.length>0&&<button onClick={()=>printHtmlDoc(buildDistantePrintHtml(cl))} style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>Printează distanțe + schițe</button>}
+      </div>
+      {lista.map(d=>{const rr=calcDistSine(d);return <div key={d.id} style={{display:"flex",alignItems:"center",gap:10,border:`1px solid ${C.border}`,background:C.surface,padding:"8px 12px",marginBottom:6,fontSize:13}}>
+        <b style={{minWidth:120}}>{d.camera}</b><span>{rr.tip==="L"?"L":"simplu"}</span>
+        <span style={{flex:1,color:rr.errs.length?"#B5504A":"inherit"}}>{rr.tip==="L"?rr.layers.map(L=>L.nume+": "+distFmt(L.lung)+" / "+distFmt(L.scurt)).join(" · "):"rămas "+distFmt(rr.rest)+" cm"}{rr.errs.length?" ⚠":""}</span>
+        <button onClick={()=>{setEditId(d.id);setF({...gol,...d});}} style={{fontSize:11,padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer"}}>Editează</button>
+        <button onClick={()=>{if(window.confirm("Ștergi acest geam?")) setClients(p=>p.map(c=>c.id!==clientId?c:{...c,distanteSine:(c.distanteSine||[]).filter(x=>x.id!==d.id)}));}} style={{fontSize:11,padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer"}}>Șterge</button>
+      </div>;})}
+    </div>}
+  </div>;
+}
+
 function buildCentralizatorMontajHtml(client){
   const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const cfgs=client.configuratiiSina||[];
@@ -3589,6 +3776,7 @@ function buildCentralizatorMontajHtml(client){
         <th style="padding:8px;border:1px solid #444;text-align:left;">Călărei / detalii</th>
         <th style="padding:8px;border:1px solid #444;text-align:left;">Poziționare pe perete (mm)</th><th style="padding:8px;border:1px solid #444;text-align:left;">Observații</th><th style="padding:8px;border:1px solid #444;">✓</th>
       </tr></thead><tbody>${rows}${rowsAlt}</tbody></table>
+    ${buildDistanteHtml(client)}
     <div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div>
   </body></html>`;
 }
@@ -9431,7 +9619,7 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>}
         <ConsumContabilitate client={client} C={C} tday={tday}/>
-        {!(client.configuratiiSina||[]).length&&((client.configuratiiSinaAlta||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length+(client.configuratiiPanou||[]).length)>0&&<div style={{marginTop:16}}><button onClick={()=>printHtmlDoc(buildCentralizatorMontajHtml(client))} title="Tabel pentru montaj, fără costuri" style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>Printează centralizat montaj</button></div>}
+        {!(client.configuratiiSina||[]).length&&((client.configuratiiSinaAlta||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length+(client.configuratiiPanou||[]).length+(client.distanteSine||[]).length)>0&&<div style={{marginTop:16}}><button onClick={()=>printHtmlDoc(buildCentralizatorMontajHtml(client))} title="Tabel pentru montaj, fără costuri" style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>Printează centralizat montaj</button></div>}
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
             <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
@@ -11971,6 +12159,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         <button onClick={()=>setDanView("cfgpanou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgpanou"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgpanou"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgpanou"?500:400}}>Configurator panou</button>
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiere"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiereprofil"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
+        <button onClick={()=>setDanView("dist")} style={{padding:"7px 14px",border:`1px solid ${danView==="dist"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="dist"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="dist"?500:400}}>Distanțe șine</button>
       </div>
       {danView==="dan"?<TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} onUpdDanTask={updDanTask} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
@@ -11978,6 +12167,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="taiere"?<ListaTaiereRulouri clients={clients} setClients={setClients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} setClients={setClients} C={C}/>:
+      danView==="dist"?<TabDistanteSine C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>}
     </div>;
@@ -12632,12 +12822,14 @@ function AppInner({authRole,authEmail,onLogout}) {
         <button onClick={()=>setDanView("cfgpanou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgpanou"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgpanou"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgpanou"?500:400}}>Configurator panou</button>
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiere"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiereprofil"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
+        <button onClick={()=>setDanView("dist")} style={{padding:"7px 14px",border:`1px solid ${danView==="dist"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="dist"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="dist"?500:400}}>Distanțe șine</button>
       </div>
       {danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="cfgrulou"?<TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="taiere"?<ListaTaiereRulouri clients={clients} setClients={setClients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} setClients={setClients} C={C}/>:
+      danView==="dist"?<TabDistanteSine C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       <TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} onUpdDanTask={updDanTask} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric}/>}
     </div>}
