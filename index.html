@@ -3614,7 +3614,7 @@ function distSchitaHtml(d,r){
     <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${esc(d.camera||"(fără cameră)")} — ${r.tip==="L"?"geam în L":"geam simplu"}</div>
     ${txt}${d.nota?`<div style="font-size:12px;margin:2px 0;">Obs.: ${esc(d.nota)}</div>`:""}
     ${r.errs.length?`<div style="color:#000;border:2px solid #000;padding:4px 8px;font-weight:700;font-size:12px;margin:4px 0;">ATENȚIE: ${esc(r.errs.join(" "))}</div>`:""}
-    ${r.tip==="L"?distSvgL(r):""}${distSvgProfil(r)}${tbl}</div>`;
+    <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">${r.tip==="L"?`<div style="flex:1 1 380px;min-width:0;">${distSvgL(r)}</div>`:""}<div style="flex:1 1 380px;min-width:0;">${distSvgProfil(r)}${tbl}</div></div></div>`;
 }
 function buildDistanteHtml(client){
   const lst=client.distanteSine||[];
@@ -3622,7 +3622,7 @@ function buildDistanteHtml(client){
   return `<div style="page-break-before:always;"><h3 style="margin:0 0 8px;">Distanțe și schițe șine</h3>${lst.map(d=>distSchitaHtml(d,calcDistSine(d))).join("")}</div>`;
 }
 function buildDistantePrintHtml(client){
-  return `<html><head><title>Distanțe șine — ${(client.name||"")}</title></head><body style="font-family:sans-serif;padding:20px;color:#111;"><h2 style="margin:0 0 4px;">Distanțe șine — ${(client.name||"")}</h2>${client.adresa?`<div style="font-size:14px;margin-bottom:10px;">${client.adresa}</div>`:""}${buildDistanteHtml(client).replace("page-break-before:always;","")}<div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div></body></html>`;
+  return `<html><head><title>Distanțe șine — ${(client.name||"")}</title></head><body style="font-family:sans-serif;padding:20px;color:#111;"><h2 style="margin:0 0 4px;">Distanțe șine — ${(client.name||"")}</h2>${client.adresa?`<div style="font-size:14px;margin-bottom:10px;">${client.adresa}</div>`:""}${buildDistanteHtml(client).replace("page-break-before:always;","").replace(/<h3[^>]*>Distanțe și schițe șine<\/h3>/,"")}<div style="margin-top:14px;font-size:11px;color:#666;">Kreativo Studio</div></body></html>`;
 }
 function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,clientIdFixat}){
   const [clientId,setClientId]=React.useState(clientIdFixat||"");
