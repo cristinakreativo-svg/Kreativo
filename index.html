@@ -2512,7 +2512,7 @@ function colecteazaNecesar(clients){
     ["materiale","banda","standard","liniiManuale"].forEach(g=>(cm[g]||[]).forEach(it=>{
       if(!(it.aprov&&it.aprov.trimis)) return;
       const i=aprovInfo(g,it);
-      out.push({clientId:c.id,client:c.name||"",comandaId:cx.id,comandaNr:cx.numar,grupa:g,itemId:it.id,cod:i.cod,den:i.den,um:i.um,cantitate:it.cantitate,furnizor:it.aprov.furnizor||"",data:it.aprov.data||"",comandat:!!it.aprov.comandat,dataComandat:it.aprov.dataComandat||""});
+      out.push({clientId:c.id,client:c.name||"",comandaId:cx.id,comandaNr:cx.numar,grupa:g,itemId:it.id,cod:i.cod,den:i.den,um:i.um,cantitate:it.cantitate,furnizor:it.aprov.furnizor||"",cantComanda:it.aprov.cantComanda==null?"":it.aprov.cantComanda,data:it.aprov.data||"",comandat:!!it.aprov.comandat,dataComandat:it.aprov.dataComandat||""});
     }));
   }));
   return out;
@@ -6488,7 +6488,7 @@ function NecesarAprovizionare({clients,setClients,C}){
     lista.forEach(x=>setAprov(x,{comandat:true,dataComandat:tday()}));
   };
   const excel=(lista,nume)=>{
-    const rows=[["Cod","Denumire","Cantitate","Referință internă"],...lista.map(x=>[x.cod,x.den,parseFloat(String(x.cantitate).replace(",","."))||0,x.client+" · comanda "+x.comandaNr])];
+    const rows=[["Cod","Denumire","Cantitate","Referință internă"],...lista.map(x=>[x.cod,x.den,parseFloat(String(x.cantComanda!==""?x.cantComanda:x.cantitate).replace(",","."))||0,x.client+" · comanda "+x.comandaNr])];
     const ws=XLSX.utils.aoa_to_sheet(rows); ws["!cols"]=[{wch:20},{wch:40},{wch:12},{wch:34}];
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Necesar");
     XLSX.writeFile(wb,`Necesar_${nume.replace(/[^a-zA-Z0-9]+/g,"_")}_${tday()}.xlsx`);
@@ -6503,8 +6503,9 @@ function NecesarAprovizionare({clients,setClients,C}){
         <b style={{fontSize:13}}>{k}</b><span style={{fontSize:12,color:C.textMuted}}>{grupe[k].length} rânduri</span><div style={{flex:1}}/>
         {!k.startsWith("(")&&<><button onClick={()=>excel(grupe[k],k)} style={btn}>Excel</button><button onClick={()=>marcheaza(grupe[k],k)} style={{...btn,background:"#33444D",color:"#fff",border:"none"}}>Marchează comandat</button></>}
       </div>
-      {grupe[k].map(x=><div key={x.comandaId+x.grupa+x.itemId} style={{display:"grid",gridTemplateColumns:"110px 1fr 90px 1.1fr 150px 28px",gap:8,alignItems:"center",padding:"6px 12px",borderBottom:`1px solid ${C.border}`,fontSize:12}}>
-        <span style={{fontWeight:600}}>{x.cod||"—"}</span><span>{x.den}</span><span style={{textAlign:"right",fontWeight:600}}>{x.cantitate} {x.um}</span>
+      {grupe[k].map(x=><div key={x.comandaId+x.grupa+x.itemId} style={{display:"grid",gridTemplateColumns:"110px 1fr 80px 110px 1.1fr 150px 28px",gap:8,alignItems:"center",padding:"6px 12px",borderBottom:`1px solid ${C.border}`,fontSize:12}}>
+        <span style={{fontWeight:600}}>{x.cod||"—"}</span><span>{x.den}</span><span style={{textAlign:"right",color:C.textMuted}} title="Necesar din consum">necesar {x.cantitate} {x.um}</span>
+        <div style={{display:"flex",alignItems:"center",gap:4}} title="Cantitatea de comandat la furnizor (de ex. 1 rolă întreagă)"><input value={x.cantComanda!==""?x.cantComanda:x.cantitate} onChange={e=>setAprov(x,{cantComanda:e.target.value})} style={{fontSize:12,fontWeight:700,border:`1px solid ${x.cantComanda!==""&&String(x.cantComanda)!==String(x.cantitate)?C.accent:C.border}`,padding:"3px 6px",background:C.bg,outline:"none",width:56}}/><span style={{fontSize:11,color:C.textMuted}}>{x.um}</span></div>
         <span style={{color:C.textMuted}}>{x.client} · comanda {x.comandaNr}</span>
         <input list="furn-dl-nec" value={x.furnizor} onChange={e=>setAprov(x,{furnizor:e.target.value})} placeholder="furnizor" style={{fontSize:11,border:`1px solid ${C.border}`,padding:"3px 6px",background:C.bg,outline:"none"}}/>
         <button onClick={()=>setAprov(x,{trimis:false})} title="Scoate din necesar" style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:13}}>✕</button>
@@ -6513,7 +6514,7 @@ function NecesarAprovizionare({clients,setClients,C}){
     {comandate.length>0&&<div>
       <button onClick={()=>setArataIstoric(v=>!v)} style={btn}>{arataIstoric?"Ascunde":"Arată"} istoric comandat ({comandate.length})</button>
       {arataIstoric&&<div style={{marginTop:8}}>{comandate.map(x=><div key={x.comandaId+x.grupa+x.itemId} style={{display:"flex",gap:10,alignItems:"center",fontSize:12,padding:"4px 0",color:C.textMuted}}>
-        <span style={{minWidth:90}}>{x.cod||"—"}</span><span style={{flex:1}}>{x.den} · {x.cantitate} {x.um}</span><span>{x.client} · {x.comandaNr}</span><span>{normFurnizor(x.furnizor)} · {x.dataComandat}</span>
+        <span style={{minWidth:90}}>{x.cod||"—"}</span><span style={{flex:1}}>{x.den} · {x.cantComanda!==""?x.cantComanda:x.cantitate} {x.um}</span><span>{x.client} · {x.comandaNr}</span><span>{normFurnizor(x.furnizor)} · {x.dataComandat}</span>
         <button onClick={()=>setAprov(x,{comandat:false,dataComandat:""})} style={btn}>Anulează</button>
       </div>)}</div>}
     </div>}
