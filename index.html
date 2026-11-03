@@ -2512,7 +2512,7 @@ function colecteazaNecesar(clients){
     ["materiale","banda","standard","liniiManuale"].forEach(g=>(cm[g]||[]).forEach(it=>{
       if(!(it.aprov&&it.aprov.trimis)) return;
       const i=aprovInfo(g,it);
-      out.push({clientId:c.id,client:c.name||"",comandaId:cx.id,comandaNr:cx.numar,grupa:g,itemId:it.id,cod:i.cod,den:i.den,um:i.um,cantitate:it.cantitate,furnizor:it.aprov.furnizor||"",cantComanda:it.aprov.cantComanda==null?"":it.aprov.cantComanda,data:it.aprov.data||"",comandat:!!it.aprov.comandat,dataComandat:it.aprov.dataComandat||""});
+      out.push({clientId:c.id,client:c.name||"",comandaId:cx.id,comandaNr:cx.numar,grupa:g,itemId:it.id,cod:i.cod,den:i.den,um:i.um,cantitate:it.cantitate,furnizor:it.aprov.furnizor||"",cantComanda:it.aprov.cantComanda==null?"":it.aprov.cantComanda,data:it.aprov.data||"",comandaId:it.aprov.comandaId||"",comandat:!!it.aprov.comandat,dataComandat:it.aprov.dataComandat||""});
     }));
   }));
   return out;
@@ -2605,11 +2605,11 @@ function ComandaExecutieCard({comanda,clientId,setClients,C,clientNume,fmtD,ofer
       setA({trimis:true,furnizor:f,data:tday(),comandat:false});
     };
     return <div style={{gridColumn:"1 / -1",display:"flex",alignItems:"center",gap:10,fontSize:11,margin:"-2px 0 6px",flexWrap:"wrap"}}>
-      <label style={{display:"flex",alignItems:"center",gap:5,cursor:a.comandat?"default":"pointer",fontWeight:600,color:bif?"#3A6A3A":C.textSub}}>
-        <input type="checkbox" checked={bif} disabled={!!a.comandat} onChange={e=>toggle(e.target.checked)}/> Trimis spre aprovizionare
+      <label style={{display:"flex",alignItems:"center",gap:5,cursor:(a.comandat||a.comandaId)?"default":"pointer",fontWeight:600,color:bif?"#3A6A3A":C.textSub}}>
+        <input type="checkbox" checked={bif} disabled={!!(a.comandat||a.comandaId)} onChange={e=>toggle(e.target.checked)}/> Trimis spre aprovizionare
       </label>
-      {bif&&!a.comandat&&<><span style={{color:C.textMuted}}>Furnizor:</span><input list="furn-dl-aprov" value={a.furnizor||""} onChange={e=>setA({...a,furnizor:e.target.value})} placeholder="alege / scrie furnizorul" style={{fontSize:11,border:`1px solid ${a.furnizor?C.border:"#B5504A"}`,padding:"3px 6px",background:C.bg,outline:"none",width:150}}/></>}
-      {a.comandat&&<span style={{color:"#3A6A3A",fontWeight:600}}>✓ comandat la {a.furnizor}</span>}
+      {bif&&!a.comandat&&!a.comandaId&&<><span style={{color:C.textMuted}}>Furnizor:</span><input list="furn-dl-aprov" value={a.furnizor||""} onChange={e=>setA({...a,furnizor:e.target.value})} placeholder="alege / scrie furnizorul" style={{fontSize:11,border:`1px solid ${a.furnizor?C.border:"#B5504A"}`,padding:"3px 6px",background:C.bg,outline:"none",width:150}}/></>}
+      {(a.comandat||a.comandaId)&&<span style={{color:"#3A6A3A",fontWeight:600}}>✓ {a.comandaId?"în comandă":"comandat"} la {a.furnizor}</span>}
     </div>;
   };
   const actualizeazaConsumBanda=()=>{
@@ -6474,50 +6474,170 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   </div>;
 }
 
-function NecesarAprovizionare({clients,setClients,C}){
-  const [arataIstoric,setArataIstoric]=React.useState(false);
-  const toate=colecteazaNecesar(clients);
-  const deComandat=toate.filter(x=>!x.comandat);
-  const comandate=toate.filter(x=>x.comandat);
+const FURNIZORI_DATE={
+  "Bru":{nume:"Bru Textiles NV",adresa:"Satenrozen 2a, B-2550 Kontich, Belgium",email:"brutex@brutex.com",tel:"+32 3 451 8000",custNr:"113497",clientAdresa:"Principala nr 872, 507221 Carpinis, Romania",vat:"RO17633996"}
+};
+function furnizorDate(nume){ return FURNIZORI_DATE[normFurnizor(nume)]||null; }
+function numarComandaAprov(lista,furnizor){
+  const d=new Date(); const z=(n)=>String(n).padStart(2,"0");
+  const baza=z(d.getDate())+z(d.getMonth()+1)+d.getFullYear();
+  const ex=new Set((lista||[]).filter(o=>o.tip==="aprovizionare"&&normFurnizor(o.furnizor)===normFurnizor(furnizor)).map(o=>String(o.numar)));
+  if(!ex.has(baza)) return baza;
+  let i=2; while(ex.has(baza+"-"+i)) i++; return baza+"-"+i;
+}
+const nrQ=(v)=>{const n=parseFloat(String(v==null?"":v).replace(",","."));return isFinite(n)?n:0;};
+function elibereazaRefsAprov(setClients,refs){
+  (refs||[]).forEach(r=>setClients(p=>p.map(c=>c.id!==r.clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==r.comandaId?cx:{...cx,consumMateriale:{...cx.consumMateriale,[r.grupa]:((cx.consumMateriale||{})[r.grupa]||[]).map(it=>it.id!==r.itemId?it:{...it,aprov:{...(it.aprov||{}),comandaId:""}})}})})));
+}
+function buildComandaAprovizionareHtml(o,intern){
+  const esc=(t)=>String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const fd=furnizorDate(o.furnizor)||{};
+  const linii=(o.linii||[]).filter(l=>String(l.den||"").trim()&&nrQ(l.cantitate)>0);
+  const dataFmt=fmtD(o.data);
+  const fmtQ=(v)=>String(Math.round(nrQ(v)*100)/100).replace(".",",");
+  const totM=linii.filter(l=>l.um==="m").reduce((s,l)=>s+nrQ(l.cantitate),0);
+  const arataCod=linii.some(l=>l.grupa&&l.grupa!=="materiale"&&l.cod);
+  const clienti=[...new Set(linii.flatMap(l=>(l.refs||[]).map(r=>r.client)).filter(Boolean))];
+  const titlu=`Order nr ${o.numar} - ${dataFmt}`+(intern?` - INTERN${clienti.length?" - "+clienti.join(", "):""}`:"");
+  const td="padding:7px 9px;border:1px solid #CBD5D0;";
+  const th="padding:7px 9px;border:1px solid #CBD5D0;background:#E8EDF0;font:600 .72em/1.2 'Source Sans 3',Calibri,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#3F5058;text-align:left;";
+  const rows=linii.map((l,i)=>`<tr>
+    <td style="${td}text-align:center;color:#5F7078">${i+1}</td>
+    ${arataCod||intern?`<td style="${td}">${esc(l.grupa&&l.grupa!=="materiale"?l.cod:(intern?l.cod:""))}</td>`:""}
+    <td style="${td}font-weight:600">${esc(l.den)}</td>
+    <td style="${td}text-align:right;font-weight:700">${fmtQ(l.cantitate)}</td>
+    <td style="${td}">${esc(l.um||"")}</td>
+    ${intern?`<td style="${td}text-align:right;color:#5F7078">${fmtQ(l.necesar)}</td><td style="${td}background:#EEF1EE;font-size:.88em">${(l.refs||[]).map(r=>esc(r.client)+" · "+esc(r.comandaNr)+" · "+fmtQ(r.cant)).join("<br/>")}</td>`:""}
+  </tr>`).join("");
+  const banner=intern?`<div style="background:#B3402F;color:#fff;padding:8px 14px;margin-bottom:14px;font:700 .85em 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase">Document intern — conține clienții. Nu se trimite furnizorului.</div>`:"";
+  return `<!DOCTYPE html><html lang="${intern?"ro":"en"}"><head><meta charset="utf-8"><title>${esc(titlu)}</title>
+  <style>@page{size:A4;margin:0.55in}body{margin:0;background:#fff;font-family:'Source Sans 3',Calibri,sans-serif;color:#2A2118;font-size:13px}</style></head><body>
+  ${banner}
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;border-bottom:2px solid #A0845C;padding-bottom:12px">
+    <div>
+      <img alt="" src="${CONTRACT_LOGO_URI}" style="height:40px;width:auto;display:block;margin-bottom:8px"/>
+      <div style="font:600 1.05em 'Source Serif 4',Cambria,Georgia,serif">${esc(COMANDA_CUSTOMER.nume)}</div>
+      <div style="font-size:.88em;color:#5C4F3E;line-height:1.45">${esc(fd.clientAdresa||COMANDA_CUSTOMER.adresa)}${fd.vat?`<br/>VAT: ${esc(fd.vat)}`:""}${fd.custNr?`<br/>${intern?"Nr. client":"Customer no."}: <b>${esc(fd.custNr)}</b>`:""}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font:400 2em/1.1 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${intern?"Comandă":"Order"} nr. ${esc(o.numar)}</div>
+      <div style="font-size:.95em;color:#5C4F3E;margin-top:4px">${intern?"Data":"Date"}: <b>${dataFmt}</b></div>
+    </div>
+  </div>
+  <div style="margin:14px 0 16px;font-size:.92em;line-height:1.5">
+    <div style="font:600 .72em 'Source Sans 3',Calibri,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A7A64;margin-bottom:2px">${intern?"Furnizor":"Supplier"}</div>
+    <b>${esc(fd.nume||o.furnizor)}</b>${fd.adresa?` · ${esc(fd.adresa)}`:""}${fd.email?`<br/>${esc(fd.email)}`:""}${fd.tel?` · Tel. ${esc(fd.tel)}`:""}
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr>
+      <th style="${th}text-align:center">${intern?"Nr.":"No."}</th>${arataCod||intern?`<th style="${th}">${intern?"Cod":"Code"}</th>`:""}<th style="${th}">${intern?"Denumire":"Description"}</th><th style="${th}text-align:right">${intern?"Cantitate":"Qty"}</th><th style="${th}">${intern?"UM":"Unit"}</th>${intern?`<th style="${th}text-align:right">Necesar</th><th style="${th}">Clienți · comanda · cant.</th>`:""}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  ${totM>0?`<div style="margin-top:10px;text-align:right;font-weight:700">${intern?"Total metri":"Total meters"}: ${fmtQ(totM)} m</div>`:""}
+  ${o.mentiuni?`<div style="margin-top:14px;font-size:.9em;white-space:pre-wrap">${esc(o.mentiuni)}</div>`:""}
+  </body></html>`;
+}
+function exportaComandaAprovExcel(o){
+  const linii=(o.linii||[]).filter(l=>String(l.den||"").trim()&&nrQ(l.cantitate)>0);
+  const rows=[["Cod","Denumire","Cantitate","UM"],...linii.map(l=>[l.grupa&&l.grupa!=="materiale"?l.cod:"",l.den,nrQ(l.cantitate),l.um||""])];
+  const ws=XLSX.utils.aoa_to_sheet(rows); ws["!cols"]=[{wch:16},{wch:42},{wch:12},{wch:8}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Comanda");
+  XLSX.writeFile(wb,`Comanda_${String(o.furnizor||"furnizor").replace(/[^a-zA-Z0-9]+/g,"_")}_${String(o.numar).replace(/[^a-zA-Z0-9-]+/g,"_")}.xlsx`);
+}
+function ComandaAprovizionareEditor({o,setComenzi,setClients,C,onBack}){
+  const upd=(patch)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(x=>x.id===o.id?{...x,...patch}:x));
+  const updL=(id,patch)=>upd({linii:(o.linii||[]).map(l=>l.id===id?{...l,...patch}:l)});
+  const delL=(l)=>{ if(!window.confirm("Scoți rândul din comandă? Rândurile din consumuri se întorc în necesar.")) return; elibereazaRefsAprov(setClients,l.refs); upd({linii:(o.linii||[]).filter(x=>x.id!==l.id)}); };
+  const addManual=()=>upd({linii:[...(o.linii||[]),{id:gid(),cod:"",den:"",um:"m",necesar:"",cantitate:"",refs:[],grupa:"manual"}]});
+  const inpS={padding:"5px 6px",border:`1px solid ${C.border}`,background:C.bg,color:C.text,fontSize:12,width:"100%",boxSizing:"border-box",fontFamily:"inherit"};
+  const btn=(primary)=>({padding:"7px 14px",border:primary?"none":`1px solid ${C.border}`,background:primary?C.accent:"transparent",color:primary?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:primary?600:400});
+  const lbl={fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:3};
+  const linii=o.linii||[];
+  const gol=()=>{ if(!linii.some(l=>String(l.den||"").trim()&&nrQ(l.cantitate)>0)){ alert("Comanda nu are nicio poziție cu cantitate."); return true; } return false; };
+  return <div>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+      <button onClick={onBack} style={btn(false)}>← Toate comenzile</button>
+      <span style={{fontSize:14,fontWeight:600,color:C.text}}>Comandă {o.furnizor} nr. {o.numar}</span>
+      <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",background:o.status==="trimisa"?"#E3EEE3":C.accentLight,color:o.status==="trimisa"?"#3A6A3A":C.accent}}>{o.status==="trimisa"?`TRIMISĂ ${fmtD(o.dataTrimis)}`:"CIORNĂ"}</span>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr 130px",gap:10,marginBottom:14}}>
+      <div><div style={lbl}>Furnizor</div><input style={inpS} value={o.furnizor||""} onChange={e=>upd({furnizor:e.target.value})}/></div>
+      <div><div style={lbl}>Nr. comandă</div><input style={inpS} value={o.numar||""} onChange={e=>upd({numar:e.target.value})}/></div>
+      <div><div style={lbl}>Data</div><input type="date" style={inpS} value={o.data||""} onChange={e=>upd({data:e.target.value})}/></div>
+    </div>
+    <div style={{overflowX:"auto",marginBottom:12}}>
+      <table style={{width:"100%",borderCollapse:"collapse",minWidth:760}}>
+        <thead><tr style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+          <th style={{padding:"4px",textAlign:"left",width:110}}>Cod</th><th style={{padding:"4px",textAlign:"left"}}>Denumire</th><th style={{padding:"4px",textAlign:"right",width:90}}>Necesar</th><th style={{padding:"4px",textAlign:"left",width:110}}>De comandat</th><th style={{padding:"4px",textAlign:"left",width:56}}>UM</th><th style={{padding:"4px",textAlign:"left",background:C.accentLight}} title="Nu apare în documentul pentru furnizor">Clienți · intern</th><th style={{width:28}}></th>
+        </tr></thead>
+        <tbody>
+          {linii.map(l=><tr key={l.id}>
+            <td style={{padding:"3px"}}><input style={inpS} value={l.cod||""} onChange={e=>updL(l.id,{cod:e.target.value})}/></td>
+            <td style={{padding:"3px"}}><input style={inpS} value={l.den||""} onChange={e=>updL(l.id,{den:e.target.value})}/></td>
+            <td style={{padding:"3px",textAlign:"right",fontSize:12,color:C.textMuted}}>{l.necesar!==""&&l.necesar!=null?`${String(Math.round(nrQ(l.necesar)*100)/100).replace(".",",")} ${l.um||""}`:"—"}</td>
+            <td style={{padding:"3px"}}><input style={{...inpS,fontWeight:700,borderColor:l.necesar!==""&&nrQ(l.cantitate)!==nrQ(l.necesar)?C.accent:C.border}} value={l.cantitate==null?"":l.cantitate} onChange={e=>updL(l.id,{cantitate:e.target.value})}/></td>
+            <td style={{padding:"3px"}}><input style={inpS} value={l.um||""} onChange={e=>updL(l.id,{um:e.target.value})}/></td>
+            <td style={{padding:"3px 6px",background:C.accentLight,fontSize:11,color:C.textSub}}>{(l.refs||[]).map(r=>`${r.client} (${r.comandaNr}): ${String(Math.round(nrQ(r.cant)*100)/100).replace(".",",")}`).join(" · ")||"—"}</td>
+            <td style={{padding:"3px"}}><button onClick={()=>delL(l)} style={{border:"none",background:"transparent",cursor:"pointer",color:C.textMuted,fontSize:13}}>✕</button></td>
+          </tr>)}
+        </tbody>
+      </table>
+    </div>
+    <div style={{marginBottom:12}}><div style={lbl}>Mențiuni (apar pe comandă)</div><textarea rows={2} style={{...inpS,resize:"vertical"}} value={o.mentiuni||""} onChange={e=>upd({mentiuni:e.target.value})}/></div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+      <button onClick={addManual} style={btn(false)}>+ rând manual</button><div style={{flex:1}}/>
+      <button onClick={()=>{if(!gol()) printHtmlDocCuImagini(buildComandaAprovizionareHtml(o,false));}} style={btn(true)}>Printează comanda furnizor</button>
+      <button onClick={()=>{if(!gol()) printHtmlDocCuImagini(buildComandaAprovizionareHtml(o,true));}} style={btn(false)}>Print intern (cu clienți)</button>
+      <button onClick={()=>{if(!gol()) exportaComandaAprovExcel(o);}} style={btn(false)}>Excel</button>
+      <button onClick={()=>upd(o.status==="trimisa"?{status:"ciorna",dataTrimis:""}:{status:"trimisa",dataTrimis:tday()})} style={btn(false)}>{o.status==="trimisa"?"Marchează ciornă":"Marchează trimisă"}</button>
+    </div>
+  </div>;
+}
+function NecesarAprovizionare({clients,setClients,comenzi,setComenzi,C,onOpen}){
+  const toate=colecteazaNecesar(clients).filter(x=>!x.comandat&&!x.comandaId);
   const grupe={};
-  deComandat.forEach(x=>{ const k=normFurnizor(x.furnizor)||"(furnizor nespecificat)"; (grupe[k]=grupe[k]||[]).push(x); });
+  toate.forEach(x=>{ const k=normFurnizor(x.furnizor)||"(furnizor nespecificat)"; (grupe[k]=grupe[k]||[]).push(x); });
   const chei=Object.keys(grupe).sort((a,b)=>a.startsWith("(")?1:b.startsWith("(")?-1:a.localeCompare(b,"ro"));
   const setAprov=(x,patch)=>setClients(p=>p.map(c=>c.id!==x.clientId?c:{...c,comenziExecutieNico:(c.comenziExecutieNico||[]).map(cx=>cx.id!==x.comandaId?cx:{...cx,consumMateriale:{...cx.consumMateriale,[x.grupa]:((cx.consumMateriale||{})[x.grupa]||[]).map(it=>it.id!==x.itemId?it:{...it,aprov:{...(it.aprov||{}),...patch}})}})}));
-  const marcheaza=(lista,nume)=>{
-    if(!window.confirm(`Marchezi ca „comandat” cele ${lista.length} rânduri pentru ${nume}?`)) return;
-    lista.forEach(x=>setAprov(x,{comandat:true,dataComandat:tday()}));
+  const centralizeaza=(lista)=>{
+    const m={};
+    lista.forEach(x=>{ const k=(x.cod||x.den)+"|"+x.um; if(!m[k]) m[k]={id:gid(),cod:x.cod,den:x.den,um:x.um,grupa:x.grupa,necesar:0,cantitate:0,refs:[]}; m[k].necesar+=nrQ(x.cantitate); m[k].refs.push({clientId:x.clientId,client:x.client,comandaId:x.comandaId,comandaNr:x.comandaNr,grupa:x.grupa,itemId:x.itemId,cant:nrQ(x.cantitate)}); });
+    return Object.values(m).map(l=>({...l,necesar:Math.round(l.necesar*100)/100,cantitate:Math.round(l.necesar*100)/100}));
   };
-  const excel=(lista,nume)=>{
-    const rows=[["Cod","Denumire","Cantitate","Referință internă"],...lista.map(x=>[x.cod,x.den,parseFloat(String(x.cantComanda!==""?x.cantComanda:x.cantitate).replace(",","."))||0,x.client+" · comanda "+x.comandaNr])];
-    const ws=XLSX.utils.aoa_to_sheet(rows); ws["!cols"]=[{wch:20},{wch:40},{wch:12},{wch:34}];
-    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Necesar");
-    XLSX.writeFile(wb,`Necesar_${nume.replace(/[^a-zA-Z0-9]+/g,"_")}_${tday()}.xlsx`);
+  const creeaza=(k,lista)=>{
+    if(!window.confirm(`Creezi comanda către ${k} cu ${lista.length} rânduri din consumuri?`)) return;
+    const linii=centralizeaza(lista);
+    const o={id:gid(),tip:"aprovizionare",furnizor:k,numar:numarComandaAprov(comenzi,k),data:tday(),status:"ciorna",linii,mentiuni:""};
+    setComenzi(p=>[o,...(Array.isArray(p)?p:[])]);
+    lista.forEach(x=>setAprov(x,{comandaId:o.id}));
+    onOpen(o.id);
   };
   const btn={fontSize:11,fontWeight:600,padding:"5px 10px",background:"transparent",color:C.textSub,border:`1px solid ${C.border}`,cursor:"pointer"};
+  const f1=(v)=>String(Math.round(nrQ(v)*100)/100).replace(".",",");
   return <div style={{marginBottom:24}}>
-    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10}}>Necesar de aprovizionare (din consumurile lui Nico) · {deComandat.length} rânduri</div>
-    {deComandat.length===0&&<div style={{fontSize:13,color:C.textMuted,marginBottom:6}}>Nimic trimis spre aprovizionare. În consumul unei comenzi Nico, bifează „Trimis spre aprovizionare” la rândurile necesare.</div>}
+    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10}}>Necesar de aprovizionare (din consumurile lui Nico) · {toate.length} rânduri</div>
+    {toate.length===0&&<div style={{fontSize:13,color:C.textMuted,marginBottom:6}}>Nimic de comandat acum. În consumul unei comenzi Nico, bifează „Trimis spre aprovizionare” la rândurile necesare.</div>}
     <datalist id="furn-dl-nec">{["Bru","Symphony Mills","Hohmann","Coulisse","Benjamin Moore","Darstar","Duval","Schrader"].map(f=><option key={f} value={f}/>)}</datalist>
-    {chei.map(k=><div key={k} style={{border:`1px solid ${k.startsWith("(")?"#B5504A":C.border}`,background:C.surface,marginBottom:10}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
-        <b style={{fontSize:13}}>{k}</b><span style={{fontSize:12,color:C.textMuted}}>{grupe[k].length} rânduri</span><div style={{flex:1}}/>
-        {!k.startsWith("(")&&<><button onClick={()=>excel(grupe[k],k)} style={btn}>Excel</button><button onClick={()=>marcheaza(grupe[k],k)} style={{...btn,background:"#33444D",color:"#fff",border:"none"}}>Marchează comandat</button></>}
-      </div>
-      {grupe[k].map(x=><div key={x.comandaId+x.grupa+x.itemId} style={{display:"grid",gridTemplateColumns:"110px 1fr 80px 110px 1.1fr 150px 28px",gap:8,alignItems:"center",padding:"6px 12px",borderBottom:`1px solid ${C.border}`,fontSize:12}}>
-        <span style={{fontWeight:600}}>{x.cod||"—"}</span><span>{x.den}</span><span style={{textAlign:"right",color:C.textMuted}} title="Necesar din consum">necesar {x.cantitate} {x.um}</span>
-        <div style={{display:"flex",alignItems:"center",gap:4}} title="Cantitatea de comandat la furnizor (de ex. 1 rolă întreagă)"><input value={x.cantComanda!==""?x.cantComanda:x.cantitate} onChange={e=>setAprov(x,{cantComanda:e.target.value})} style={{fontSize:12,fontWeight:700,border:`1px solid ${x.cantComanda!==""&&String(x.cantComanda)!==String(x.cantitate)?C.accent:C.border}`,padding:"3px 6px",background:C.bg,outline:"none",width:56}}/><span style={{fontSize:11,color:C.textMuted}}>{x.um}</span></div>
-        <span style={{color:C.textMuted}}>{x.client} · comanda {x.comandaNr}</span>
-        <input list="furn-dl-nec" value={x.furnizor} onChange={e=>setAprov(x,{furnizor:e.target.value})} placeholder="furnizor" style={{fontSize:11,border:`1px solid ${C.border}`,padding:"3px 6px",background:C.bg,outline:"none"}}/>
-        <button onClick={()=>setAprov(x,{trimis:false})} title="Scoate din necesar" style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:13}}>✕</button>
-      </div>)}
-    </div>)}
-    {comandate.length>0&&<div>
-      <button onClick={()=>setArataIstoric(v=>!v)} style={btn}>{arataIstoric?"Ascunde":"Arată"} istoric comandat ({comandate.length})</button>
-      {arataIstoric&&<div style={{marginTop:8}}>{comandate.map(x=><div key={x.comandaId+x.grupa+x.itemId} style={{display:"flex",gap:10,alignItems:"center",fontSize:12,padding:"4px 0",color:C.textMuted}}>
-        <span style={{minWidth:90}}>{x.cod||"—"}</span><span style={{flex:1}}>{x.den} · {x.cantComanda!==""?x.cantComanda:x.cantitate} {x.um}</span><span>{x.client} · {x.comandaNr}</span><span>{normFurnizor(x.furnizor)} · {x.dataComandat}</span>
-        <button onClick={()=>setAprov(x,{comandat:false,dataComandat:""})} style={btn}>Anulează</button>
-      </div>)}</div>}
-    </div>}
+    {chei.map(k=>{
+      const cen=centralizeaza(grupe[k]);
+      return <div key={k} style={{border:`1px solid ${k.startsWith("(")?"#B5504A":C.border}`,background:C.surface,marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.bg,borderBottom:`1px solid ${C.border}`}}>
+          <b style={{fontSize:13}}>{k}</b><span style={{fontSize:12,color:C.textMuted}}>{cen.length} poziții · {grupe[k].length} rânduri din consumuri</span><div style={{flex:1}}/>
+          {!k.startsWith("(")?<button onClick={()=>creeaza(k,grupe[k])} style={{...btn,background:"#33444D",color:"#fff",border:"none"}}>Creează comandă furnizor</button>:<span style={{fontSize:11,color:"#B5504A"}}>completează furnizorul pe rânduri</span>}
+        </div>
+        {cen.map(l=><div key={l.id} style={{borderBottom:`1px solid ${C.border}`}}>
+          <div style={{display:"grid",gridTemplateColumns:"110px 1fr 110px",gap:8,padding:"6px 12px",fontSize:12,background:C.bg+"88"}}>
+            <b>{l.cod||"—"}</b><b>{l.den}</b><b style={{textAlign:"right"}}>{f1(l.necesar)} {l.um}</b>
+          </div>
+          {grupe[k].filter(x=>((x.cod||x.den)+"|"+x.um)===((l.cod||l.den)+"|"+l.um)).map(x=><div key={x.comandaId+x.grupa+x.itemId} style={{display:"grid",gridTemplateColumns:"110px 1fr 110px 150px 28px",gap:8,alignItems:"center",padding:"3px 12px",fontSize:11,color:C.textMuted}}>
+            <span/><span>{x.client} · comanda {x.comandaNr}</span><span style={{textAlign:"right"}}>{f1(x.cantitate)} {x.um}</span>
+            <input list="furn-dl-nec" value={x.furnizor} onChange={e=>setAprov(x,{furnizor:e.target.value})} placeholder="furnizor" style={{fontSize:11,border:`1px solid ${C.border}`,padding:"2px 6px",background:C.bg,outline:"none"}}/>
+            <button onClick={()=>setAprov(x,{trimis:false})} title="Scoate din necesar" style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:13}}>✕</button>
+          </div>)}
+        </div>)}
+      </div>;
+    })}
   </div>;
 }
 function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients}){
@@ -6541,7 +6661,7 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients}){
     setAll(p=>[o,...p]);
     setOpenId(o.id); setImpOpen(true); setImpSel({});
   };
-  const stergeComanda=(o)=>{ if(window.confirm(`Ștergi comanda nr. ${o.numar}? Nu poate fi recuperată.`)){ setAll(p=>p.filter(x=>x.id!==o.id)); if(openId===o.id) setOpenId(null); } };
+  const stergeComanda=(o)=>{ if(window.confirm(`Ștergi comanda nr. ${o.numar}? Nu poate fi recuperată.`+(o.tip==="aprovizionare"?" Rândurile din consumuri se întorc în necesar.":""))){ if(o.tip==="aprovizionare"&&setClients) (o.linii||[]).forEach(l=>elibereazaRefsAprov(setClients,l.refs)); setAll(p=>p.filter(x=>x.id!==o.id)); if(openId===o.id) setOpenId(null); } };
 
   // candidați: produse "pliseu" din toate ofertele clienților
   const candidati=[];
@@ -6567,19 +6687,20 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients}){
   // ---------- LISTA COMENZILOR ----------
   if(!comanda){
     return <div>
-      {setClients&&<NecesarAprovizionare clients={clients} setClients={setClients} C={C}/>}
+      {setClients&&<NecesarAprovizionare clients={clients} setClients={setClients} comenzi={lista} setComenzi={setComenzi} C={C} onOpen={(id)=>{setOpenId(id);setImpOpen(false);}}/>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
         <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Comenzi către furnizori · plisee Schrader</div>
         <button onClick={nouaComanda} style={btn(true)}>+ Comandă nouă Schrader</button>
       </div>
       {lista.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"20px 0"}}>Nicio comandă încă. Apasă „+ Comandă nouă Schrader”, apoi preia plisseele din oferte sau adaugă rânduri de mână.</div>}
       {lista.map(o=>{
+        const aprov=o.tip==="aprovizionare";
         const buc=(o.linii||[]).reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
-        const clienti=[...new Set((o.linii||[]).map(l=>(l.client||"").trim()).filter(Boolean))];
+        const clienti=aprov?[...new Set((o.linii||[]).flatMap(l=>(l.refs||[]).map(r=>r.client)).filter(Boolean))]:[...new Set((o.linii||[]).map(l=>(l.client||"").trim()).filter(Boolean))];
         return <div key={o.id} onClick={()=>{setOpenId(o.id);setImpOpen(false);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6,cursor:"pointer"}}>
           <span style={{fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>Order nr. {o.numar}</span>
           <span style={{fontSize:12,color:C.textSub,minWidth:80}}>{fmtD(o.data)}</span>
-          <span style={{fontSize:12,color:C.textSub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.furnizor} · {buc} buc.{clienti.length?` · ${clienti.join(", ")}`:""}</span>
+          <span style={{fontSize:12,color:C.textSub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.furnizor} · {aprov?`${(o.linii||[]).length} poziții`:`${buc} buc.`}{clienti.length?` · ${clienti.join(", ")}`:""}</span>
           <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",background:o.status==="trimisa"?"#E3EEE3":C.accentLight,color:o.status==="trimisa"?"#3A6A3A":C.accent}}>{o.status==="trimisa"?`TRIMISĂ ${fmtD(o.dataTrimis)}`:"CIORNĂ"}</span>
           <button onClick={e=>{e.stopPropagation();stergeComanda(o);}} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:14}}>🗑</button>
         </div>;
@@ -6587,6 +6708,7 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients}){
     </div>;
   }
 
+  if(comanda.tip==="aprovizionare") return <ComandaAprovizionareEditor o={comanda} setComenzi={setComenzi} setClients={setClients} C={C} onBack={()=>setOpenId(null)}/>;
   // ---------- EDITOR COMANDĂ ----------
   const o=comanda;
   const buc=(o.linii||[]).reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
