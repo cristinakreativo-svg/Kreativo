@@ -6476,7 +6476,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
 
 const LIVRARE_IMPLICIT="Magazin Kreativo, Ioan Ursu nr. 10, sc. B";
 const FURNIZORI_DATE={
-  "Bru":{nume:"Bru Textiles NV",adresa:"Satenrozen 2a, B-2550 Kontich, Belgium",email:"brutex@brutex.com",tel:"+32 3 451 8000",custNr:"113497",clientAdresa:"Principala nr 872, 507221 Carpinis, Romania",vat:"RO17633996"}
+  "Bru":{nume:"Bru Textiles NV",adresa:"Satenrozen 2a, B-2550 Kontich, Belgium",email:"brutex@brutex.com",tel:"+32 3 451 8000",emailComenzi:"zofia.ciecierska@brutex.com",contact:"Zofia",custNr:"113497",clientAdresa:"Principala nr 872, 507221 Carpinis, Romania",vat:"RO17633996"}
 };
 function furnizorDate(nume){ return FURNIZORI_DATE[normFurnizor(nume)]||null; }
 function numarComandaAprov(lista,furnizor){
@@ -6543,12 +6543,21 @@ function buildComandaAprovizionareHtml(o,intern){
   ${o.mentiuni?`<div style="margin-top:14px;font-size:.9em;white-space:pre-wrap">${esc(o.mentiuni)}</div>`:""}
   </body></html>`;
 }
-function exportaComandaAprovExcel(o){
+function xlsxComandaAprov(o){
+  const fd=furnizorDate(o.furnizor)||{};
   const linii=(o.linii||[]).filter(l=>String(l.den||"").trim()&&nrQ(l.cantitate)>0);
-  const rows=[["Cod","Denumire","Cantitate","UM","Observații"],...linii.map(l=>[l.grupa&&l.grupa!=="materiale"?l.cod:"",l.den,nrQ(l.cantitate),l.um||"",l.obs||""])];
-  const ws=XLSX.utils.aoa_to_sheet(rows); ws["!cols"]=[{wch:16},{wch:42},{wch:12},{wch:8},{wch:30}];
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Comanda");
-  XLSX.writeFile(wb,`Comanda_${String(o.furnizor||"furnizor").replace(/[^a-zA-Z0-9]+/g,"_")}_${String(o.numar).replace(/[^a-zA-Z0-9-]+/g,"_")}.xlsx`);
+  const arataCod=linii.some(l=>l.grupa&&l.grupa!=="materiale"&&l.cod);
+  const rows=[["Order nr.",o.numar],["Date",fmtD(o.data)],["From",COMANDA_CUSTOMER.nume+(fd.custNr?" - Customer no. "+fd.custNr:"")],[],
+    ["No.",...(arataCod?["Code"]:[]),"Description","Quantity","Unit","Remarks"],
+    ...linii.map((l,i)=>[i+1,...(arataCod?[l.grupa&&l.grupa!=="materiale"?l.cod:""]:[]),l.den,nrQ(l.cantitate),l.um||"",l.obs||""])];
+  const ws=XLSX.utils.aoa_to_sheet(rows); ws["!cols"]=[{wch:10},...(arataCod?[{wch:14}]:[]),{wch:42},{wch:12},{wch:8},{wch:34}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Order");
+  const out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  return {blob:new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),filename:`Order_${String(o.numar).replace(/[^a-zA-Z0-9-]+/g,"_")}_3P_Design.xlsx`};
+}
+function exportaComandaAprovExcel(o){
+  const {blob,filename}=xlsxComandaAprov(o);
+  const u=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=u; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000);
 }
 function ComandaAprovizionareEditor({o,setComenzi,setClients,C,onBack}){
   const upd=(patch)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(x=>x.id===o.id?{...x,...patch}:x));
@@ -6559,6 +6568,24 @@ function ComandaAprovizionareEditor({o,setComenzi,setClients,C,onBack}){
   const btn=(primary)=>({padding:"7px 14px",border:primary?"none":`1px solid ${C.border}`,background:primary?C.accent:"transparent",color:primary?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:primary?600:400});
   const lbl={fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:3};
   const linii=o.linii||[];
+  const mailTo=o.emailTo!==undefined?o.emailTo:((furnizorDate(o.furnizor)||{}).emailComenzi||"");
+  const contactNume=o.contact!==undefined?o.contact:((furnizorDate(o.furnizor)||{}).contact||"");
+  const mailSubj=`Order nr. ${o.numar} - 3P Design SRL`;
+  const mailBody=`Dear ${contactNume||"Sir or Madam"},\n\nPlease find attached our order nr. ${o.numar}.\n\nKind regards,\nCristina Donisa\n3P Design SRL\ncristina.donisa@kreativo.ro`;
+  const trimiteMail=()=>{
+    if(gol()) return;
+    exportaComandaAprovExcel(o);
+    setTimeout(()=>{ window.location.href=`mailto:${encodeURIComponent(mailTo).replace(/%40/g,"@")}?subject=${encodeURIComponent(mailSubj)}&body=${encodeURIComponent(mailBody)}`; },500);
+  };
+  const partajeaza=async()=>{
+    if(gol()) return;
+    const {blob,filename}=xlsxComandaAprov(o);
+    const file=new File([blob],filename,{type:blob.type});
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:mailSubj,text:mailBody}); return; }
+      alert("Acest browser/Windows nu acceptă partajarea de fișiere. Folosește „Trimite pe mail”.");
+    }catch(e){ if(e&&e.name==="AbortError") return; alert("Partajarea nu a mers. Folosește „Trimite pe mail”."); }
+  };
   const gol=()=>{ if(!linii.some(l=>String(l.den||"").trim()&&nrQ(l.cantitate)>0)){ alert("Comanda nu are nicio poziție cu cantitate."); return true; } return false; };
   return <div>
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
@@ -6570,6 +6597,10 @@ function ComandaAprovizionareEditor({o,setComenzi,setClients,C,onBack}){
       <div><div style={lbl}>Furnizor</div><input style={inpS} value={o.furnizor||""} onChange={e=>upd({furnizor:e.target.value})}/></div>
       <div><div style={lbl}>Nr. comandă</div><input style={inpS} value={o.numar||""} onChange={e=>upd({numar:e.target.value})}/></div>
       <div><div style={lbl}>Data</div><input type="date" style={inpS} value={o.data||""} onChange={e=>upd({data:e.target.value})}/></div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr",gap:10,marginBottom:14}}>
+      <div><div style={lbl}>E-mail pentru comenzi</div><input style={inpS} value={o.emailTo!==undefined?o.emailTo:((furnizorDate(o.furnizor)||{}).emailComenzi||"")} onChange={e=>upd({emailTo:e.target.value})} placeholder="adresa furnizorului"/></div>
+      <div><div style={lbl}>Persoană de contact</div><input style={inpS} value={o.contact!==undefined?o.contact:((furnizorDate(o.furnizor)||{}).contact||"")} onChange={e=>upd({contact:e.target.value})}/></div>
     </div>
     <div style={{marginBottom:14}}><div style={lbl}>Adresa de livrare (apare pe comandă)</div><input style={inpS} value={o.livrare!==undefined?o.livrare:LIVRARE_IMPLICIT} onChange={e=>upd({livrare:e.target.value})} placeholder="stradă, nr., oraș, cod poștal"/></div>
     <div style={{overflowX:"auto",marginBottom:12}}>
@@ -6597,6 +6628,8 @@ function ComandaAprovizionareEditor({o,setComenzi,setClients,C,onBack}){
       <button onClick={()=>{if(!gol()) printHtmlDocCuImagini(buildComandaAprovizionareHtml(o,false));}} style={btn(true)}>Printează comanda furnizor</button>
       <button onClick={()=>{if(!gol()) printHtmlDocCuImagini(buildComandaAprovizionareHtml(o,true));}} style={btn(false)}>Print intern (cu clienți)</button>
       <button onClick={()=>{if(!gol()) exportaComandaAprovExcel(o);}} style={btn(false)}>Excel</button>
+      <button onClick={trimiteMail} style={btn(true)} title="Descarcă fișierul și deschide mailul pregătit în Outlook">Trimite pe mail</button>
+      <button onClick={partajeaza} style={btn(false)} title="Încearcă partajarea din Windows, cu fișierul atașat">Partajează cu fișier</button>
       <button onClick={()=>upd(o.status==="trimisa"?{status:"ciorna",dataTrimis:""}:{status:"trimisa",dataTrimis:tday()})} style={btn(false)}>{o.status==="trimisa"?"Marchează ciornă":"Marchează trimisă"}</button>
     </div>
   </div>;
