@@ -385,12 +385,13 @@ function costProductieConfig(cfg, catalogCostComponente){
   // NOTĂ: cfg.parts conține deja cantitățile finale (înmulțite cu nr. de bucăți configurate, acolo unde e cazul —
   // ex: rulouPartsList înmulțește cu qty la generare). NU se mai înmulțește încă o dată aici cu cfg.qty.
   cfg.parts.forEach(p=>{
-    const cod=(p.code||p.article||"").toLowerCase();
+    const cod=(fixCodRoman(p.code)||p.article||"").toLowerCase();
     if(!cod) return;
-    if(priceMap[cod]!==undefined){
-      total += priceMap[cod]*(p.qty||0);
+    const codP=(priceMap[cod]===undefined && cod==="rsc03-wl")?"rsc03":cod; // RSC03-WL fără preț propriu în catalog → preț RSC03
+    if(priceMap[codP]!==undefined){
+      total += priceMap[codP]*(p.qty||0);
     } else {
-      lipsa.push(p.code||p.article);
+      lipsa.push(fixCodRoman(p.code)||p.article);
     }
   });
   return {total, lipsa:[...new Set(lipsa)]};
@@ -843,7 +844,7 @@ function rulouDeleteMaterial(list, name){
 
 // ---------- shared print-document builders (Roman + Rulou) — folosite atât din configurator cât și din pagina clientului ----------
 function buildRomanPrintHtml(cfg){
-  const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.code}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
+  const rows=cfg.parts.map((p,i)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${i+1}</td><td style="padding:6px 10px;border:1px solid #ccc;">${fixCodRoman(p.code)}</td><td style="padding:6px 10px;border:1px solid #ccc;">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;">${p.qty}</td></tr>`).join("");
   return `<html><head><title>Comandă Stor Roman</title></head><body style="font-family:sans-serif;padding:20px;">
     <h2>Configurator Absolute Roman</h2>
     ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p><p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>`:""}
@@ -875,7 +876,7 @@ function buildRulouPrintHtml(cfg){
     <div style="border:1px solid #999;padding:10px 14px;margin:12px 0;background:#f4f2ee;">
       <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#555;font-weight:700;margin-bottom:8px;">Date introduse (nu sunt calcule ale sistemului)</div>
       <div style="line-height:1.9;">
-        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}${cfg.input.btbManual?"<br/>Contragreutate: "+cfg.input.btb+" (manual, culoare: "+(cfg.input.btbManualColor||"nespecificată")+")":""}<br/>Cantitate: ${cfg.qty}
+        Lățime: ${cfg.input.width}mm<br/>Înălțime: ${cfg.input.height}mm<br/>Tub: ${cfg.input.tube}<br/>Culoare: ${cfg.input.color}${cfg.input.materialName?"<br/>Material: "+cfg.input.materialName:""}${cfg.input.btbManual?"<br/>Contragreutate: "+cfg.input.btb+" (manual, culoare: "+(cfg.input.btbManualColor||"nespecificată")+")":(cfg.input.btbColor?"<br/>Contragreutate: "+cfg.input.btb+" — "+cfg.input.btbColor:"")}<br/>Cantitate: ${cfg.qty}
       </div>
     </div>
     <p><b>Rezultat calcul:</b> Tub tăiat: ${cfg.result.tubeL}mm · Lățime stofă: ${cfg.result.fabricW}mm · Înălțime stofă: ${cfg.result.fabricH}mm · Contragreutate: ${cfg.result.btbL}mm · Diametru rulou: ${cfg.result.rolDiam}mm</p>
@@ -1733,9 +1734,10 @@ function romanCalc(input){
     bottombar:Math.round(btbrailLength), spools:numberSpools, clips:numberClips, chainlen, isMotor, isTwin, optCodes, mech};
 }
 
+const fixCodRoman=(c)=>(c==="RSC20 / RSC08"||c==="RSC20")?"RSC08":(c==="CM-07"?"CM-07V2":(c==="RSC03"?"RSC03-WL":c));
 const PARTS_ROMAN = [
   {code:"RSC21-RAS04", desc:"Șină rotundă absolute (lipită velcro)", colour:"", used:["RSC-A10","RSC-B10","RSC-I10"], excl:[], colourCode:"", qty:(c)=>c.headrail/1000},
-  {code:"RSC20 / RSC08", desc:"Consolă (bracket)", colour:"", used:["RSC-A","RSC-B","RSC-I10"], excl:[], colourCode:"", qty:(c)=>c.clips},
+  {code:"RSC08", desc:"Consolă (bracket)", colour:"", used:["RSC-A","RSC-B","RSC-I10"], excl:[], colourCode:"", qty:(c)=>c.clips},
   {code:"RSC05-06", desc:"Rolă bandă + suport (spool)", colour:"", used:["RSC-A","RSC-B","RSC-I"], excl:[], colourCode:"", qty:(c)=>c.spools},
   {code:"CM-07V2", desc:"Motor CM-07 (mid-motor 24mm 12VDC)", colour:"", used:["RSC-B10"], excl:[], colourCode:"", qty:()=>1},
   {code:"CM-11-BK", desc:"Telecomandă", colour:"", used:["RM6"], excl:[], colourCode:"", qty:()=>1},
@@ -2041,7 +2043,7 @@ function consolidateClientParts(client){
     map.set(code,(map.get(code)||0)+qty);
   };
   (client.configuratiiSina||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(p.code,p.qty)));
-  (client.configuratiiRoman||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(p.code,p.qty)));
+  (client.configuratiiRoman||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(fixCodRoman(p.code),p.qty)));
   (client.configuratiiRulou||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(p.article,p.qty)));
   (client.configuratiiPanou||[]).forEach(cfg=>(cfg.parts||[]).forEach(p=>add(p.article,p.qty)));
   return Array.from(map.entries())
@@ -5812,7 +5814,7 @@ function buildComandaFurnizorHtml(o,intern){
   </body></html>`;
 }
 
-function exportComandaFurnizorXLSX(o){
+function exportComandaFurnizorXLSX(o,soloBlob){
   if(typeof XLSX==="undefined"){ alert("Modulul Excel nu s-a încărcat (verifică conexiunea la internet) — încearcă din nou."); return; }
   const linii=(o.linii||[]).filter(l=>String(l.model||"").trim()||String(l.fabric||"").trim()||String(l.width||"").trim());
   const n=(v)=>{ const x=Number(String(v).replace(",",".")); return (String(v).trim()!==""&&!isNaN(x))?x:String(v||""); };
@@ -5831,7 +5833,9 @@ function exportComandaFurnizorXLSX(o){
   ws["!cols"]=[{wch:8},{wch:12},{wch:7},{wch:22},{wch:14},{wch:10},{wch:10}];
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Order");
-  XLSX.writeFile(wb,`Order_nr_${numAsciiFisier(o.numar)}_${fmtD(o.data).replace(/\./g,"-")}.xlsx`);
+  const filename=`Order_nr_${numAsciiFisier(o.numar)}_${fmtD(o.data).replace(/\./g,"-")}.xlsx`;
+  if(soloBlob){ const out=XLSX.write(wb,{bookType:"xlsx",type:"array"}); return {blob:new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),filename}; }
+  XLSX.writeFile(wb,filename);
 }
 
 
@@ -6723,6 +6727,26 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients}){
   const printSupplier=()=>{ if(!(comanda.linii||[]).length){ alert("Comanda nu are niciun rând."); return; } printHtmlDocCuImagini(buildComandaFurnizorHtml(comanda,false)); };
   const printIntern=()=>{ if(!(comanda.linii||[]).length){ alert("Comanda nu are niciun rând."); return; } printHtmlDocCuImagini(buildComandaFurnizorHtml(comanda,true)); };
   const marcheazaTrimisa=()=>upd(comanda.id,comanda.status==="trimisa"?{status:"ciorna",dataTrimis:""}:{status:"trimisa",dataTrimis:tday()});
+  const mailSchrader=()=>{
+    const to=comanda.emailFurnizor!==undefined?comanda.emailFurnizor:SCHRADER_DATE.email;
+    return {to,subj:`Order nr ${comanda.numar} - ${fmtD(comanda.data)}`,body:`Hi,\n\nPlease find attached our order nr. ${comanda.numar}.\n\nKind regards,\nCristina Donisa\n3P Design SRL\ncristina.donisa@kreativo.ro`};
+  };
+  const trimiteMailSchrader=()=>{
+    if(!(comanda.linii||[]).length){ alert("Comanda nu are niciun rând."); return; }
+    const m=mailSchrader();
+    exportComandaFurnizorXLSX(comanda);
+    setTimeout(()=>{ window.location.href=`mailto:${encodeURIComponent(m.to).replace(/%40/g,"@")}?subject=${encodeURIComponent(m.subj)}&body=${encodeURIComponent(m.body)}`; },500);
+  };
+  const partajeazaSchrader=async()=>{
+    if(!(comanda.linii||[]).length){ alert("Comanda nu are niciun rând."); return; }
+    const m=mailSchrader();
+    const r=exportComandaFurnizorXLSX(comanda,true); if(!r) return;
+    const file=new File([r.blob],r.filename,{type:r.blob.type});
+    try{
+      if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:m.subj,text:m.body}); return; }
+      alert("Acest browser/Windows nu acceptă partajarea de fișiere. Folosește „Trimite pe mail”.");
+    }catch(e){ if(e&&e.name==="AbortError") return; alert("Partajarea nu a mers. Folosește „Trimite pe mail”."); }
+  };
 
   // ---------- LISTA COMENZILOR ----------
   if(!comanda){
@@ -6850,6 +6874,8 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients}){
       <button onClick={printSupplier} style={btn(true)}>🖨 Printează / PDF pentru furnizor</button>
       <button onClick={()=>exportComandaFurnizorXLSX(o)} style={btn(false)}>⬇ Excel pentru furnizor</button>
       <button onClick={printIntern} style={btn(false)}>🖨 Printează intern (cu client și cameră)</button>
+      <button onClick={trimiteMailSchrader} style={btn(true)} title="Descarcă Excelul și deschide mailul pregătit în Outlook">✉ Trimite pe mail</button>
+      <button onClick={partajeazaSchrader} style={btn(false)} title="Încearcă partajarea din Windows, cu fișierul atașat">Partajează cu fișier</button>
       <button onClick={marcheazaTrimisa} style={{...btn(false),marginLeft:"auto"}}>{o.status==="trimisa"?"Marchează ca ciornă":"✓ Marchează ca trimisă"}</button>
     </div>
     <div style={{fontSize:11,color:C.textMuted,marginTop:8}}>Documentul pentru furnizor și Excelul nu conțin clientul și camera. Printarea internă le arată, pentru montajele voastre.</div>
@@ -8852,7 +8878,7 @@ function TabConfiguratorRoman({C,clients,setClients,camereLista,setCamereLista,p
       </div>
       {parts.map((p,i)=><div key={p.code} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
         <span style={{fontSize:11,color:C.textMuted,minWidth:20,flexShrink:0}}>{i+1}.</span>
-        <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{p.code}</span>
+        <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:100,flexShrink:0}}>{fixCodRoman(p.code)}</span>
         <span style={{fontSize:12,color:C.text,flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
         <span style={{fontSize:12,fontWeight:600,color:C.text,flexShrink:0}}>{p.qty}</span>
       </div>)}
@@ -8920,7 +8946,7 @@ function ConfigRomanSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
       </div>
       {cfg.parts.map((p,i)=><div key={p.code} style={{display:"flex",gap:10,fontSize:12,padding:"5px 8px",color:C.textSub,background:C.bg,marginBottom:2}}>
         <span style={{color:C.textMuted,minWidth:18}}>{i+1}.</span>
-        <span style={{fontWeight:600,color:C.accent,minWidth:90}}>{p.code}</span>
+        <span style={{fontWeight:600,color:C.accent,minWidth:90}}>{fixCodRoman(p.code)}</span>
         <span style={{flex:1}}>{p.desc}{p.colour&&` (${p.colour})`}</span>
         <span style={{fontWeight:600,color:C.text}}>{p.qty}</span>
       </div>)}
@@ -9085,7 +9111,7 @@ function ListaTaiereProfile({clients,setClients,C}){
       rows.push({categorie:"Rulou", tip:"Tub rulou", lungime:cfg.result.tubeL, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
         detalii:cfg.input.tube, cantitate:cfg.qty||1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-tu", cfgIdRaw:cfg.id, arrKey:"configuratiiRulou"});
       if(cfg.input.btb){
-        rows.push({categorie:"Contragreutate", tip:`Contragreutate ${cfg.input.btbManual?(cfg.input.btbManualColor||"culoare nespecificată")+" — ":""}${cfg.input.btb}`,
+        rows.push({categorie:"Contragreutate", tip:`Contragreutate ${cfg.input.btbManual?(cfg.input.btbManualColor||"culoare nespecificată")+" — ":""}${cfg.input.btb}${!cfg.input.btbManual&&cfg.input.btbColor?" — "+cfg.input.btbColor:""}`,
           lungime:cfg.result.btbL, gabaritL:cfg.input.width, gabaritH:cfg.input.height,
           detalii:"rulou", cantitate:cfg.qty||1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-btb", cfgIdRaw:cfg.id, arrKey:"configuratiiRulou"});
       }
@@ -9225,6 +9251,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
   const [btbManual,setBtbManual]=React.useState(false);
   const [btbManualName,setBtbManualName]=React.useState("");
   const [btbManualColor,setBtbManualColor]=React.useState("");
+  const [btbColor,setBtbColor]=React.useState("");
   const [qty,setQty]=React.useState(1);
   const [fabricCoulisse,setFabricCoulisse]=React.useState("");
   const [fabricMl,setFabricMl]=React.useState("");
@@ -9283,7 +9310,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
 
   const fabCat = fabricCoulisse ? (catalogCostComponente||[]).find(x=>x.cod.toLowerCase()===fabricCoulisse.trim().toLowerCase()) : null;
   const fabMlNr = Number(String(fabricMl).replace(",","."))||0;
-  const inp = {...btbCandidatesInput, btb: btbManual ? btbManualName.trim() : btb, btbManual, btbManualColor: btbManual?btbManualColor.trim():"",
+  const inp = {...btbCandidatesInput, btb: btbManual ? btbManualName.trim() : btb, btbManual, btbManualColor: btbManual?btbManualColor.trim():"", btbColor: btbManual?"":btbColor,
     fabricCoulisse: fabCat?fabCat.cod:"", fabricCoulisseDesc: fabCat?fabCat.descriere:"", fabricMl: fabCat?fabMlNr:0};
   let result=null, parts=[], calcError=null;
   try{
@@ -9346,6 +9373,7 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
     setBtbManual(!!i.btbManual);
     if(i.btbManual){ setBtbManualName(i.btb||""); setBtbManualColor(i.btbManualColor||""); }
     else { setBtb(i.btb||""); setBtbManualName(""); setBtbManualColor(""); }
+    setBtbColor(i.btbColor||"");
     const mo=i.mechOptions||[];
     const isChain=o=>/ballchain \(roll\)|Endless.*ballchain/i.test(o);
     const isCsd=o=>/^(CSD-|SafetyClip|Ballchain breakaway)/i.test(o);
@@ -9555,6 +9583,10 @@ function TabConfiguratorRulou({C,clients,setClients,savedMateriale,setSavedMater
       {!btbManual&&<select value={btb} onChange={e=>setBtb(e.target.value)} style={selStyle}>
         {availBtb.map(b=><option key={b} value={b}>{b}</option>)}
       </select>}
+      {!btbManual&&<select value={btbColor} onChange={e=>setBtbColor(e.target.value)} style={{...selStyle,marginTop:8}}>
+        <option value="">Culoare contragreutate — alege</option>
+        {["Negru","Alb","Brass"].map(c=><option key={c} value={c}>{c}</option>)}
+      </select>}
       {btbManual&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:12}}>
         <input value={btbManualName} onChange={e=>setBtbManualName(e.target.value)} placeholder="Denumire contragreutate" style={selStyle}/>
         <input value={btbManualColor} onChange={e=>setBtbManualColor(e.target.value)} placeholder="Culoare (ex: alb, negru, gri antracit)" style={selStyle}/>
@@ -9670,7 +9702,7 @@ function ConfigRulouSalvataRow({cfg,clientId,setClients,C,onPrint,onEdit,catalog
           ["Țesătură",cfg.input.fabricManual?(cfg.input.materialName||"material custom"):cfg.input.fabric],
           ...(cfg.input.fabricManual?[["Grosime",cfg.input.fabricThickness+" mm"],["Greutate",cfg.input.fabricWeight+" g/m²"]]:[]),
           ...(cfg.input.fabricCoulisse?[["Țesătură Coulisse",cfg.input.fabricCoulisse],["Metri liniari",cfg.input.fabricMl+" ml"]]:[]),
-          ["Contragreutate",cfg.input.btbManual?`${cfg.input.btb} (manual, culoare: ${cfg.input.btbManualColor||"nespecificată"})`:cfg.input.btb],
+          ["Contragreutate",cfg.input.btbManual?`${cfg.input.btb} (manual, culoare: ${cfg.input.btbManualColor||"nespecificată"})`:(cfg.input.btb+(cfg.input.btbColor?` — ${cfg.input.btbColor}`:""))],
           ["Opțiuni",(cfg.input.options||[]).length?cfg.input.options.join(", "):"—"],
           ["Accesorii",(cfg.input.mechOptions||[]).length?cfg.input.mechOptions.join(", "):"—"],
           ["Cantitate",cfg.qty+" buc."]].map(([l,v])=>
