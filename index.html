@@ -7318,7 +7318,7 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
     setPickerFor(null);
   };
   const alegeOrac=(camId,prodId,m)=>{
-    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.cod+" — "+m.den+(Number(m.L)>0?" ("+m.L+" mm)":""),pretUnitar:String(m.pretTva),furnizor:"Orac",cantitate:pr.cantitate||"1"})}));
+    setCamere(p=>p.map(c=>c.id!==camId?c:{...c,produse:c.produse.map(pr=>pr.id!==prodId?pr:{...pr,material:m.cod+" — "+m.den+(Number(m.L)>0?" ("+m.L+" mm)":""),pretUnitar:String(m.pretTva),furnizor:"Orac",um:"buc",cantitate:pr.cantitate||"1"})}));
     setPickerFor(null);
   };
   const alegeStorRomanElectric=(camId,prodId,m)=>{
@@ -7512,7 +7512,7 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
         const rTotalStor=`<tr><td colSpan="5" style="padding:5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">Total ${tipTotal(pr.tip)}:</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:700;border-bottom:2px solid #D3DBD6">${fm(valoareLinieM(pr))}</td></tr>`;
         return rMaterialStor+rBenziManoperaStor+rLining+rMecanism+rMontajStor+rTotalStor;
       }
-      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretUnitar||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial1(pr)))}</td></tr>`;
+      const rMaterial=`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4">${tipCol(pr.tip)}</td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material}</td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate||0} ${(pr.um==="buc"||pr.furnizor==="Orac")?"buc":"m"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretUnitar||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial1(pr)))}</td></tr>`;
       const rMaterial2=(esteTextil(pr)&&pr.dublata&&(pr.material2||"").trim())?`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px solid #E1E8E4"></td><td style="padding:5px 8px;font:400 1em/1.3 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;border-bottom:1px solid #E1E8E4">${pr.material2} <span style="color:#5F7078">(dublură)</span></td><td style="padding:5px 8px;border-bottom:1px solid #E1E8E4">${pr.culoare2||"—"}</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${pr.cantitate2||0} m</td><td style="padding:5px 8px;text-align:right;border-bottom:1px solid #E1E8E4">${fu(pr.pretUnitar2||0)}</td><td style="padding:5px 0 5px 8px;text-align:right;font-weight:600;border-bottom:1px solid #E1E8E4">${fm(mv(valoareMaterial2(pr)))}</td></tr>`:"";
       if(!esteTextil(pr)){
         if(pr.tip==="șină"){
