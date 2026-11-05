@@ -6131,7 +6131,7 @@ function VopImportOferta({lista,C,inpS,btn,onSave,onCancel}){
   </div>;
 }
 
-function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRadu,C}){
+function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRadu,C,comenziFurn,setComenziFurn,onDeschideComandaFurn}){
   const [view,setView]=React.useState(rolRadu?"comenzi":"inventar");
   const [cmdNoua,setCmdNoua]=React.useState(false);
   const [cmdOferta,setCmdOferta]=React.useState(false);
@@ -6176,6 +6176,24 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   const nrInv=lista.filter(x=>x.stoc!==0).length;
   const nrEpuizate=lista.filter(x=>x.stoc===0&&areMis[x.id]).length;
   const nrNeg=lista.filter(x=>x.stoc<0).length;
+  const trimiteInAprovizionare=()=>{
+    const L=lista.filter(x=>x.stoc<0).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),undefined,{numeric:true}));
+    if(!L.length){ alert("Nu există produse cu stoc negativ."); return; }
+    const furn=(window.prompt("Furnizor pentru comandă (îl poți schimba și în comandă):","Benjamin Moore")||"").trim();
+    if(!furn) return;
+    const linii=L.map(x=>({id:gid(),cod:String(x.cod||""),den:[x.den,x.baza,x.fin,x.amb!=null&&x.amb!==""?fmtAmb(x.amb):""].filter(Boolean).join(" · "),um:"buc",umNec:"buc",necesar:-x.stoc,cantitate:-x.stoc,refs:[],grupa:"vopsele",obs:""}));
+    const o={id:gid(),tip:"aprovizionare",sursa:"vopsele",furnizor:furn,numar:numarComandaAprov(comenziFurn,furn),data:tday(),status:"ciorna",linii,mentiuni:""};
+    setComenziFurn(p=>[o,...(Array.isArray(p)?p:[])]);
+    onDeschideComandaFurn&&onDeschideComandaFurn(o.id);
+  };
+  const exportaNecesarVop=()=>{
+    const L=lista.filter(x=>x.stoc<0).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),undefined,{numeric:true}));
+    if(!L.length){ alert("Nu există produse cu stoc negativ."); return; }
+    const aoa=[["Cod","Denumire","Bază","Finisaj","Ambalare","Stoc","Necesar (buc)"],...L.map(x=>[x.cod,x.den,x.baza||"",x.fin||"",fmtAmb(x.amb),x.stoc,-x.stoc])];
+    const ws=XLSX.utils.aoa_to_sheet(aoa); ws["!cols"]=[{wch:8},{wch:34},{wch:12},{wch:12},{wch:10},{wch:8},{wch:14}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Necesar");
+    XLSX.writeFile(wb,"Necesar_aprovizionare_vopsele_"+new Date().toISOString().slice(0,10)+".xlsx");
+  };
   const reset=()=>{setFCod("");setFDen("");setFFin("");setFBaza("");setFAmb("");};
   const numeProd=(x)=>x?`${x.cod} · ${x.den}${x.baza?" "+x.baza:""} · ${fmtAmb(x.amb)}`:"";
   const adauga=()=>{
@@ -6374,7 +6392,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
       <div style={{flex:1}}/>
       {view==="marfa"&&<button onClick={()=>{setPanou(panou==="factura"?null:"factura");setFact(null);setFactMsg("");}} style={btn(panou==="factura")}>+ Încarcă factură Murali</button>}
       {view==="inventar"&&<button onClick={()=>setPanou(panou==="manual"?null:"manual")} style={btn(panou==="manual")}>+ Intrare / ieșire manuală</button>}
-      {!esteCmd&&!esteMarfa&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}{nrNeg>0&&<span style={{color:"#B3261E",fontWeight:600}}> · {nrNeg} cu stoc negativ (roșu, în așteptare factură)</span>}{view==="inventar"&&<label style={{marginLeft:14,cursor:"pointer",color:C.text}}><input type="checkbox" checked={afisEpuizate} onChange={e=>setAfisEpuizate(e.target.checked)} style={{marginRight:6,verticalAlign:"middle"}}/>Arată și produsele epuizate (stoc 0, cu istoric): {nrEpuizate}</label>}</div>}
+      {!esteCmd&&!esteMarfa&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}{nrNeg>0&&<span style={{color:"#B3261E",fontWeight:600}}> · {nrNeg} cu stoc negativ (roșu, în așteptare factură)</span>}{nrNeg>0&&view==="inventar"&&<button onClick={exportaNecesarVop} style={{marginLeft:12,fontSize:11,fontWeight:600,padding:"4px 10px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,borderRadius:4,cursor:"pointer"}}>Necesar aprovizionare (Excel)</button>}{nrNeg>0&&view==="inventar"&&setComenziFurn&&<button onClick={trimiteInAprovizionare} style={{marginLeft:8,fontSize:11,fontWeight:600,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",borderRadius:4,cursor:"pointer"}}>Trimite în aprovizionare</button>}{view==="inventar"&&<label style={{marginLeft:14,cursor:"pointer",color:C.text}}><input type="checkbox" checked={afisEpuizate} onChange={e=>setAfisEpuizate(e.target.checked)} style={{marginRight:6,verticalAlign:"middle"}}/>Arată și produsele epuizate (stoc 0, cu istoric): {nrEpuizate}</label>}</div>}
     </div>
 
     {view==="marfa"&&panou==="factura"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
@@ -6567,7 +6585,7 @@ function ComandaAprovizionareEditor({o,setComenzi,setClients,C,onBack}){
   const upd=(patch)=>setComenzi(p=>(Array.isArray(p)?p:[]).map(x=>x.id===o.id?{...x,...patch}:x));
   const updL=(id,patch)=>upd({linii:(o.linii||[]).map(l=>l.id===id?{...l,...patch}:l)});
   const delL=(l)=>{ if(!window.confirm("Scoți rândul din comandă? Rândurile din consumuri se întorc în necesar.")) return; elibereazaRefsAprov(setClients,l.refs); upd({linii:(o.linii||[]).filter(x=>x.id!==l.id)}); };
-  const addManual=()=>upd({linii:[...(o.linii||[]),{id:gid(),cod:"",den:"",um:"m",necesar:"",cantitate:"",refs:[],grupa:"manual"}]});
+  const addManual=()=>upd({linii:[...(o.linii||[]),{id:gid(),cod:"",den:"",um:o.sursa==="vopsele"?"buc":"m",necesar:"",cantitate:"",refs:[],grupa:"manual"}]});
   const inpS={padding:"5px 6px",border:`1px solid ${C.border}`,background:C.bg,color:C.text,fontSize:12,width:"100%",boxSizing:"border-box",fontFamily:"inherit"};
   const btn=(primary)=>({padding:"7px 14px",border:primary?"none":`1px solid ${C.border}`,background:primary?C.accent:"transparent",color:primary?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:primary?600:400});
   const lbl={fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:3};
@@ -6684,8 +6702,9 @@ function NecesarAprovizionare({clients,setClients,comenzi,setComenzi,C,onOpen}){
     })}
   </div>;
 }
-function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients}){
-  const [openId,setOpenId]=React.useState(null);
+function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients,openInit,onOpened}){
+  const [openId,setOpenId]=React.useState(openInit||null);
+  React.useEffect(()=>{ if(openInit){ setOpenId(openInit); onOpened&&onOpened(); } },[openInit]);
   const [impOpen,setImpOpen]=React.useState(false);
   const [impSel,setImpSel]=React.useState({});
   const lista=Array.isArray(comenzi)?comenzi:[];
@@ -11229,6 +11248,145 @@ function ConsumuriVopsele({C}){
   </div>;
 }
 
+// ---------- Impozit pe profit: calcul din balanța de verificare (Excel Transart) — fără salvare în date ----------
+function calcImpozitProfit(rows){
+  // rows: [{cont,den,rld,rlc,rcd,rcc}] — rulaje curente (luna) și cumulate (de la 1 ian)
+  const n=(x)=>Number(x)||0;
+  let venCum=0,chCum=0,venLuna=0,chLuna=0,impAnt=0,p121=null;
+  const venituri=[],cheltuieli=[];
+  // 711 (variația stocurilor de produse) are și credit (intrări în stoc) și debit (ieșiri la vânzare). Când e închis în 121 (RCD=RCC),
+  // partea reală nu se vede în cont → variația netă se ia din conturile de stoc produse (331,332,341,345,346,348): debit − credit.
+  const STOC=["331","332","341","345","346","348"];
+  let stCum=0,stLuna=0;
+  rows.forEach(r=>{ const c=String(r.cont||"").trim(); if(STOC.includes(c)){ stCum+=n(r.rcd)-n(r.rcc); stLuna+=n(r.rld)-n(r.rlc); } });
+  rows.forEach(r=>{
+    const c=String(r.cont||"").trim();
+    if(!c) return;
+    if(c==="691"){ impAnt=n(r.rcd)-n(r.rcc); return; }
+    if(c.startsWith("69")) return;
+    if(c==="121"){ p121=n(r.rcc)-n(r.rcd); return; }
+    // Conturile 6/7 se închid lunar în 121 (rulaj debit = credit), deci nu se poate folosi soldul net:
+    // folosim partea naturală a contului (6xx = debit, 7xx = credit); excepții: 609 (credit) și 709 (debit).
+    if(c[0]==="7"){ const dbt=(c==="709"); let cum=dbt?-n(r.rcd):n(r.rcc), lu=dbt?-n(r.rld):n(r.rlc);
+      if(c==="711"){ if(Math.abs(n(r.rcd)-n(r.rcc))<0.01){ cum=stCum; lu=stLuna; } else { cum=n(r.rcc)-n(r.rcd); lu=n(r.rlc)-n(r.rld); } } venCum+=cum; venLuna+=lu; venituri.push({cont:c,den:r.den,cum,luna:lu}); }
+    else if(c[0]==="6"){ const crd=(c==="609"); const cum=crd?-n(r.rcc):n(r.rcd), lu=crd?-n(r.rlc):n(r.rld); chCum+=cum; chLuna+=lu; cheltuieli.push({cont:c,den:r.den,cum,luna:lu}); }
+  });
+  return {p121,venCum,chCum,venLuna,chLuna,impAnt,venituri,cheltuieli,profitCum:venCum-chCum,profitLuna:venLuna-chLuna};
+}
+function ImpozitProfitTab({C}){
+  const [an,setAn]=React.useState(String(new Date().getFullYear()));
+  const [luna,setLuna]=React.useState("09");
+  const [fisier,setFisier]=React.useState("");
+  const [rows,setRows]=React.useState(null);
+  const [err,setErr]=React.useState("");
+  const [cota,setCota]=React.useState("16");
+  const [neded,setNeded]=React.useState("0");
+  const [neimp,setNeimp]=React.useState("0");
+  const [pierd,setPierd]=React.useState("0");
+  const [impAntMan,setImpAntMan]=React.useState("");
+  const [detalii,setDetalii]=React.useState(false);
+  const fmt=(x)=>Number(x||0).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2});
+  const nr=(x)=>Number(String(x).replace(",","."))||0;
+  const incarca=(file)=>{
+    setErr(""); if(!file) return;
+    const rd=new FileReader();
+    rd.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:""});
+        const h=aoa.findIndex(r=>r.some(c=>String(c).trim()==="Cont") && r.some(c=>String(c).trim()==="RCD"));
+        if(h<0) throw new Error("Nu găsesc antetul balanței (coloanele „Cont”, „RCD”, „RCC”). E fișierul corect, exportat din Transart?");
+        const hd=aoa[h].map(c=>String(c).trim());
+        const ix=(k)=>hd.indexOf(k);
+        const need=["Cont","Denumire","RLD","RLC","RCD","RCC"];
+        const lipsa=need.filter(k=>ix(k)<0);
+        if(lipsa.length) throw new Error("Lipsesc coloanele: "+lipsa.join(", "));
+        const out=aoa.slice(h+1).filter(r=>String(r[ix("Cont")]).trim()).map(r=>({cont:String(r[ix("Cont")]).trim(),den:r[ix("Denumire")],rld:r[ix("RLD")],rlc:r[ix("RLC")],rcd:r[ix("RCD")],rcc:r[ix("RCC")]}));
+        setRows(out); setFisier(file.name); setImpAntMan("");
+      }catch(e){ setRows(null); setErr(e.message); }
+    };
+    rd.readAsArrayBuffer(file);
+  };
+  const R=rows?calcImpozitProfit(rows):null;
+  let calc=null;
+  if(R){
+    const baza=R.profitCum+nr(neded)-nr(neimp);
+    const bazaDupaPierd=Math.max(0,baza-nr(pierd));
+    const impCum=bazaDupaPierd*nr(cota)/100;
+    const impAnt=impAntMan!==""?nr(impAntMan):R.impAnt;
+    calc={baza,bazaDupaPierd,impCum,impAnt,deVarsat:impCum-impAnt};
+  }
+  const luni={"01":"ianuarie","02":"februarie","03":"martie","04":"aprilie","05":"mai","06":"iunie","07":"iulie","08":"august","09":"septembrie","10":"octombrie","11":"noiembrie","12":"decembrie"};
+  const tipar=()=>{
+    if(!R||!calc) return;
+    const tr=(a,b,bold)=>`<tr><td style="padding:6px 10px;border:1px solid #ccc;${bold?"font-weight:700;":""}">${a}</td><td style="padding:6px 10px;border:1px solid #ccc;text-align:right;${bold?"font-weight:700;":""}">${b}</td></tr>`;
+    printHtmlDoc(`<div style="font-family:Arial,sans-serif;font-size:13px;padding:20px;max-width:720px">
+      <h2 style="margin:0 0 4px">Impozit pe profit — ${luni[luna]} ${an}</h2>
+      <div style="color:#666;margin-bottom:14px">Calcul cumulat de la 1 ianuarie, din balanța de verificare (${fisier})</div>
+      <table style="border-collapse:collapse;width:100%">
+      ${tr("Venituri cumulate (clasa 7)",fmt(R.venCum))}
+      ${tr("Cheltuieli cumulate (clasa 6, fără 691)",fmt(R.chCum))}
+      ${tr("Profit contabil cumulat",fmt(R.profitCum),true)}
+      ${tr("+ Cheltuieli nedeductibile",fmt(nr(neded)))}
+      ${tr("− Venituri neimpozabile",fmt(nr(neimp)))}
+      ${tr("− Pierderi fiscale reportate",fmt(nr(pierd)))}
+      ${tr("Profit impozabil",fmt(calc.bazaDupaPierd),true)}
+      ${tr("Impozit cumulat ("+cota+"%)",fmt(calc.impCum))}
+      ${tr("− Impozit deja înregistrat (cont 691)",fmt(calc.impAnt))}
+      ${tr("Impozit de înregistrat/plătit pentru perioadă",fmt(calc.deVarsat),true)}
+      </table></div>`);
+  };
+  const card={background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:16,marginBottom:14};
+  const inp={fontSize:13,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:4,background:C.surface,color:C.text,width:"100%",boxSizing:"border-box"};
+  const lbl={fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted,marginBottom:4,display:"block"};
+  const line=(a,b,bold,col)=><div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${C.border}`,fontWeight:bold?700:400,color:col||C.text,fontSize:13}}><span>{a}</span><span>{b}</span></div>;
+  return <div>
+    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16}}>Impozit pe profit</div>
+    <div style={card}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:12,marginBottom:12}}>
+        <div><label style={lbl}>Luna</label><select value={luna} onChange={e=>setLuna(e.target.value)} style={inp}>{Object.keys(luni).map(k=><option key={k} value={k}>{k} · {luni[k]}</option>)}</select></div>
+        <div><label style={lbl}>An</label><input value={an} onChange={e=>setAn(e.target.value)} style={inp}/></div>
+        <div><label style={lbl}>Cotă impozit (%)</label><input value={cota} onChange={e=>setCota(e.target.value)} style={inp}/></div>
+      </div>
+      <label style={lbl}>Balanța de verificare (Excel din Transart, la sfârșitul lunii alese, cu rulaje cumulate de la 1 ianuarie)</label>
+      <input type="file" accept=".xlsx,.xls" onChange={e=>incarca(e.target.files[0])} style={{fontSize:12}}/>
+      {err&&<div style={{marginTop:10,color:"#B33",fontSize:12}}>{err}</div>}
+      {fisier&&!err&&<div style={{marginTop:8,fontSize:11,color:C.textMuted}}>Încărcat: {fisier} · {rows.length} conturi. Fișierul nu se salvează nicăieri.</div>}
+    </div>
+    {R&&calc&&<>
+      <div style={card}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:14}}>
+          <div><label style={lbl}>+ Cheltuieli nedeductibile</label><input value={neded} onChange={e=>setNeded(e.target.value)} style={inp}/></div>
+          <div><label style={lbl}>− Venituri neimpozabile</label><input value={neimp} onChange={e=>setNeimp(e.target.value)} style={inp}/></div>
+          <div><label style={lbl}>− Pierderi fiscale reportate</label><input value={pierd} onChange={e=>setPierd(e.target.value)} style={inp}/></div>
+          <div><label style={lbl}>Impozit deja înregistrat (691)</label><input value={impAntMan!==""?impAntMan:String(R.impAnt)} onChange={e=>setImpAntMan(e.target.value)} style={inp}/></div>
+        </div>
+        {line("Venituri cumulate (clasa 7)",fmt(R.venCum))}
+        {line("Cheltuieli cumulate (clasa 6, fără 691)",fmt(R.chCum))}
+        {line("Profit contabil cumulat",fmt(R.profitCum),true,R.profitCum<0?"#B33":C.text)}
+        {line("Profit impozabil",fmt(calc.bazaDupaPierd),true)}
+        {line(`Impozit cumulat (${cota}%)`,fmt(calc.impCum))}
+        {line("− Impozit deja înregistrat în 691",fmt(calc.impAnt))}
+        <div style={{display:"flex",justifyContent:"space-between",padding:"12px 0 4px",fontWeight:700,fontSize:16,color:C.accent}}><span>De înregistrat / plătit pentru perioadă</span><span>{fmt(calc.deVarsat)} lei</span></div>
+        <div style={{fontSize:11,color:C.textMuted,marginTop:6}}>Informativ, doar luna {luni[luna]}: profit contabil din rulajul lunii = {fmt(R.profitLuna)} lei (venituri {fmt(R.venLuna)} − cheltuieli {fmt(R.chLuna)}).</div>
+        {R.p121!==null&&Math.abs(R.p121-R.profitCum)>1&&<div style={{fontSize:12,color:"#B33",marginTop:8}}>Atenție: contul 121 din balanță arată {fmt(R.p121)} lei (credit − debit), iar profitul calculat din clasele 6/7 este {fmt(R.profitCum)} lei. Diferența de {fmt(R.profitCum-R.p121)} lei trebuie lămurită cu contabilul (închideri de luni încă nefăcute, conturi lipsă din export etc.) înainte să folosești cifra.</div>}
+        {calc.deVarsat<0&&<div style={{fontSize:12,color:"#B33",marginTop:8}}>Rezultă negativ: impozitul deja înregistrat în 691 depășește impozitul cumulat. Verifică profitul/ajustările înainte să corectezi ceva.</div>}
+        <div style={{display:"flex",gap:8,marginTop:14}}>
+          <button onClick={tipar} style={{fontSize:12,fontWeight:600,padding:"8px 14px",border:`1px solid ${C.accent}`,background:C.accent,color:"#fff",borderRadius:4,cursor:"pointer"}}>Printează</button>
+          <button onClick={()=>setDetalii(d=>!d)} style={{fontSize:12,fontWeight:600,padding:"8px 14px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,borderRadius:4,cursor:"pointer"}}>{detalii?"Ascunde":"Arată"} conturile folosite</button>
+        </div>
+      </div>
+      {detalii&&<div style={card}>
+        {[["Venituri (7xx)",R.venituri],["Cheltuieli (6xx, fără 691)",R.cheltuieli]].map(([t,L])=><div key={t} style={{marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,marginBottom:6}}>{t}</div>
+          {L.map(x=><div key={x.cont} style={{display:"flex",gap:8,fontSize:12,padding:"3px 0"}}><span style={{width:44}}>{x.cont}</span><span style={{flex:1}}>{x.den}</span><span>{fmt(x.cum)}</span></div>)}
+        </div>)}
+      </div>}
+    </>}
+  </div>;
+}
+
 function DeclaratiiTab({declaratii,setDeclaratii,C,esteAdmin,mergiLa}){
   const azi=tday();
   const lunaPrec=(()=>{let y=+azi.slice(0,4),m=+azi.slice(5,7)-1;if(m<1){m=12;y-=1;}return y+"-"+String(m).padStart(2,"0");})();
@@ -11733,6 +11891,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   const [declaratii,setDeclaratii]=useState({});
   const [raduModul,setRaduModul]=useState("vopsele");
   const [achizSub,setAchizSub]=useState("lista");
+  const [openComandaFurn,setOpenComandaFurn]=useState(null);
   const [catalogSine,setCatalogSine]=useState([]);
   const [catalogPlisse,setCatalogPlisse]=useState([]);
   const [catalogJaluzele,setCatalogJaluzele]=useState([]);
@@ -12504,7 +12663,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
     {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu"},{id:"recurente",l:"Recurente"}]},
-    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
+    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:authRole==="admin"?[{id:"trezorerie",l:"Cash Flow"},{id:"impozit",l:"Impozit pe profit"}]:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
 
@@ -13237,7 +13396,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         {[["lista","De achiziționat"],["comenzi","Comenzi către furnizori"]].map(([id,l])=>
           <button key={id} onClick={()=>setAchizSub(id)} style={{padding:"7px 14px",border:`1px solid ${achizSub===id?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:achizSub===id?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:achizSub===id?500:400}}>{l}</button>)}
       </div>
-      {achizSub==="comenzi"&&<ComenziFurnizori clients={clients} comenzi={comenziFurnizori} setComenzi={setComenziFurnizori} C={C} setClients={setClients}/>}
+      {achizSub==="comenzi"&&<ComenziFurnizori clients={clients} comenzi={comenziFurnizori} setComenzi={setComenziFurnizori} C={C} setClients={setClients} openInit={openComandaFurn} onOpened={()=>setOpenComandaFurn(null)}/>}
       {achizSub==="lista"&&<>
       <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:16,fontWeight:600}}>Achiziții necesare · pe furnizor</div>
       {(()=>{
@@ -13268,7 +13427,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     </div>}
 
     {tab==="tudor"&&<div>
-      <VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C}/>
+      <VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C} comenziFurn={comenziFurnizori} setComenziFurn={setComenziFurnizori} onDeschideComandaFurn={(id)=>{setOpenComandaFurn(id);setAchizSub("comenzi");setTab("achizitii");}}/>
     </div>}
 
     {tab==="motionblinds"&&<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
@@ -13386,6 +13545,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {tab==="declaratii"&&<DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={authRole==="admin"} mergiLa={setTab}/>}
     {tab==="consumvop"&&authRole==="admin"&&<div style={{maxWidth:1000}}><ConsumuriVopsele C={C}/></div>}
     {tab==="banca"&&authRole==="admin"&&<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>}
+    {tab==="impozit"&&authRole==="admin"&&<ImpozitProfitTab C={C}/>}
     {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
 
 
