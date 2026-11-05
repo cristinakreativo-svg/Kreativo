@@ -6780,23 +6780,34 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients,openInit,onOp
   if(!comanda){
     return <div>
       {setClients&&<NecesarAprovizionare clients={clients} setClients={setClients} comenzi={lista} setComenzi={setComenzi} C={C} onOpen={(id)=>{setOpenId(id);setImpOpen(false);}}/>}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-        <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Comenzi către furnizori · plisee Schrader</div>
-        <button onClick={nouaComanda} style={btn(true)}>+ Comandă nouă Schrader</button>
-      </div>
-      {lista.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"20px 0"}}>Nicio comandă încă. Apasă „+ Comandă nouă Schrader”, apoi preia plisseele din oferte sau adaugă rânduri de mână.</div>}
-      {lista.map(o=>{
-        const aprov=o.tip==="aprovizionare";
-        const buc=(o.linii||[]).reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
-        const clienti=aprov?[...new Set((o.linii||[]).flatMap(l=>(l.refs||[]).map(r=>r.client)).filter(Boolean))]:[...new Set((o.linii||[]).map(l=>(l.client||"").trim()).filter(Boolean))];
-        return <div key={o.id} onClick={()=>{setOpenId(o.id);setImpOpen(false);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6,cursor:"pointer"}}>
-          <span style={{fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>Order nr. {o.numar}</span>
-          <span style={{fontSize:12,color:C.textSub,minWidth:80}}>{fmtD(o.data)}</span>
-          <span style={{fontSize:12,color:C.textSub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.furnizor} · {aprov?`${(o.linii||[]).length} poziții`:`${buc} buc.`}{clienti.length?` · ${clienti.join(", ")}`:""}</span>
-          <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",background:o.status==="trimisa"?"#E3EEE3":C.accentLight,color:o.status==="trimisa"?"#3A6A3A":C.accent}}>{o.status==="trimisa"?`TRIMISĂ ${fmtD(o.dataTrimis)}`:"CIORNĂ"}</span>
-          <button onClick={e=>{e.stopPropagation();stergeComanda(o);}} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:14}}>🗑</button>
-        </div>;
-      })}
+      {(()=>{
+        const rand=(o)=>{
+          const aprov=o.tip==="aprovizionare";
+          const buc=(o.linii||[]).reduce((s,l)=>s+(Number(String(l.qty).replace(",","."))||0),0);
+          const clienti=aprov?[...new Set((o.linii||[]).flatMap(l=>(l.refs||[]).map(r=>r.client)).filter(Boolean))]:[...new Set((o.linii||[]).map(l=>(l.client||"").trim()).filter(Boolean))];
+          return <div key={o.id} onClick={()=>{setOpenId(o.id);setImpOpen(false);}} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6,cursor:"pointer"}}>
+            <span style={{fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>Order nr. {o.numar}</span>
+            <span style={{fontSize:12,color:C.textSub,minWidth:80}}>{fmtD(o.data)}</span>
+            <span style={{fontSize:12,color:C.textSub,flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{o.furnizor} · {aprov?`${(o.linii||[]).length} poziții`:`${buc} buc.`}{clienti.length?` · ${clienti.join(", ")}`:""}</span>
+            <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",background:o.status==="trimisa"?"#E3EEE3":C.accentLight,color:o.status==="trimisa"?"#3A6A3A":C.accent}}>{o.status==="trimisa"?`TRIMISĂ ${fmtD(o.dataTrimis)}`:"CIORNĂ"}</span>
+            <button onClick={e=>{e.stopPropagation();stergeComanda(o);}} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:14}}>🗑</button>
+          </div>;
+        };
+        const aprovL=lista.filter(o=>o.tip==="aprovizionare");
+        const pliseL=lista.filter(o=>o.tip!=="aprovizionare");
+        const titlu={fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"};
+        return <>
+          <div style={{...titlu,marginBottom:14}}>Comenzi către furnizori (Bru, Benjamin Moore etc.) · {aprovL.length}</div>
+          {aprovL.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"0 0 18px"}}>Nicio comandă încă. Se creează din „Necesar de aprovizionare” (de sus) sau din Inventar vopsele → „Trimite în aprovizionare”.</div>}
+          {aprovL.map(rand)}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"26px 0 14px",flexWrap:"wrap",gap:8}}>
+            <div style={titlu}>Comenzi plisee · Schrader · {pliseL.length}</div>
+            <button onClick={nouaComanda} style={btn(true)}>+ Comandă nouă Schrader</button>
+          </div>
+          {pliseL.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"0 0 10px"}}>Nicio comandă de plisee încă. Apasă „+ Comandă nouă Schrader”, apoi preia plisseele din oferte sau adaugă rânduri de mână.</div>}
+          {pliseL.map(rand)}
+        </>;
+      })()}
     </div>;
   }
 
