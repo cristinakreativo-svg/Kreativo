@@ -6193,7 +6193,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
     const linii=L.map(x=>({id:gid(),cod:String(x.cod||""),den:[x.den,x.baza,x.fin,x.amb!=null&&x.amb!==""?fmtAmb(x.amb):""].filter(Boolean).join(" · "),um:"buc",umNec:"buc",necesar:-(x.stoc+x.pend),cantitate:-(x.stoc+x.pend),refs:[],grupa:"vopsele",obs:""}));
     const o={id:gid(),tip:"aprovizionare",sursa:"vopsele",furnizor:furn,numar:numarComandaAprov(comenziFurn,furn),data:tday(),status:"ciorna",linii,mentiuni:""};
     setComenziFurn(p=>[o,...(Array.isArray(p)?p:[])]);
-    onDeschideComandaFurn&&onDeschideComandaFurn(o.id);
+    setView("furn"); setFurnOpen(o.id); setPanou(null);
   };
   const exportaNecesarVop=()=>{
     const L=lista.filter(x=>x.stoc+x.pend<0).sort((a,b)=>String(a.cod).localeCompare(String(b.cod),undefined,{numeric:true}));
@@ -6337,6 +6337,10 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   const factAst=facts.filter(f=>f.stare!=="validata");
   const factVal=facts.filter(f=>f.stare==="validata");
   const esteMarfa=view==="marfa";
+  const esteFurn=view==="furn";
+  const [furnOpen,setFurnOpen]=React.useState(null);
+  const comVop=(Array.isArray(comenziFurn)?comenziFurn:[]).filter(o=>o.tip==="aprovizionare"&&o.sursa==="vopsele");
+  const comVopDeschisa=comVop.find(o=>o.id===furnOpen)||null;
   const esteCmd=view==="comenzi"||view==="finalizate";
   const cmdActive=cmds.filter(c=>c.stare!=="finalizata").sort((a,b)=>(b.numar||0)-(a.numar||0));
   const cmdFin=cmds.filter(c=>c.stare==="finalizata").sort((a,b)=>String(b.dataFin||"").localeCompare(String(a.dataFin||""))||(b.numar||0)-(a.numar||0));
@@ -6396,12 +6400,12 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
   const lblS={fontSize:10,textTransform:"uppercase",letterSpacing:"0.08em",color:C.textMuted};
   return <div>
     <div style={{display:"flex",gap:6,marginBottom:12,flexWrap:"wrap",alignItems:"center"}}>
-      {[["marfa","Marfă de venit ("+factAst.length+")"],["comenzi","Comenzi active ("+cmdActive.length+")"],["finalizate","Comenzi finalizate ("+cmdFin.length+")"],["inventar","Inventar ("+nrInv+")"],["nomenclator","Nomenclator ("+lista.length+")"]].map(([id,l])=>
+      {[["marfa","Marfă de venit ("+factAst.length+")"],["comenzi","Comenzi active ("+cmdActive.length+")"],["finalizate","Comenzi finalizate ("+cmdFin.length+")"],["inventar","Inventar ("+nrInv+")"],["nomenclator","Nomenclator ("+lista.length+")"],...(setComenziFurn?[["furn","Comenzi furnizor ("+comVop.length+")"]]:[])].map(([id,l])=>
         <button key={id} onClick={()=>{setView(id);setPanou(null);}} style={{padding:"7px 14px",border:`1px solid ${view===id?C.accent:(id==="marfa"&&factAst.length?"#C08A2A":C.border)}`,background:(id==="marfa"&&factAst.length&&view!==id)?"#8A5A00":"#33444D",color:"#fff",boxShadow:view===id?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:(view===id||(id==="marfa"&&factAst.length))?600:400}}>{l}</button>)}
       <div style={{flex:1}}/>
       {view==="marfa"&&<button onClick={()=>{setPanou(panou==="factura"?null:"factura");setFact(null);setFactMsg("");}} style={btn(panou==="factura")}>+ Încarcă factură Murali</button>}
       {view==="inventar"&&<button onClick={()=>setPanou(panou==="manual"?null:"manual")} style={btn(panou==="manual")}>+ Intrare / ieșire manuală</button>}
-      {!esteCmd&&!esteMarfa&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}{nrNeg>0&&<span style={{color:"#B3261E",fontWeight:600}}> · {nrNeg} cu stoc negativ (roșu, în așteptare factură)</span>}{nrAcop>0&&<span style={{color:"#2F6B3A",fontWeight:600}}> · {nrAcop} acoperite de facturi pe drum (verde)</span>}{nrNeg>0&&view==="inventar"&&<button onClick={exportaNecesarVop} style={{marginLeft:12,fontSize:11,fontWeight:600,padding:"4px 10px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,borderRadius:4,cursor:"pointer"}}>Necesar aprovizionare (Excel)</button>}{nrNeg>0&&view==="inventar"&&setComenziFurn&&<button onClick={trimiteInAprovizionare} style={{marginLeft:8,fontSize:11,fontWeight:600,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",borderRadius:4,cursor:"pointer"}}>Trimite în aprovizionare</button>}{view==="inventar"&&<label style={{marginLeft:14,cursor:"pointer",color:C.text}}><input type="checkbox" checked={afisEpuizate} onChange={e=>setAfisEpuizate(e.target.checked)} style={{marginRight:6,verticalAlign:"middle"}}/>Arată și produsele epuizate (stoc 0, cu istoric): {nrEpuizate}</label>}</div>}
+      {!esteCmd&&!esteMarfa&&!esteFurn&&<div style={{fontSize:12,color:C.textSub,width:"100%",textAlign:"right"}}>{filtrat.length} produse{view==="inventar"?" · "+totalBuc+" bucăți":""}{nrNeg>0&&<span style={{color:"#B3261E",fontWeight:600}}> · {nrNeg} cu stoc negativ (roșu, în așteptare factură)</span>}{nrAcop>0&&<span style={{color:"#2F6B3A",fontWeight:600}}> · {nrAcop} acoperite de facturi pe drum (verde)</span>}{nrNeg>0&&view==="inventar"&&<button onClick={exportaNecesarVop} style={{marginLeft:12,fontSize:11,fontWeight:600,padding:"4px 10px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,borderRadius:4,cursor:"pointer"}}>Necesar aprovizionare (Excel)</button>}{nrNeg>0&&view==="inventar"&&setComenziFurn&&<button onClick={trimiteInAprovizionare} style={{marginLeft:8,fontSize:11,fontWeight:600,padding:"4px 10px",border:"none",background:C.accent,color:"#fff",borderRadius:4,cursor:"pointer"}}>Trimite în aprovizionare</button>}{view==="inventar"&&<label style={{marginLeft:14,cursor:"pointer",color:C.text}}><input type="checkbox" checked={afisEpuizate} onChange={e=>setAfisEpuizate(e.target.checked)} style={{marginRight:6,verticalAlign:"middle"}}/>Arată și produsele epuizate (stoc 0, cu istoric): {nrEpuizate}</label>}</div>}
     </div>
 
     {view==="marfa"&&panou==="factura"&&<div style={{border:`1px solid ${C.border}`,padding:14,marginBottom:14,background:C.surface}}>
@@ -6443,6 +6447,19 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
       {mf.itemId&&<FormMiscare itemId={mf.itemId} onDone={()=>setMf(p=>({...p,itemId:"",q:""}))}/>}
     </div>}
 
+    {esteFurn&&<div>
+      {comVopDeschisa?<ComandaAprovizionareEditor o={comVopDeschisa} setComenzi={setComenziFurn} setClients={()=>{}} C={C} onBack={()=>setFurnOpen(null)}/>:<div>
+        <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:12}}>Comenzi furnizor vopsele · {comVop.length}</div>
+        {comVop.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"6px 0"}}>Nicio comandă încă. Se creează din Inventar → „Trimite în aprovizionare”.</div>}
+        {comVop.map(o=><div key={o.id} onClick={()=>setFurnOpen(o.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6,cursor:"pointer"}}>
+          <span style={{fontSize:13,fontWeight:600,color:C.text,minWidth:90}}>Order nr. {o.numar}</span>
+          <span style={{fontSize:12,color:C.textSub,minWidth:80}}>{vopFmtData(o.data)}</span>
+          <span style={{fontSize:12,color:C.textSub,flex:1}}>{o.furnizor} · {(o.linii||[]).length} poziții</span>
+          <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",background:o.status==="trimisa"?"#E3EEE3":C.accentLight,color:o.status==="trimisa"?"#3A6A3A":C.accent}}>{o.status==="trimisa"?"TRIMISĂ":"CIORNĂ"}</span>
+          <button onClick={e=>{e.stopPropagation(); if(window.confirm("Ștergi comanda nr. "+o.numar+"? Nu poate fi recuperată.")) setComenziFurn(p=>(Array.isArray(p)?p:[]).filter(z=>z.id!==o.id));}} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:14}}>🗑</button>
+        </div>)}
+      </div>}
+    </div>}
     {esteCmd&&<div>
       {view==="comenzi"&&!rolRadu&&!cmdNoua&&!cmdOferta&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}><button onClick={()=>setCmdNoua(true)} style={btn(true)}>+ Comandă nouă pentru Radu</button><button onClick={()=>setCmdOferta(true)} style={btn(false)}>+ Comandă din ofertă (PDF)</button></div>}
       {view==="comenzi"&&cmdOferta&&<VopImportOferta lista={lista} C={C} inpS={inpS} btn={btn} onSave={salveazaComanda} onCancel={()=>setCmdOferta(false)}/>}
@@ -6458,7 +6475,7 @@ function VopseleStoc({items,setItems,miscari,setMiscari,comenzi,setComenzi,rolRa
       {factAst.map(renderFactura)}
       {factVal.length>0&&<div style={{marginTop:20}}><div style={{...lblS,marginBottom:8}}>Facturi validate ({factVal.length})</div>{factVal.map(renderFactura)}</div>}
     </div>}
-    {!esteCmd&&!esteMarfa&&<div>
+    {!esteCmd&&!esteMarfa&&!esteFurn&&<div>
     <div style={{overflowX:"auto"}}>
     <div style={{minWidth:790,width:"fit-content",maxWidth:"100%"}}>
       <div style={{display:"grid",gridTemplateColumns:grid,gap:8,padding:"6px 8px 2px",...lblS}}>
@@ -6793,11 +6810,11 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients,openInit,onOp
             <button onClick={e=>{e.stopPropagation();stergeComanda(o);}} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:14}}>🗑</button>
           </div>;
         };
-        const aprovL=lista.filter(o=>o.tip==="aprovizionare");
+        const aprovL=lista.filter(o=>o.tip==="aprovizionare"&&o.sursa!=="vopsele");
         const pliseL=lista.filter(o=>o.tip!=="aprovizionare");
         const titlu={fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"};
         return <>
-          <div style={{...titlu,marginBottom:14}}>Comenzi către furnizori (Bru, Benjamin Moore etc.) · {aprovL.length}</div>
+          <div style={{...titlu,marginBottom:14}}>Comenzi către furnizori · {aprovL.length}</div>
           {aprovL.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"0 0 18px"}}>Nicio comandă încă. Se creează din „Necesar de aprovizionare” (de sus) sau din Inventar vopsele → „Trimite în aprovizionare”.</div>}
           {aprovL.map(rand)}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"26px 0 14px",flexWrap:"wrap",gap:8}}>
