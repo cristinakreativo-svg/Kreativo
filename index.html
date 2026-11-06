@@ -4265,17 +4265,26 @@ const GAL_GLIDERS={
 function galerieCalc(inp){
   const L=Number(inp.length)||0, mult=inp.rod==="Dublă"?2:1, q=Number(inp.qty)||1;
   const col=inp.colourKey;
-  const rods=mult===2?[inp.gliderKey,inp.gliderKey2||inp.gliderKey]:[inp.gliderKey];
-  const glCount=(k)=>{const g=GAL_GLIDERS[k]; return g.tip==="normal"?Math.ceil(L/(1000/9)):excelOdd(L/g.spacing);};
+  const rodsK=mult===2?[inp.gliderKey,inp.gliderKey2||inp.gliderKey]:[inp.gliderKey];
+  const rodsO=mult===2?[inp.opening||"Laterală",inp.opening2||"Laterală"]:[inp.opening||"Laterală"];
+  const rods=rodsK;
+  const par=(n)=>n%2===0?n:n+1; // wave: mereu număr par, minim cât dă calculul
+  const glInfo=(k,op)=>{const g=GAL_GLIDERS[k];
+    if(g.tip==="normal") return {tot:Math.ceil(L/(1000/9)),txt:String(Math.ceil(L/(1000/9)))};
+    const raw=Math.ceil(L/g.spacing);
+    if(op==="Centrală"){const h=par(Math.ceil(raw/2)); return {tot:2*h,txt:h+" + "+h};}
+    const t=par(raw); return {tot:t,txt:String(t)};};
+  const glCount=(k,i)=>glInfo(k,rodsO[i]).tot;
   const errors=[];
   if(L<300) errors.push("Lungimea e prea mică (min 300 mm).");
   if(L>6000) errors.push("Lungimea depășește bara de 6 m — bara nu se recomandă îmbinată.");
   const consoleN=inp.mount==="Perete"?(L<=1500?2:2+Math.ceil((L-1500)/500)):0;
   const tavanN=inp.mount==="Tavan"?Math.ceil(L/400)+1:0;
-  const result={length:L,glidersPerRod:rods.map(glCount),consoleN,tavanN,capete:2*mult};
-  const gTot=new Map(); rods.forEach(k=>gTot.set(k,(gTot.get(k)||0)+glCount(k)));
-  const gParts=[...gTot.entries()].map(([k,n])=>{const g=GAL_GLIDERS[k]; const gEur=g.tip==="normal"?g.eurPiece:g.eurM*g.spacing/1000;
-    return {code:g.cod,desc:g.desc+(mult===2&&rods[0]!==rods[1]?(k===rods[0]?" — bara 1":" — bara 2"):""),colour:"",qty:n*q,unit:"buc",eur:gEur};});
+  const result={length:L,glidersPerRod:rodsK.map((k,i)=>glInfo(k,rodsO[i]).txt),consoleN,tavanN,capete:2*mult};
+  const gMap=new Map();
+  rodsK.forEach((k,i)=>{const g=GAL_GLIDERS[k]; const op=g.tip==="wave"?rodsO[i]:""; const key=k+"|"+op; const e=gMap.get(key)||{k,op,n:0,bare:[]}; e.n+=glCount(k,i); e.bare.push(i+1); gMap.set(key,e);});
+  const gParts=[...gMap.values()].map(e=>{const g=GAL_GLIDERS[e.k]; const gEur=g.tip==="normal"?g.eurPiece:g.eurM*g.spacing/1000;
+    return {code:g.cod,desc:g.desc+(e.op?" — deschidere "+e.op.toLowerCase():"")+(mult===2&&gMap.size>1?" — bara "+e.bare.join("+"):""),colour:"",qty:e.n*q,unit:"buc",eur:gEur};});
   const parts=[
     {code:"AP9001S",desc:`Bară Stilling AP 9001S ${col} — ${(L/1000).toFixed(2).replace(".",",")} m${mult>1?" × 2 bare":""}`,colour:col,qty:Math.round(L/1000*mult*q*1000)/1000,unit:"m",eur:GAL_BARA_EUR[col]},
     {code:GAL_COMP.capat.cod,desc:GAL_COMP.capat.desc,colour:col,qty:2*mult*q,unit:"buc",eur:GAL_COMP.capat.eur},
@@ -4289,7 +4298,7 @@ const buildGaleriePrintHtml=(cfg)=>`<html><head><title>Galerie Stilling</title><
   <h2>Galerie Stilling AP 9001S</h2>
   ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p>`:""}<p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>
   ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
-  <p><b>Lungime:</b> ${cfg.input.length} mm · <b>Bară:</b> ${cfg.input.rod} · <b>Montaj:</b> ${cfg.input.mount} · <b>Culoare:</b> ${cfg.input.colourKey} · <b>Călăreți:</b> ${cfg.input.rod==="Dublă"?"bara 1 — "+cfg.input.gliderKey+", bara 2 — "+(cfg.input.gliderKey2||cfg.input.gliderKey):cfg.input.gliderKey} · <b>Cantitate:</b> ${cfg.input.qty||1}</p>
+  <p><b>Lungime:</b> ${cfg.input.length} mm · <b>Bară:</b> ${cfg.input.rod} · <b>Montaj:</b> ${cfg.input.mount} · <b>Culoare:</b> ${cfg.input.colourKey} · <b>Călăreți:</b> ${cfg.input.rod==="Dublă"?"bara 1 — "+cfg.input.gliderKey+(cfg.input.opening&&/Wave/.test(cfg.input.gliderKey)?" ("+String(cfg.input.opening).toLowerCase()+")":"")+", bara 2 — "+(cfg.input.gliderKey2||cfg.input.gliderKey)+(cfg.input.opening2&&/Wave/.test(cfg.input.gliderKey2||"")?" ("+String(cfg.input.opening2).toLowerCase()+")":""):cfg.input.gliderKey+(cfg.input.opening&&/Wave/.test(cfg.input.gliderKey)?" ("+String(cfg.input.opening).toLowerCase()+")":"")} · <b>Cantitate:</b> ${cfg.input.qty||1}</p>
   <table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr style="background:#eee;"><th style="border:1px solid #999;padding:6px">Cod</th><th style="border:1px solid #999;padding:6px;text-align:left">Descriere</th><th style="border:1px solid #999;padding:6px">Cant.</th></tr></thead><tbody>
   ${cfg.parts.map(p=>`<tr><td style="border:1px solid #999;padding:6px">${p.code}</td><td style="border:1px solid #999;padding:6px">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="border:1px solid #999;padding:6px;text-align:right">${p.qty} ${p.unit}</td></tr>`).join("")}
   </tbody></table></body></html>`;
@@ -4300,12 +4309,15 @@ function TabConfiguratorGalerie({C,clients,setClients,camereLista,setCamereLista
   const [colourKey,setColourKey]=React.useState("Negru");
   const [gliderKey,setGliderKey]=React.useState("Normali");
   const [gliderKey2,setGliderKey2]=React.useState("Wave 8 cm");
+  const [opening,setOpening]=React.useState("Laterală");
+  const [opening2,setOpening2]=React.useState("Laterală");
   const [qty,setQty]=React.useState(1);
   const [clientId,setClientId]=React.useState("");
   const [camera,setCamera]=React.useState("");
   const [observatii,setObservatii]=React.useState("");
   const [savedMsg,setSavedMsg]=React.useState("");
-  const inp={length:Number(length),rod,mount,colourKey,gliderKey,...(rod==="Dublă"?{gliderKey2}:{}),qty:Number(qty)||1};
+  const isW=(k)=>GAL_GLIDERS[k].tip==="wave";
+  const inp={length:Number(length),rod,mount,colourKey,gliderKey,...(isW(gliderKey)?{opening}:{}),...(rod==="Dublă"?{gliderKey2,...(isW(gliderKey2)?{opening2}:{})}:{}),qty:Number(qty)||1};
   const calc=galerieCalc(inp);
   const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
   const lblStyle={fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:5,display:"block"};
@@ -4340,13 +4352,15 @@ function TabConfiguratorGalerie({C,clients,setClients,camereLista,setCamereLista
       <div><label style={lblStyle}>Montaj</label><select value={mount} onChange={e=>setMount(e.target.value)} style={selStyle}><option>Perete</option><option>Tavan</option></select></div>
       <div><label style={lblStyle}>Culoare</label><select value={colourKey} onChange={e=>setColourKey(e.target.value)} style={selStyle}><option>Negru</option><option>Antique</option></select></div>
       <div><label style={lblStyle}>{rod==="Dublă"?"Călăreți bara 1":"Călăreți"}</label><select value={gliderKey} onChange={e=>setGliderKey(e.target.value)} style={selStyle}>{Object.keys(GAL_GLIDERS).map(k=><option key={k}>{k}</option>)}</select></div>
+      {isW(gliderKey)&&<div><label style={lblStyle}>{rod==="Dublă"?"Deschidere bara 1":"Deschidere"}</label><select value={opening} onChange={e=>setOpening(e.target.value)} style={selStyle}><option>Laterală</option><option>Centrală</option></select></div>}
       {rod==="Dublă"&&<div><label style={lblStyle}>Călăreți bara 2</label><select value={gliderKey2} onChange={e=>setGliderKey2(e.target.value)} style={selStyle}>{Object.keys(GAL_GLIDERS).map(k=><option key={k}>{k}</option>)}</select></div>}
+      {rod==="Dublă"&&isW(gliderKey2)&&<div><label style={lblStyle}>Deschidere bara 2</label><select value={opening2} onChange={e=>setOpening2(e.target.value)} style={selStyle}><option>Laterală</option><option>Centrală</option></select></div>}
       <div><label style={lblStyle}>Cantitate (nr. galerii)</label><input type="number" min="1" value={qty} onChange={e=>setQty(e.target.value)} style={selStyle}/></div>
     </div>
     {calc.errors.map((e,i)=><div key={i} style={{fontSize:13,color:"#B5504A",padding:"6px 0"}}>{e}</div>)}
     {!calc.errors.length&&<div style={{marginBottom:16}}>
       <div style={{display:"flex",gap:18,flexWrap:"wrap",padding:"12px 16px",background:C.accentLight,border:`1px solid ${C.border}`,marginBottom:10,fontSize:13}}>
-        <span><b>Călăreți / bară:</b> {calc.result.glidersPerRod.join(" + ")}</span>
+        <span><b>Călăreți / bară:</b> {calc.result.glidersPerRod.join("  |  ")}</span>
         {calc.result.consoleN>0&&<span><b>Console / galerie:</b> {calc.result.consoleN}</span>}
         {calc.result.tavanN>0&&<span><b>Prinderi tavan / galerie:</b> {calc.result.tavanN}</span>}
         <span><b>Capete / galerie:</b> {calc.result.capete}</span>
@@ -4372,7 +4386,7 @@ function TabConfiguratorGalerie({C,clients,setClients,camereLista,setCamereLista
         <div key={cfg.id} style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div style={{flex:1}}>
             <span style={{fontSize:13,fontWeight:600,color:C.text}}>{cfg.camera||"(fără cameră)"}</span>
-            <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.length} mm · bară {String(cfg.input.rod).toLowerCase()} · {String(cfg.input.mount).toLowerCase()} · {cfg.input.colourKey} · {cfg.input.rod==="Dublă"?cfg.input.gliderKey+" + "+(cfg.input.gliderKey2||cfg.input.gliderKey):cfg.input.gliderKey} · ×{cfg.input.qty||1}</span>
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.length} mm · bară {String(cfg.input.rod).toLowerCase()} · {String(cfg.input.mount).toLowerCase()} · {cfg.input.colourKey} · {cfg.input.rod==="Dublă"?cfg.input.gliderKey+(cfg.input.opening?" ("+String(cfg.input.opening).toLowerCase()+")":"")+" + "+(cfg.input.gliderKey2||cfg.input.gliderKey)+(cfg.input.opening2?" ("+String(cfg.input.opening2).toLowerCase()+")":""):cfg.input.gliderKey+(cfg.input.opening?" ("+String(cfg.input.opening).toLowerCase()+")":"")} · ×{cfg.input.qty||1}</span>
             <span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost: {Number(cfg.costTotal||0).toFixed(0)} lei</span>
             {cfg.observatii&&<div style={{fontSize:12,color:C.textSub,marginTop:4}}>Obs: {cfg.observatii}</div>}
           </div>
