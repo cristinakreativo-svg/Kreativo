@@ -9551,6 +9551,12 @@ function ListaTaiereProfile({clients,setClients,C}){
           detalii:"rulou", cantitate:cfg.qty||1, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-btb", cfgIdRaw:cfg.id, arrKey:"configuratiiRulou"});
       }
     });
+    (client.configuratiiGalerie||[]).forEach(cfg=>{
+      if(cfg.produs) return;
+      const mult=cfg.input.rod==="Dublă"?2:1, q=Number(cfg.input.qty)||1;
+      rows.push({categorie:"Galerie", tip:`Bară galerie AP 9001S ${cfg.input.colourKey}`, lungime:cfg.input.length, gabaritL:null, gabaritH:null,
+        detalii:"1 segment", cantitate:mult*q, client:client.name, camera:cfg.camera||"—", clientId:client.id, cfgId:cfg.id+"-g", cfgIdRaw:cfg.id, arrKey:"configuratiiGalerie"});
+    });
     (client.configuratiiPanou||[]).forEach(cfg=>{
       if(cfg.produs) return; // șina/profilul e mereu Coulisse, indiferent de bifa material — dar dacă e produs, nu mai apare
       const segm=cfg.input.segments||1;
@@ -9567,7 +9573,7 @@ function ListaTaiereProfile({clients,setClients,C}){
   const clientiToti=[...new Set(rows.map(r=>r.client))].sort((x,y)=>x.localeCompare(y,"ro"));
   if(clSel.length) for(let k=rows.length-1;k>=0;k--) if(!clSel.includes(rows[k].client)) rows.splice(k,1);
   const toggleCl=(n)=>setClSel(p=>p.includes(n)?p.filter(x=>x!==n):[...p,n]);
-  const CATEGORII=["Șină Coulisse","Șină Aluprof","Stor roman","Rulou","Contragreutate","Panou"];
+  const CATEGORII=["Șină Coulisse","Șină Aluprof","Stor roman","Rulou","Contragreutate","Panou","Galerie"];
   const grupuri={};
   rows.forEach(r=>{ (grupuri[r.tip]=grupuri[r.tip]||{categorie:r.categorie,items:[]}).items.push(r); });
   const [tipSel,setTipSel]=React.useState([]);
