@@ -9443,21 +9443,22 @@ function ListaTaiereProfile({clients,setClients,C}){
     const sectii=tipuri.map(tip=>{
       const items=viewItems(grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro")));
       const cat=grupuri[tip].categorie;
+      const showDet=items.some(r=>r.detalii!=="1 segment");
       const catHeader = cat!==lastCat ? `<div style="font:700 1.1em 'Source Serif 4',Cambria,Georgia,serif;color:#33444D;margin:${lastCat?"22px":"0"} 0 8px;border-bottom:2px solid #33444D;padding-bottom:4px">${cat}</div>` : "";
       lastCat=cat;
       const rowsHtml=items.map(r=>`<tr>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-size:16px">☐</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:700;font-size:16px;white-space:nowrap;min-width:90px">${r.lungime} mm</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-weight:700;font-size:${centr?"18px":"13px"}">${r.cantitate}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.gabText||(r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—")}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.detalii}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;white-space:nowrap">${r.gabText||(r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—")}</td>
+        ${showDet?`<td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.detalii}</td>`:""}
         <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;font-size:${centr?"11px":"13px"}" colspan="2">${r.origini}</td>
       </tr>`).join("");
       return `${catHeader}<div style="margin-bottom:22px">
         <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${tip} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} ${centr?"lungimi":"bucăți"} · ${items.reduce((a,r)=>a+Number(r.cantitate||1),0)} buc. total</span></div>
         <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
           <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
-            <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6;white-space:nowrap">Lungime tăiere</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Detalii</td><td style="padding:6px 10px;border:1px solid #D3DBD6" colspan="2">Provine din (client · cameră)</td>
+            <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6;white-space:nowrap">Lungime tăiere</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit</td>${showDet?`<td style="padding:6px 10px;border:1px solid #D3DBD6">Detalii</td>`:""}<td style="padding:6px 10px;border:1px solid #D3DBD6" colspan="2">Provine din (client · cameră)</td>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -9501,6 +9502,7 @@ function ListaTaiereProfile({clients,setClients,C}){
     {tipuri.length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nimic de tăiat — toate profilele salvate sunt deja marcate „produs".</div>}
     {tipuri.map((tip,ti)=>{
       const items=viewItems(grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro")));
+      const showDet=items.some(r=>r.detalii!=="1 segment");
       const subtotalBuc=items.reduce((s,r)=>s+Number(r.cantitate||1),0);
       const showCatHeader = ti===0 || grupuri[tipuri[ti-1]].categorie!==grupuri[tip].categorie;
       return <React.Fragment key={tip}>
@@ -9516,7 +9518,7 @@ function ListaTaiereProfile({clients,setClients,C}){
               <th style={{textAlign:"center",padding:"6px 10px"}}>Tăiat</th>
               <th style={{textAlign:"left",padding:"6px 14px"}}>Lungime tăiere</th>
               <th style={{textAlign:"center",padding:"6px 14px"}}>Buc.</th><th style={{textAlign:"left",padding:"6px 14px"}}>Gabarit</th>
-              <th style={{textAlign:"left",padding:"6px 14px"}}>Detalii</th>
+              {showDet&&<th style={{textAlign:"left",padding:"6px 14px"}}>Detalii</th>}
               
               <th colSpan={2} style={{textAlign:"left",padding:"6px 14px"}}>Provine din (client · cameră)</th>
             </tr>
@@ -9526,8 +9528,8 @@ function ListaTaiereProfile({clients,setClients,C}){
               <td style={{padding:"7px 10px",textAlign:"center"}}><input type="checkbox" onChange={()=>toggleTaiatGrup(r.srcs)} style={{cursor:"pointer",width:16,height:16}}/></td>
               <td style={{padding:"7px 14px",fontWeight:600,color:C.text,whiteSpace:"nowrap"}}>{r.lungime} mm</td>
               <td style={{padding:"7px 14px",textAlign:"center",fontWeight:700,fontSize:centr?18:13,color:C.text}}>{r.cantitate}</td>
-              <td style={{padding:"7px 14px",color:C.textSub}}>{r.gabText||(r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—")}</td>
-              <td style={{padding:"7px 14px",color:C.textSub}}>{r.detalii}</td>
+              <td style={{padding:"7px 14px",color:C.textSub,whiteSpace:"nowrap"}}>{r.gabText||(r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—")}</td>
+              {showDet&&<td style={{padding:"7px 14px",color:C.textSub}}>{r.detalii}</td>}
               <td colSpan={2} style={{padding:"7px 14px",color:C.textSub,fontSize:centr?11:13}}>{r.origini}</td>
             </tr>)}
           </tbody>
