@@ -9283,12 +9283,11 @@ function ListaTaiereRulouri({clients,setClients,C}){
         <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:600">${r.inaltime} mm</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.gabaritL}×${r.gabaritH} mm</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.sistem}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${r.cantitate}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.client}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#5F7078">${r.camera}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:700;font-size:${centr?"18px":"13px"}">${r.cantitate}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;font-size:${centr?"11px":"13px"}" colspan="2">${r.origini}</td>
       </tr>`).join("");
       return `<div style="break-inside:avoid;margin-bottom:22px">
-        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${mat} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} bucăți</span></div>
+        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${mat} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} ${centr?"lungimi":"bucăți"} · ${items.reduce((a,r)=>a+Number(r.cantitate||1),0)} buc. total</span></div>
         <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
           <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
             <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Lățime stofă</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Înălțime stofă</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit rulou</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Sistem</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Client</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cameră</td>
@@ -9324,7 +9323,7 @@ function ListaTaiereRulouri({clients,setClients,C}){
       return <div key={mat} style={{border:`1px solid ${C.border}`,marginBottom:14,background:C.surface}}>
         <div style={{padding:"10px 14px",background:C.accentLight,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontSize:13,fontWeight:600,color:C.text}}>{mat}</span>
-          <span style={{fontSize:11,color:C.textMuted}}>{items.length} bucăți · {subtotalBuc} buc. total</span>
+          <span style={{fontSize:11,color:C.textMuted}}>{items.length} {centr?"lungimi":"bucăți"} · {subtotalBuc} buc. total</span>
         </div>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead>
@@ -9346,9 +9345,8 @@ function ListaTaiereRulouri({clients,setClients,C}){
               <td style={{padding:"7px 14px",fontWeight:600,color:C.text}}>{r.inaltime} mm</td>
               <td style={{padding:"7px 14px",color:C.textSub}}>{r.gabaritL}×{r.gabaritH} mm</td>
               <td style={{padding:"7px 14px",color:C.textSub}}>{r.sistem}</td>
-              <td style={{padding:"7px 14px",textAlign:"right",fontWeight:600,color:C.text}}>{r.cantitate}</td>
-              <td style={{padding:"7px 14px",color:C.textSub}}>{r.client}</td>
-              <td style={{padding:"7px 14px",color:C.textMuted}}>{r.camera}</td>
+              <td style={{padding:"7px 14px",textAlign:"right",fontWeight:700,fontSize:centr?18:13,color:C.text}}>{r.cantitate}</td>
+              <td colSpan={2} style={{padding:"7px 14px",color:C.textSub,fontSize:centr?11:13}}>{r.origini}</td>
             </tr>)}
           </tbody>
         </table>
@@ -9360,6 +9358,18 @@ function ListaTaiereRulouri({clients,setClients,C}){
 function ListaTaiereProfile({clients,setClients,C}){
   const toggleTaiat=(clientId,arrKey,cfgId)=>{
     setClients(p=>p.map(c=>c.id!==clientId?c:{...c,[arrKey]:(c[arrKey]||[]).map(x=>x.id!==cfgId?x:{...x,produs:true})}));
+  };
+  const [centr,setCentr]=React.useState(false);
+  const toggleTaiatGrup=(srcs)=>{ srcs.forEach(r=>toggleTaiat(r.clientId,r.arrKey,r.cfgIdRaw)); };
+  const viewItems=(items)=>{
+    if(!centr) return items.map(r=>({...r,srcs:[r],origini:r.client+" · "+r.camera}));
+    const m=new Map();
+    items.forEach(r=>{ const k=String(r.lungime); let g=m.get(k);
+      if(!g){g={...r,cantitate:0,srcs:[],_det:new Set(),_gab:new Set(),_o:[]};m.set(k,g);}
+      g.cantitate+=Number(r.cantitate||1); g.srcs.push(r); g._det.add(r.detalii); if(r.gabaritL) g._gab.add(r.gabaritL+"×"+r.gabaritH);
+      g._o.push(r.client+" · "+r.camera+(Number(r.cantitate||1)>1?" ×"+r.cantitate:"")); });
+    return [...m.values()].sort((x,y)=>Number(x.lungime)-Number(y.lungime)).map(g=>({...g,
+      detalii:[...g._det].join(" / "), gabaritL:null, origini:g._o.join(" | "), nrGab:g._gab.size}));
   };
   const rows=[];
   (clients||[]).forEach(client=>{
@@ -9421,24 +9431,23 @@ function ListaTaiereProfile({clients,setClients,C}){
   const printLista=()=>{
     let lastCat=null;
     const sectii=tipuri.map(tip=>{
-      const items=grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro"));
+      const items=viewItems(grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro")));
       const cat=grupuri[tip].categorie;
       const catHeader = cat!==lastCat ? `<div style="font:700 1.1em 'Source Serif 4',Cambria,Georgia,serif;color:#33444D;margin:${lastCat?"22px":"0"} 0 8px;border-bottom:2px solid #33444D;padding-bottom:4px">${cat}</div>` : "";
       lastCat=cat;
       const rowsHtml=items.map(r=>`<tr>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-size:16px">☐</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:600">${r.lungime} mm</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—"}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:(centr?"—":"—")}</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.detalii}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:600">${r.cantitate}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.client}</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#5F7078">${r.camera}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:right;font-weight:700;font-size:${centr?"18px":"13px"}">${r.cantitate}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;font-size:${centr?"11px":"13px"}" colspan="2">${r.origini}</td>
       </tr>`).join("");
       return `${catHeader}<div style="break-inside:avoid;margin-bottom:22px">
-        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${tip} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} bucăți</span></div>
+        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${tip} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} ${centr?"lungimi":"bucăți"} · ${items.reduce((a,r)=>a+Number(r.cantitate||1),0)} buc. total</span></div>
         <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
           <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
-            <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Lungime tăiere</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Detalii</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Client</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Cameră</td>
+            <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Lungime tăiere</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Detalii</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6" colspan="2">Provine din (client · cameră)</td>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
         </table>
@@ -9461,12 +9470,15 @@ function ListaTaiereProfile({clients,setClients,C}){
   return <div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
       <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Listă tăiere profile — șine, tuburi, tije nerealizate încă</div>
-      {rows.length>0&&<button onClick={printLista} style={{fontSize:12,fontWeight:600,padding:"7px 16px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>}
+      <div style={{display:"flex",alignItems:"center",gap:14}}>
+        <label style={{fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><input type="checkbox" checked={centr} onChange={()=>setCentr(v=>!v)}/>Centralizat (aceeași lungime însumată)</label>
+        {rows.length>0&&<button onClick={printLista} style={{fontSize:12,fontWeight:600,padding:"7px 16px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>}
+      </div>
     </div>
     <div style={{fontSize:12,color:C.textMuted,marginBottom:16}}>{rows.length} bucăți de tăiat ({totalBuc} buc. total) · {tipuri.length} tipuri de profil · grupate pe categorie (șină/roman/rulou/panou) și apoi pe tip</div>
     {tipuri.length===0&&<div style={{textAlign:"center",padding:"2rem",fontSize:13,color:C.textMuted}}>Nimic de tăiat — toate profilele salvate sunt deja marcate „produs".</div>}
     {tipuri.map((tip,ti)=>{
-      const items=grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro"));
+      const items=viewItems(grupuri[tip].items.sort((a,b)=>a.client.localeCompare(b.client,"ro")));
       const subtotalBuc=items.reduce((s,r)=>s+Number(r.cantitate||1),0);
       const showCatHeader = ti===0 || grupuri[tipuri[ti-1]].categorie!==grupuri[tip].categorie;
       return <React.Fragment key={tip}>
@@ -9474,7 +9486,7 @@ function ListaTaiereProfile({clients,setClients,C}){
         <div style={{border:`1px solid ${C.border}`,marginBottom:14,background:C.surface}}>
         <div style={{padding:"10px 14px",background:C.accentLight,borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontSize:13,fontWeight:600,color:C.text}}>{tip}</span>
-          <span style={{fontSize:11,color:C.textMuted}}>{items.length} bucăți · {subtotalBuc} buc. total</span>
+          <span style={{fontSize:11,color:C.textMuted}}>{items.length} {centr?"lungimi":"bucăți"} · {subtotalBuc} buc. total</span>
         </div>
         <table style={{width:"100%",borderCollapse:"collapse"}}>
           <thead>
@@ -9484,19 +9496,17 @@ function ListaTaiereProfile({clients,setClients,C}){
               <th style={{textAlign:"left",padding:"6px 14px"}}>Gabarit</th>
               <th style={{textAlign:"left",padding:"6px 14px"}}>Detalii</th>
               <th style={{textAlign:"right",padding:"6px 14px"}}>Buc.</th>
-              <th style={{textAlign:"left",padding:"6px 14px"}}>Client</th>
-              <th style={{textAlign:"left",padding:"6px 14px"}}>Cameră</th>
+              <th colSpan={2} style={{textAlign:"left",padding:"6px 14px"}}>Provine din (client · cameră)</th>
             </tr>
           </thead>
           <tbody>
             {items.map((r,i)=><tr key={r.cfgId+i} style={{fontSize:13,background:i%2===0?C.bg:C.surface}}>
-              <td style={{padding:"7px 10px",textAlign:"center"}}><input type="checkbox" onChange={()=>toggleTaiat(r.clientId,r.arrKey,r.cfgIdRaw)} style={{cursor:"pointer",width:16,height:16}}/></td>
+              <td style={{padding:"7px 10px",textAlign:"center"}}><input type="checkbox" onChange={()=>toggleTaiatGrup(r.srcs)} style={{cursor:"pointer",width:16,height:16}}/></td>
               <td style={{padding:"7px 14px",fontWeight:600,color:C.text}}>{r.lungime} mm</td>
               <td style={{padding:"7px 14px",color:C.textSub}}>{r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—"}</td>
               <td style={{padding:"7px 14px",color:C.textSub}}>{r.detalii}</td>
-              <td style={{padding:"7px 14px",textAlign:"right",fontWeight:600,color:C.text}}>{r.cantitate}</td>
-              <td style={{padding:"7px 14px",color:C.textSub}}>{r.client}</td>
-              <td style={{padding:"7px 14px",color:C.textMuted}}>{r.camera}</td>
+              <td style={{padding:"7px 14px",textAlign:"right",fontWeight:700,fontSize:centr?18:13,color:C.text}}>{r.cantitate}</td>
+              <td colSpan={2} style={{padding:"7px 14px",color:C.textSub,fontSize:centr?11:13}}>{r.origini}</td>
             </tr>)}
           </tbody>
         </table>
