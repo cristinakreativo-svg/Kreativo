@@ -3227,6 +3227,94 @@ function TabNico({clients,setClients,sb,tday,fmtD,C,blocate,onAddBlocat,onDelBlo
   </div>;
 }
 
+// ---------- Import șine Coulisse (manual, alb) din Excel: 2 șine/geam (draperie wave 8 + perdea normali) ----------
+function SineImportExcel({C,clientId,clientObj,setClients}){
+  const [rows,setRows]=React.useState(null);
+  const [fisier,setFisier]=React.useState("");
+  const [err,setErr]=React.useState("");
+  const [inaltime,setInaltime]=React.useState("2500");
+  const [packKey,setPackKey]=React.useState("Center opening - left");
+  const [msg,setMsg]=React.useState("");
+  const importate=(clientObj.configuratiiSina||[]).filter(c=>c.importExcel);
+  const citeste=(file)=>{
+    setErr("");setMsg("");setRows(null); if(!file) return;
+    const rd=new FileReader();
+    rd.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const out=[];
+        wb.SheetNames.forEach(sn=>{
+          const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:""});
+          aoa.forEach(r=>{
+            const cam=String(r[0]).trim(), nr=String(r[1]).trim(), L=Number(String(r[2]).replace(",","."));
+            if(!cam||!nr||!(L>0)||/^cameră/i.test(cam)||/^total/i.test(cam)) return;
+            out.push({sheet:sn,camera:cam,geam:nr,mm:Math.round(L*1000)});
+          });
+        });
+        if(!out.length) throw new Error("Nu am găsit rânduri cu cameră, număr geam și lungime șină.");
+        setRows(out); setFisier(file.name);
+      }catch(e){ setErr(e.message); }
+    };
+    rd.readAsArrayBuffer(file);
+  };
+  const construieste=()=>{
+    const h=Number(inaltime)||2500;
+    const off=MOTORS["Manual"].railOffset;
+    const existente=new Set((clientObj.configuratiiSina||[]).map(c=>c.camera));
+    const noi=[],erori=[];let sar=0;
+    rows.forEach(r=>{
+      [["Draperie","Wave 80mm"],["Perdea","Pleat"]].forEach(([tip,glider])=>{
+        const camera=`${r.camera} · geam ${r.geam} · ${tip}`;
+        if(existente.has(camera)){ sar++; return; }
+        const width=r.mm+off;
+        const input={width,height:h,motorKey:"Manual",gliderKey:glider,packKey,colourKey:"White",railSegments:1,options:[]};
+        const v=validateCoulisseInput(input);
+        if(v.errors.length){ erori.push(camera+": "+v.errors[0]); return; }
+        const result=coulisseCalc(input);
+        if(result.rail!==r.mm){ erori.push(camera+": șina calculată ("+result.rail+") ≠ Excel ("+r.mm+")"); return; }
+        const parts=getPartsList(result.articleCode,result,1,"Manual");
+        noi.push({id:gid(),camera,observatii:(r.sheet.toLowerCase().includes("cu spa")?"Geam CU spațiu lateral (perete)":"Geam FĂRĂ spațiu lateral")+" · "+(tip==="Draperie"?"călăreți wave 8":"călăreți normali"),dataCreat:tday(),importExcel:fisier,
+          input:{width,height:h,motorKey:"Manual",gliderKey:glider,packKey,colourKey:"White",railSegments:1,quantity:1,options:[]},result,parts});
+      });
+    });
+    return {noi,erori,sar};
+  };
+  const importa=()=>{
+    const {noi,erori,sar}=construieste();
+    if(erori.length){ setErr("Nu import nimic, sunt erori:\n"+erori.slice(0,8).join("\n")); return; }
+    if(!noi.length){ setMsg("Nimic de importat — toate sunt deja în configurații ("+sar+" sărite)."); return; }
+    if(!window.confirm(`Adaug ${noi.length} configurații de șină la ${clientObj.name} (${rows.length} geamuri × 2: draperie wave 8 + perdea normali; Coulisse manuală, alb).${sar?"\n"+sar+" există deja și sunt sărite.":""}\nConfigurațiile existente nu se modifică.`)) return;
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:[...(c.configuratiiSina||[]),...noi]}));
+    setMsg(`Adăugat ${noi.length} configurații.`+(sar?` ${sar} sărite (existau).`:"")); setRows(null); setErr("");
+  };
+  const stergeImportate=()=>{
+    if(!importate.length) return;
+    if(!window.confirm(`Ștergi cele ${importate.length} configurații importate din Excel de la ${clientObj.name}? Cele create de mână rămân.`)) return;
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiSina:(c.configuratiiSina||[]).filter(x=>!x.importExcel)}));
+    setMsg("Importul a fost șters.");
+  };
+  const inpS={padding:"6px 8px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:12,fontFamily:"inherit"};
+  return <div style={{border:`1px dashed ${C.accent}`,padding:14,margin:"4px 0 18px",background:C.surface}}>
+    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8}}>Import șine din Excel · {clientObj.name}</div>
+    <div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>Excel cu cameră, număr geam, lungime șină (m). Pentru fiecare geam se creează 2 șine Coulisse manuale, albe: draperie (călăreți wave 8 cm) și perdea (călăreți normali). Lungimea din Excel este șina de tăiat.</div>
+    <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"end",marginBottom:8}}>
+      <input type="file" accept=".xlsx,.xls" onChange={e=>{citeste(e.target.files[0]);e.target.value="";}} style={{fontSize:12}}/>
+      <label style={{fontSize:11,color:C.textMuted}}>Înălțime sistem (mm)<br/><input value={inaltime} onChange={e=>setInaltime(e.target.value)} style={{...inpS,width:90}}/></label>
+      <label style={{fontSize:11,color:C.textMuted}}>Deschidere<br/><select value={packKey} onChange={e=>setPackKey(e.target.value)} style={inpS}>{Object.keys(PACK_SIDES).map(k=><option key={k} value={k}>{k}</option>)}</select></label>
+    </div>
+    {err&&<div style={{fontSize:12,color:"#B33",whiteSpace:"pre-wrap",marginBottom:8}}>{err}</div>}
+    {rows&&<div>
+      <div style={{fontSize:12,marginBottom:6}}>{fisier}: <b>{rows.length}</b> geamuri → <b>{rows.length*2}</b> șine. Verifică un eșantion:</div>
+      <div style={{maxHeight:160,overflow:"auto",border:`1px solid ${C.border}`,marginBottom:8}}>
+        {rows.slice(0,8).map((r,i)=><div key={i} style={{fontSize:12,padding:"4px 8px",borderTop:i?`1px solid ${C.border}`:"none"}}>{r.camera} · geam {r.geam} · șină de tăiat <b>{r.mm} mm</b> · {r.sheet}</div>)}
+      </div>
+      <button onClick={importa} style={{fontSize:12,fontWeight:600,padding:"8px 14px",border:"none",background:C.accent,color:"#fff",cursor:"pointer"}}>Importă {rows.length*2} configurații</button>
+    </div>}
+    {msg&&<div style={{fontSize:12,marginTop:8,color:C.text}}>{msg}</div>}
+    {importate.length>0&&<div style={{marginTop:10,fontSize:12,color:C.textMuted}}>{importate.length} configurații importate din Excel. <a href="#" onClick={e=>{e.preventDefault();stergeImportate();}} style={{color:"#B33"}}>Șterge importul</a></div>}
+  </div>;
+}
+
 function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCamereLista,pendingEditCfg,setPendingEditCfg,catalogCostComponente}){
   const [mod,setMod]=React.useState("coulisse");
   const [width,setWidth]=React.useState(2000);
@@ -3474,6 +3562,8 @@ function TabConfigurator({C,clients,setClients,clientIdFixat,camereLista,setCame
         <span style={{fontSize:12,fontWeight:600,color:C.text,flexShrink:0,minWidth:36,textAlign:"right"}}>{p.qty}</span>
       </div>;})}
     </div>}
+
+    {clientObj&&<SineImportExcel C={C} clientId={clientId} clientObj={clientObj} setClients={setClients}/>}
 
     {clientObj&&(clientObj.configuratiiSina||[]).length>0&&<div>
       <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
