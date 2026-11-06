@@ -3975,7 +3975,7 @@ function PrintMontajOpt({client,C}){
   return <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",padding:"8px 10px",border:`1px solid ${C.border}`,marginBottom:10}}>
     <span style={{fontSize:11,fontWeight:700,color:C.accent,textTransform:"uppercase"}}>Printează:</span>
     {items.map(([k,l,n])=><label key={k} style={{fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}><input type="checkbox" checked={!!o[k]} onChange={()=>tg(k)}/>{l} ({n})</label>)}
-    {(client.configuratiiSina||[]).length>0&&<label style={{fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontWeight:700}}><input type="checkbox" checked={o.centr} onChange={()=>tg("centr")}/>Centralizat (însumează dimensiunile identice)</label>}
+    {(client.configuratiiSina||[]).length>0&&<label style={{fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:4,fontWeight:700}}><input type="checkbox" checked={o.centr} onChange={()=>tg("centr")}/>Centralizat profile de tăiat (lungimi identice însumate)</label>}
     <button onClick={()=>printHtmlDoc(buildCentralizatorMontajHtml(client,o))} title="Tabel pentru montaj, fără costuri" style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>Printează centralizator montaj</button>
   </div>;
 }
@@ -3996,25 +3996,27 @@ function buildCentralizatorMontajHtml(client0,opts){
   const dt=client.dataMontaj?zn+" "+client.dataMontaj.split("-").reverse().join(".")+(client.oraMontaj?", ora "+client.oraMontaj:""):"";
   const totalBuc=cfgs.reduce((a,c)=>a+(Number(c.input&&c.input.quantity)||1),0);
   const grupe=(()=>{ const m=new Map();
-    cfgs.forEach(c=>{ const q=Number(c.input&&c.input.quantity)||1, cl=calaretiMontaj(c)||{};
-      const w=Number(c.input&&c.input.width)||0;
-      const k=[w,cl.tip,cl.imp,c.input&&c.input.colourKey].join("|");
-      let g=m.get(k); if(!g){g={w,tip:cl.tip||"",imp:cl.imp||"",col:(c.input&&c.input.colourKey)||"",buc:0,cal:0,camere:[]};m.set(k,g);}
-      g.buc+=q; g.cal+=(cl.tot||0)*q; if(c.camera) g.camere.push(c.camera+(q>1?" ×"+q:"")); });
-    return [...m.values()].sort((x,y)=>x.w-y.w); })();
+    cfgs.forEach(c=>{ const q=Number(c.input&&c.input.quantity)||1;
+      const n=Number(c.input&&c.input.railSegments)||1;
+      const len=Math.round(((Number(c.result&&c.result.rail)||0)/n)*10)/10;
+      const col=(c.input&&c.input.colourKey)||"";
+      const k=len+"|"+col;
+      let g=m.get(k); if(!g){g={len,col,buc:0,camere:[]};m.set(k,g);}
+      g.buc+=q*n; if(c.camera) g.camere.push(c.camera+(q*n>1?" ×"+(q*n):"")); });
+    return [...m.values()].sort((x,y)=>x.len-y.len); })();
+  const totProf=grupe.reduce((a,g)=>a+g.buc,0);
   const rowsCentr=grupe.map((g,i)=>`<tr>
       <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;">${i+1}</td>
-      <td style="padding:8px;border:1px solid #444;font-weight:700;font-size:16px;white-space:nowrap;">${esc(g.w)} mm</td>
-      <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;font-size:18px;">${g.buc}</td>
-      <td style="padding:8px;border:1px solid #444;">${esc(g.tip)}<br><span style="font-size:11px;color:#444;">${esc(g.imp)}${g.col?" · "+esc(g.col):""}</span></td>
-      <td style="padding:8px;border:1px solid #444;text-align:center;">${g.cal}</td>
+      <td style="padding:8px;border:1px solid #444;font-weight:700;font-size:18px;white-space:nowrap;">${esc(String(g.len).replace(".",","))} mm</td>
+      <td style="padding:8px;border:1px solid #444;text-align:center;font-weight:700;font-size:20px;">${g.buc}</td>
+      <td style="padding:8px;border:1px solid #444;">${esc(g.col)}</td>
       <td style="padding:8px;border:1px solid #444;font-size:11px;">${esc(g.camere.join(", "))}</td>
       <td style="padding:8px;border:1px solid #444;width:28px;"></td>
     </tr>`).join("");
-  const tabCentr=(centr&&cfgs.length)?`<h3 style="margin:14px 0 6px;">Șine Coulisse — centralizat (dimensiuni identice însumate)</h3>
+  const tabCentr=(centr&&cfgs.length)?`<h3 style="margin:14px 0 6px;">Profile de tăiat — centralizat pe lungime (${totProf} profile)</h3>
     <table style="border-collapse:collapse;width:100%;font-size:13px;margin-bottom:14px;"><thead><tr style="background:#e6e6e6;">
-      <th style="padding:8px;border:1px solid #444;">Nr.</th><th style="padding:8px;border:1px solid #444;">Lățime sistem</th><th style="padding:8px;border:1px solid #444;">Total buc.</th>
-      <th style="padding:8px;border:1px solid #444;text-align:left;">Călăreți / tip</th><th style="padding:8px;border:1px solid #444;">Total călăreți</th><th style="padding:8px;border:1px solid #444;text-align:left;">Camere</th><th style="padding:8px;border:1px solid #444;">✓</th>
+      <th style="padding:8px;border:1px solid #444;">Nr.</th><th style="padding:8px;border:1px solid #444;">Lungime de tăiat</th><th style="padding:8px;border:1px solid #444;">Total profile</th>
+      <th style="padding:8px;border:1px solid #444;text-align:left;">Culoare</th><th style="padding:8px;border:1px solid #444;text-align:left;">Provine din (cameră)</th><th style="padding:8px;border:1px solid #444;">✓</th>
     </tr></thead><tbody>${rowsCentr}</tbody></table>`:"";
   const rows=cfgs.map((c,i)=>{
     const pz=parsePozitie(c.pozitie);
