@@ -4254,6 +4254,131 @@ function buildPanouPrintHtml(cfg){
   </body></html>`;
 }
 
+/* ===== Galerii Stilling AP 9001S ===== */
+const GAL_FACT=0.70*6.55; // preț catalog € → cost producție lei (−30%, ×6,55)
+const GAL_BARA_EUR={"Negru":6.34,"Antique":9.30}; // € / metru
+const GAL_COMP={consola:{cod:"389717",desc:"Consolă dublă de perete 17 cm",eur:14.06},capat:{cod:"679928",desc:"Capăt plat",eur:3.35},tavan:{cod:"5010",desc:"Prindere de tavan",eur:0.80}};
+const GAL_GLIDERS={
+  "Normali":{cod:"5738",desc:"Călăreți normali (nylon)",tip:"normal",eurPiece:0.02},
+  "Wave 6 cm":{cod:"5730",desc:"Călăreți wave 6 cm",tip:"wave",spacing:60,eurM:2.59},
+  "Wave 8 cm":{cod:"5735",desc:"Călăreți wave 8 cm",tip:"wave",spacing:80,eurM:2.10}};
+function galerieCalc(inp){
+  const L=Number(inp.length)||0, mult=inp.rod==="Dublă"?2:1, q=Number(inp.qty)||1;
+  const g=GAL_GLIDERS[inp.gliderKey]; const col=inp.colourKey;
+  const errors=[];
+  if(L<300) errors.push("Lungimea e prea mică (min 300 mm).");
+  if(L>6000) errors.push("Lungimea depășește bara de 6 m — bara nu se recomandă îmbinată.");
+  let gl;
+  if(g.tip==="normal"){ const sp=1000/9; gl=Math.ceil(L/sp); } else { gl=excelOdd(L/g.spacing); }
+  const consoleN=inp.mount==="Perete"?(L<=1500?2:2+Math.ceil((L-1500)/500)):0;
+  const tavanN=inp.mount==="Tavan"?Math.ceil(L/400)+1:0;
+  const result={length:L,glidersPerRod:gl,consoleN,tavanN,capete:2*mult};
+  const gEur=g.tip==="normal"?g.eurPiece:g.eurM*g.spacing/1000;
+  const parts=[
+    {code:"AP9001S",desc:`Bară Stilling AP 9001S ${col} — ${(L/1000).toFixed(2).replace(".",",")} m${mult>1?" × 2 bare":""}`,colour:col,qty:Math.round(L/1000*mult*q*1000)/1000,unit:"m",eur:GAL_BARA_EUR[col]},
+    {code:GAL_COMP.capat.cod,desc:GAL_COMP.capat.desc,colour:col,qty:2*mult*q,unit:"buc",eur:GAL_COMP.capat.eur},
+    ...(consoleN?[{code:GAL_COMP.consola.cod,desc:GAL_COMP.consola.desc,colour:col,qty:consoleN*q,unit:"buc",eur:GAL_COMP.consola.eur}]:[]),
+    ...(tavanN?[{code:GAL_COMP.tavan.cod,desc:GAL_COMP.tavan.desc,colour:col,qty:tavanN*q,unit:"buc",eur:GAL_COMP.tavan.eur}]:[]),
+    {code:g.cod,desc:g.desc,colour:"",qty:gl*mult*q,unit:"buc",eur:gEur}
+  ].map(p=>({...p,lei:Math.round(p.eur*GAL_FACT*10000)/10000,total:Math.round(p.qty*p.eur*GAL_FACT*100)/100}));
+  return {errors,result,parts,total:Math.round(parts.reduce((a,p)=>a+p.total,0)*100)/100};
+}
+const buildGaleriePrintHtml=(cfg)=>`<html><head><title>Galerie Stilling</title></head><body style="font-family:sans-serif;padding:20px;">
+  <h2>Galerie Stilling AP 9001S</h2>
+  ${cfg.clientName?`<p><b>Client:</b> ${cfg.clientName}</p>`:""}<p><b>Destinație (cameră):</b> ${cfg.camera||"—"}</p>
+  ${cfg.observatii?`<p style="background:#5C6B65;color:#fff;padding:10px 14px;"><b>Observație:</b> ${cfg.observatii}</p>`:""}
+  <p><b>Lungime:</b> ${cfg.input.length} mm · <b>Bară:</b> ${cfg.input.rod} · <b>Montaj:</b> ${cfg.input.mount} · <b>Culoare:</b> ${cfg.input.colourKey} · <b>Călăreți:</b> ${cfg.input.gliderKey} · <b>Cantitate:</b> ${cfg.input.qty||1}</p>
+  <table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr style="background:#eee;"><th style="border:1px solid #999;padding:6px">Cod</th><th style="border:1px solid #999;padding:6px;text-align:left">Descriere</th><th style="border:1px solid #999;padding:6px">Cant.</th></tr></thead><tbody>
+  ${cfg.parts.map(p=>`<tr><td style="border:1px solid #999;padding:6px">${p.code}</td><td style="border:1px solid #999;padding:6px">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="border:1px solid #999;padding:6px;text-align:right">${p.qty} ${p.unit}</td></tr>`).join("")}
+  </tbody></table></body></html>`;
+function TabConfiguratorGalerie({C,clients,setClients,camereLista,setCamereLista}){
+  const [length,setLength]=React.useState(2000);
+  const [rod,setRod]=React.useState("Simplă");
+  const [mount,setMount]=React.useState("Perete");
+  const [colourKey,setColourKey]=React.useState("Negru");
+  const [gliderKey,setGliderKey]=React.useState("Normali");
+  const [qty,setQty]=React.useState(1);
+  const [clientId,setClientId]=React.useState("");
+  const [camera,setCamera]=React.useState("");
+  const [observatii,setObservatii]=React.useState("");
+  const [savedMsg,setSavedMsg]=React.useState("");
+  const inp={length:Number(length),rod,mount,colourKey,gliderKey,qty:Number(qty)||1};
+  const calc=galerieCalc(inp);
+  const selStyle={width:"100%",fontSize:13,border:`1px solid ${C.border}`,padding:"7px 10px",background:C.surface,outline:"none"};
+  const lblStyle={fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:5,display:"block"};
+  const clientObj=clients&&clients.find(c=>c.id===clientId);
+  const salveaza=()=>{
+    if(calc.errors.length) return;
+    if(!clientId){ alert("Alege întâi un client — apoi poți salva."); return; }
+    if(!camera.trim() && !window.confirm("Nu ai completat Cameră (destinație). Salvezi oricum?")) return;
+    if(camera.trim() && setCamereLista && !(camereLista||[]).some(cm=>cm.toLowerCase()===camera.trim().toLowerCase())) setCamereLista(p=>[...p,camera.trim()]);
+    const cfg={id:gid(),camera:camera.trim(),observatii:observatii.trim(),dataCreat:tday(),input:inp,result:calc.result,parts:calc.parts,costTotal:calc.total};
+    setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiGalerie:[...(c.configuratiiGalerie||[]),cfg]}));
+    setSavedMsg(`Salvat la ${clientObj?clientObj.name:"client"}${camera?" · "+camera:""} ✓`); setCamera(""); setObservatii("");
+    setTimeout(()=>setSavedMsg(""),3000);
+  };
+  return <div>
+    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:14}}>Configurator galerie — Stilling AP 9001S</div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+      <div><label style={lblStyle}>Client</label>
+        <select value={clientId} onChange={e=>setClientId(e.target.value)} style={selStyle}>
+          <option value="">— alege client —</option>
+          {clients.slice().sort((a,b)=>a.name.localeCompare(b.name,"ro")).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select></div>
+      <div><label style={lblStyle}>Cameră</label>
+        <input list="camere-dl-gal" value={camera} onChange={e=>setCamera(e.target.value)} placeholder="ex: living" style={selStyle}/>
+        <datalist id="camere-dl-gal">{(camereLista||[]).map(cm=><option key={cm} value={cm}/>)}</datalist></div>
+      <div style={{gridColumn:"1 / -1"}}><label style={lblStyle}>Observații pentru Dan</label>
+        <textarea value={observatii} onChange={e=>setObservatii(e.target.value)} rows={2} style={{...selStyle,resize:"vertical",fontFamily:"inherit"}}/></div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:16}}>
+      <div><label style={lblStyle}>Lungime galerie (mm)</label><input type="number" value={length} onChange={e=>setLength(e.target.value)} style={selStyle}/></div>
+      <div><label style={lblStyle}>Bară</label><select value={rod} onChange={e=>setRod(e.target.value)} style={selStyle}><option>Simplă</option><option>Dublă</option></select></div>
+      <div><label style={lblStyle}>Montaj</label><select value={mount} onChange={e=>setMount(e.target.value)} style={selStyle}><option>Perete</option><option>Tavan</option></select></div>
+      <div><label style={lblStyle}>Culoare (bară, capete, console)</label><select value={colourKey} onChange={e=>setColourKey(e.target.value)} style={selStyle}><option>Negru</option><option>Antique</option></select></div>
+      <div><label style={lblStyle}>Călăreți</label><select value={gliderKey} onChange={e=>setGliderKey(e.target.value)} style={selStyle}>{Object.keys(GAL_GLIDERS).map(k=><option key={k}>{k}</option>)}</select></div>
+      <div><label style={lblStyle}>Cantitate (nr. galerii)</label><input type="number" min="1" value={qty} onChange={e=>setQty(e.target.value)} style={selStyle}/></div>
+    </div>
+    {calc.errors.map((e,i)=><div key={i} style={{fontSize:13,color:"#B5504A",padding:"6px 0"}}>{e}</div>)}
+    {!calc.errors.length&&<div style={{marginBottom:16}}>
+      <div style={{display:"flex",gap:18,flexWrap:"wrap",padding:"12px 16px",background:C.accentLight,border:`1px solid ${C.border}`,marginBottom:10,fontSize:13}}>
+        <span><b>Călăreți / bară:</b> {calc.result.glidersPerRod}</span>
+        {calc.result.consoleN>0&&<span><b>Console / galerie:</b> {calc.result.consoleN}</span>}
+        {calc.result.tavanN>0&&<span><b>Prinderi tavan / galerie:</b> {calc.result.tavanN}</span>}
+        <span><b>Capete / galerie:</b> {calc.result.capete}</span>
+      </div>
+      {calc.parts.map((p,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:C.bg,marginBottom:3}}>
+        <span style={{fontSize:11,color:C.textMuted,minWidth:20}}>{i+1}.</span>
+        <span style={{fontSize:12,fontWeight:600,color:C.accent,minWidth:80}}>{p.code}</span>
+        <span style={{fontSize:12,color:C.text,flex:1}}>{p.desc}{p.colour&&p.code!=="AP9001S"?` (${p.colour})`:""}</span>
+        <span style={{fontSize:11,color:"#2255AA"}}>{p.lei.toFixed(2)} lei × {p.qty} = {p.total.toFixed(2)} lei</span>
+        <span style={{fontSize:12,fontWeight:600,color:C.text,minWidth:60,textAlign:"right"}}>{p.qty} {p.unit}</span>
+      </div>)}
+      <div style={{display:"flex",justifyContent:"flex-end",padding:"8px 8px 0",fontSize:14,fontWeight:700,color:C.text}}>Cost producție: {calc.total.toFixed(2)} lei</div>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginTop:12}}>
+        <button onClick={salveaza} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer"}}>Salvează configurația la client</button>
+        <button onClick={()=>printHtmlDoc(buildGaleriePrintHtml({clientName:clientObj&&clientObj.name,camera,observatii,input:inp,parts:calc.parts}))} style={{fontSize:12,fontWeight:600,padding:"8px 16px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>
+        {savedMsg&&<span style={{fontSize:12,color:C.accent,fontWeight:600}}>{savedMsg}</span>}
+      </div>
+    </div>}
+    {clientObj&&(clientObj.configuratiiGalerie||[]).length>0&&<div>
+      <div style={{height:1,background:C.border,margin:"8px 0 16px"}}/>
+      <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:10}}>Galerii salvate la {clientObj.name} ({(clientObj.configuratiiGalerie||[]).length})</div>
+      {(clientObj.configuratiiGalerie||[]).map(cfg=>
+        <div key={cfg.id} style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div style={{flex:1}}>
+            <span style={{fontSize:13,fontWeight:600,color:C.text}}>{cfg.camera||"(fără cameră)"}</span>
+            <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{cfg.input.length} mm · bară {String(cfg.input.rod).toLowerCase()} · {String(cfg.input.mount).toLowerCase()} · {cfg.input.colourKey} · {cfg.input.gliderKey} · ×{cfg.input.qty||1}</span>
+            <span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost: {Number(cfg.costTotal||0).toFixed(0)} lei</span>
+            {cfg.observatii&&<div style={{fontSize:12,color:C.textSub,marginTop:4}}>Obs: {cfg.observatii}</div>}
+          </div>
+          <button onClick={()=>printHtmlDoc(buildGaleriePrintHtml({...cfg,clientName:clientObj.name}))} style={{fontSize:11,padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer"}}>Printează</button>
+          <button onClick={()=>{if(window.confirm("Ștergi această galerie?")) setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiGalerie:(c.configuratiiGalerie||[]).filter(x=>x.id!==cfg.id)}));}} style={{fontSize:11,padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer"}}>Șterge</button>
+        </div>)}
+    </div>}
+  </div>;
+}
+
 function TabConfiguratorPanou({C,clients,setClients,camereLista,setCamereLista}){
   const [width,setWidth]=React.useState(1500);
   const [height,setHeight]=React.useState(1500);
@@ -9448,16 +9573,16 @@ function ListaTaiereProfile({clients,setClients,C}){
       lastCat=cat;
       const rowsHtml=items.map(r=>`<tr>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-size:16px">☐</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:700;font-size:16px;white-space:nowrap;min-width:90px">${r.lungime} mm</td>
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-weight:700;font-size:${centr?"18px":"13px"}">${r.cantitate}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;font-weight:700;font-size:22px;white-space:nowrap;min-width:110px">${r.lungime} mm</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;text-align:center;font-weight:700;font-size:${centr?"24px":"20px"}">${r.cantitate}</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;white-space:nowrap">${r.gabText||(r.gabaritL?`${r.gabaritL}×${r.gabaritH} mm`:"—")}</td>
         ${showDet?`<td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.detalii}</td>`:""}
-        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;font-size:${centr?"11px":"13px"}" colspan="2">${r.origini}</td>
+        <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;font-size:${centr?"14px":"17px"}" colspan="2">${r.origini}</td>
       </tr>`).join("");
       return `${catHeader}<div style="margin-bottom:22px">
-        <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${tip} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} ${centr?"lungimi":"bucăți"} · ${items.reduce((a,r)=>a+Number(r.cantitate||1),0)} buc. total</span></div>
-        <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
-          <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
+        <div style="font:600 1.3em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${tip} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} ${centr?"lungimi":"bucăți"} · ${items.reduce((a,r)=>a+Number(r.cantitate||1),0)} buc. total</span></div>
+        <table style="width:100%;border-collapse:collapse;font:400 17px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
+          <thead><tr style="font:600 .72em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
             <td style="padding:6px 10px;border:1px solid #D3DBD6">Tăiat</td><td style="padding:6px 10px;border:1px solid #D3DBD6;white-space:nowrap">Lungime tăiere</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Buc.</td><td style="padding:6px 10px;border:1px solid #D3DBD6">Gabarit</td>${showDet?`<td style="padding:6px 10px;border:1px solid #D3DBD6">Detalii</td>`:""}<td style="padding:6px 10px;border:1px solid #D3DBD6" colspan="2">Provine din (client · cameră)</td>
           </tr></thead>
           <tbody>${rowsHtml}</tbody>
@@ -9472,7 +9597,7 @@ function ListaTaiereProfile({clients,setClients,C}){
         <div><div style="font:600 1.3em 'Source Sans 3',sans-serif;color:#2A2118">KREATIVO STUDIO</div><div style="font-size:.8em;color:#8A7A64">Listă tăiere profile — șine, tuburi, tije</div></div>
         <div style="font-size:.8em;color:#8A7A64">${new Date().toLocaleDateString("ro-RO")}</div>
       </div>
-      <div style="font-size:.9em;color:#5C4F3E;margin-bottom:16px">${rows.length} bucăți de tăiat (${totalBuc} buc. total) · ${tipuri.length} tipuri de profil</div>
+      <div style="font-size:1.1em;color:#5C4F3E;margin-bottom:16px">${rows.length} bucăți de tăiat (${totalBuc} buc. total) · ${tipuri.length} tipuri de profil</div>
       ${sectii}
     </body></html>`;
     printHtmlDoc(html);
@@ -13011,6 +13136,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgroman"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
         <button onClick={()=>setDanView("cfgrulou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgrulou"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgrulou"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgrulou"?500:400}}>Configurator rulou</button>
         <button onClick={()=>setDanView("cfgpanou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgpanou"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgpanou"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgpanou"?500:400}}>Configurator panou</button>
+        <button onClick={()=>setDanView("cfggalerie")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfggalerie"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfggalerie"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfggalerie"?500:400}}>Configurator galerie</button>
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiere"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiereprofil"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
         <button onClick={()=>setDanView("dist")} style={{padding:"7px 14px",border:`1px solid ${danView==="dist"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="dist"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="dist"?500:400}}>Distanțe șine</button>
@@ -13022,6 +13148,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} setClients={setClients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} setClients={setClients} C={C}/>:
       danView==="dist"?<TabDistanteSine C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="cfggalerie"?<TabConfiguratorGalerie C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       <TabConfiguratorRulou C={C} clients={clients} setClients={setClients} savedMateriale={rulouMateriale} setSavedMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>}
     </div>;
@@ -13674,6 +13801,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgroman"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
         <button onClick={()=>setDanView("cfgrulou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgrulou"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgrulou"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgrulou"?500:400}}>Configurator rulou</button>
         <button onClick={()=>setDanView("cfgpanou")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgpanou"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgpanou"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgpanou"?500:400}}>Configurator panou</button>
+        <button onClick={()=>setDanView("cfggalerie")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfggalerie"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfggalerie"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfggalerie"?500:400}}>Configurator galerie</button>
         <button onClick={()=>setDanView("taiere")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiere"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiere"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiere"?500:400}}>Listă tăiere materiale</button>
         <button onClick={()=>setDanView("taiereprofil")} style={{padding:"7px 14px",border:`1px solid ${danView==="taiereprofil"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taiereprofil"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taiereprofil"?500:400}}>Listă tăiere profile</button>
         <button onClick={()=>setDanView("dist")} style={{padding:"7px 14px",border:`1px solid ${danView==="dist"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="dist"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="dist"?500:400}}>Distanțe șine</button>
@@ -13684,6 +13812,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       danView==="taiere"?<ListaTaiereRulouri clients={clients} setClients={setClients} C={C}/>:
       danView==="taiereprofil"?<ListaTaiereProfile clients={clients} setClients={setClients} C={C}/>:
       danView==="dist"?<TabDistanteSine C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
+      danView==="cfggalerie"?<TabConfiguratorGalerie C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       danView==="cfgpanou"?<TabConfiguratorPanou C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista}/>:
       <TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} onUpdDanTask={updDanTask} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} catalogOrac={catalogOrac}/>}
     </div>}
