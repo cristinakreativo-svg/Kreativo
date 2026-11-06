@@ -9453,7 +9453,7 @@ function ListaTaiereProfile({clients,setClients,C}){
         <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058">${r.detalii}</td>
         <td style="padding:8px 10px;border:1px solid #D3DBD6;color:#3F5058;font-size:${centr?"11px":"13px"}" colspan="2">${r.origini}</td>
       </tr>`).join("");
-      return `${catHeader}<div style="break-inside:avoid;margin-bottom:22px">
+      return `${catHeader}<div style="margin-bottom:22px">
         <div style="font:600 1.05em/1.2 'Source Serif 4',Cambria,Georgia,serif;color:#1F2A30;background:#E8EDF0;padding:8px 12px;border-top:2px solid #33444D">${tip} <span style="font-weight:400;font-size:.8em;color:#5F7078">— ${items.length} ${centr?"lungimi":"bucăți"} · ${items.reduce((a,r)=>a+Number(r.cantitate||1),0)} buc. total</span></div>
         <table style="width:100%;border-collapse:collapse;font:400 13px/1.4 'Source Sans 3',Calibri,sans-serif;color:#1F2A30">
           <thead><tr style="font:600 .74em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5F7078;background:#EDF0ED">
@@ -9465,7 +9465,7 @@ function ListaTaiereProfile({clients,setClients,C}){
     }).join("");
     const html=`<!DOCTYPE html><html lang="ro"><head><meta charset="utf-8"><title>Listă tăiere profile</title>
     <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
-    <style>@page{size:A4;margin:0.5in}body{margin:0;background:#fff;font-family:'Source Sans 3',sans-serif}</style></head>
+    <style>@page{size:A4;margin:0.5in}body{margin:0;background:#fff;font-family:'Source Sans 3',sans-serif}tr{break-inside:avoid;page-break-inside:avoid}thead{display:table-header-group}</style></head>
     <body>
       <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #D4C9B8;padding-bottom:10px;margin-bottom:16px">
         <div><div style="font:600 1.3em 'Source Sans 3',sans-serif;color:#2A2118">KREATIVO STUDIO</div><div style="font-size:.8em;color:#8A7A64">Listă tăiere profile — șine, tuburi, tije</div></div>
