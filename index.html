@@ -9475,7 +9475,7 @@ function ListaTaiereProfile({clients,setClients,C}){
 
   return <div>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-      <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Listă tăiere profile — șine, tuburi, tije nerealizate încă</div>
+      <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Listă tăiere profile — șine, tuburi, tije nerealizate încă <span style={{fontWeight:400,color:C.textMuted,textTransform:"none"}}>(versiune 06.11 · 14:55 · Buc. lângă lungime)</span></div>
       <div style={{display:"flex",alignItems:"center",gap:14}}>
         <label style={{fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><input type="checkbox" checked={centr} onChange={()=>setCentr(v=>!v)}/>Centralizat (aceeași lungime însumată)</label>
         {rows.length>0&&<button onClick={printLista} style={{fontSize:12,fontWeight:600,padding:"7px 16px",background:C.accent,color:"#fff",border:"none",cursor:"pointer"}}>Printează</button>}
