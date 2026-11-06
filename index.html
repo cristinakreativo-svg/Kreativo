@@ -2071,6 +2071,7 @@ function listaConfigConsum(client){
   (client.configuratiiRoman||[]).forEach(cfg=>out.push({key:"r"+cfg.id,tip:"Stor roman",cfg,codeKey:"code",eticheta:`${cfg.camera||"(fără cameră)"} ${dim(cfg)}`.trim()}));
   (client.configuratiiRulou||[]).forEach(cfg=>out.push({key:"u"+cfg.id,tip:"Rulou",cfg,codeKey:"article",eticheta:`${cfg.camera||"(fără cameră)"} ${dim(cfg)}${cfg.input&&cfg.input.tube?" · "+cfg.input.tube:""}`.trim()}));
   (client.configuratiiPanou||[]).forEach(cfg=>out.push({key:"p"+cfg.id,tip:"Panou",cfg,codeKey:"article",eticheta:`${cfg.camera||"(fără cameră)"} ${dim(cfg)}`.trim()}));
+  (client.configuratiiGalerie||[]).forEach(cfg=>out.push({key:"g"+cfg.id,tip:"Galerie",cfg,codeKey:"code",eticheta:`${cfg.camera||"(fără cameră)"} ${cfg.input&&cfg.input.length?cfg.input.length+" mm":""}${cfg.input&&cfg.input.colourKey?" · "+cfg.input.colourKey:""}`.trim()}));
   return out;
 }
 function consolideazaConfigs(items){
@@ -3969,8 +3970,8 @@ function TabDistanteSine({C,clients,setClients,camereLista,setCamereLista,client
 }
 
 function PrintMontajOpt({client,C}){
-  const [o,setO]=React.useState({sine:true,alte:true,roman:true,rulou:true,panou:true,dist:true,centr:false});
-  const items=[["sine","Șine Coulisse",(client.configuratiiSina||[]).length],["alte","Șine non-Coulisse",(client.configuratiiSinaAlta||[]).length],["roman","Storuri romane",(client.configuratiiRoman||[]).length],["rulou","Rulouri",(client.configuratiiRulou||[]).length],["panou","Panouri",(client.configuratiiPanou||[]).length],["dist","Distanțe șine",(client.distanteSine||[]).length]].filter(x=>x[2]>0);
+  const [o,setO]=React.useState({sine:true,alte:true,roman:true,rulou:true,panou:true,galerii:true,dist:true,centr:false});
+  const items=[["sine","Șine Coulisse",(client.configuratiiSina||[]).length],["alte","Șine non-Coulisse",(client.configuratiiSinaAlta||[]).length],["roman","Storuri romane",(client.configuratiiRoman||[]).length],["rulou","Rulouri",(client.configuratiiRulou||[]).length],["panou","Panouri",(client.configuratiiPanou||[]).length],["galerii","Galerii",(client.configuratiiGalerie||[]).length],["dist","Distanțe șine",(client.distanteSine||[]).length]].filter(x=>x[2]>0);
   const tg=(k)=>setO(p=>({...p,[k]:!p[k]}));
   return <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",padding:"8px 10px",border:`1px solid ${C.border}`,marginBottom:10}}>
     <span style={{fontSize:11,fontWeight:700,color:C.accent,textTransform:"uppercase"}}>Printează:</span>
@@ -3988,6 +3989,7 @@ function buildCentralizatorMontajHtml(client0,opts){
     configuratiiRoman:on("roman")?(client0.configuratiiRoman||[]):[],
     configuratiiRulou:on("rulou")?(client0.configuratiiRulou||[]):[],
     configuratiiPanou:on("panou")?(client0.configuratiiPanou||[]):[],
+    configuratiiGalerie:on("galerii")?(client0.configuratiiGalerie||[]):[],
     distanteSine:on("dist")?(client0.distanteSine||[]):[]};
   const centr=!!o0.centr;
   const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -4042,6 +4044,9 @@ function buildCentralizatorMontajHtml(client0,opts){
   (client.configuratiiRoman||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Stor roman",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.mechKey,n.fabricKey,n.controlSide&&!(c.result&&c.result.isMotor)?"comandă "+n.controlSide:"",(n.options||[]).join(", ")].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
   (client.configuratiiRulou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Rulou",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.tube&&("tub "+n.tube),n.color,n.materialName].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
   (client.configuratiiPanou||[]).forEach(c=>{const n=c.input||{};altele.push({tip:"Panou japonez",camera:c.camera,dim:dm(n.width,n.height),q:Number(c.qty)||1,det:[n.system,n.tracks&&(n.tracks+" canale"),n.colour,n.material].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
+  (client.configuratiiGalerie||[]).forEach(c=>{const n=c.input||{};
+    const gl=n.rod==="Dublă"?`bara 1: ${n.gliderKey}${n.opening?" ("+String(n.opening).toLowerCase()+")":""}; bara 2: ${n.gliderKey2||n.gliderKey}${n.opening2?" ("+String(n.opening2).toLowerCase()+")":""}`:`${n.gliderKey}${n.opening?" ("+String(n.opening).toLowerCase()+")":""}`;
+    altele.push({tip:"Galerie Stilling",camera:c.camera,dim:n.length?esc(n.length)+" mm (lungime)":"",q:Number(n.qty)||1,det:[n.rod&&("bară "+String(n.rod).toLowerCase()),n.mount&&("montaj "+String(n.mount).toLowerCase()),n.colourKey,gl].filter(Boolean).map(esc).join(" · "),obs:c.observatii});});
   const barX=(x)=>{ const pz=parsePozitie(x.poz); if(!pz) return x.poz?esc(x.poz):'<span style="color:#888;">pe tot peretele</span>';
     return `<div style="display:flex;border:1.5px solid #222;margin-top:6px;">${pz.segs.map((g,k)=>`<div style="flex:${g.v};min-width:46px;padding:7px 4px;text-align:center;font-size:12px;background:${k%2?"#d9d9d9":"#f3f3f3"};${k?"border-left:1.5px solid #222;":""}"><b>${esc(String(g.v).replace(".",","))}</b>${g.label?"<br>"+esc(g.label):""}</div>`).join("")}</div>`; };
   const rowsAlt=altele.map((x,k)=>`<tr>
@@ -4302,6 +4307,35 @@ const buildGaleriePrintHtml=(cfg)=>`<html><head><title>Galerie Stilling</title><
   <table style="border-collapse:collapse;width:100%;font-size:14px;"><thead><tr style="background:#eee;"><th style="border:1px solid #999;padding:6px">Cod</th><th style="border:1px solid #999;padding:6px;text-align:left">Descriere</th><th style="border:1px solid #999;padding:6px">Cant.</th></tr></thead><tbody>
   ${cfg.parts.map(p=>`<tr><td style="border:1px solid #999;padding:6px">${p.code}</td><td style="border:1px solid #999;padding:6px">${p.desc}${p.colour?" ("+p.colour+")":""}</td><td style="border:1px solid #999;padding:6px;text-align:right">${p.qty} ${p.unit}</td></tr>`).join("")}
   </tbody></table></body></html>`;
+function GalerieRowClient({cfg,clientId,clientName,setClients,C}){
+  const [open,setOpen]=React.useState(false);
+  const upd=(patch)=>setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiGalerie:(c.configuratiiGalerie||[]).map(x=>x.id!==cfg.id?x:{...x,...patch})}));
+  const inp=cfg.input||{};
+  const gl=inp.rod==="Dublă"?`${inp.gliderKey}${inp.opening?" ("+String(inp.opening).toLowerCase()+")":""} + ${inp.gliderKey2||inp.gliderKey}${inp.opening2?" ("+String(inp.opening2).toLowerCase()+")":""}`:`${inp.gliderKey}${inp.opening?" ("+String(inp.opening).toLowerCase()+")":""}`;
+  return <div style={{border:`1px solid ${C.border}`,marginBottom:6,background:C.surface}}>
+    <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",background:C.bg}}>
+      <input type="checkbox" checked={!!cfg.produs} onChange={e=>{e.stopPropagation();upd({produs:!cfg.produs});}} onClick={e=>e.stopPropagation()} title="Marchează ca produs" style={{cursor:"pointer",width:16,height:16,flexShrink:0}}/>
+      <div style={{flex:1}}>
+        <span style={{fontSize:13,fontWeight:600,color:cfg.produs?C.textMuted:C.text}}>{cfg.camera||"(fără cameră)"}</span>
+        <span style={{fontSize:11,color:C.textMuted,marginLeft:8}}>{inp.length} mm · bară {String(inp.rod||"").toLowerCase()} · {String(inp.mount||"").toLowerCase()} · {inp.colourKey} · {gl}</span>
+        {cfg.observatii&&<span style={{fontSize:10,fontWeight:700,color:"#fff",background:"#33444D",padding:"2px 8px",marginLeft:8}}>observație</span>}
+        {cfg.costTotal>0&&<span style={{fontSize:11,fontWeight:600,color:"#2255AA",marginLeft:8}}>Cost producție: {Number(cfg.costTotal).toFixed(0)} lei</span>}
+      </div>
+      <span style={{fontSize:11,color:C.textMuted}}>{open?"▾":"▸"}</span>
+    </div>
+    {open&&<div style={{padding:"10px 14px"}}>
+      {cfg.observatii&&<div style={{fontSize:12,color:C.textSub,marginBottom:8}}>Obs: {cfg.observatii}</div>}
+      {(cfg.parts||[]).map((p,i)=><div key={i} style={{display:"flex",gap:10,padding:"5px 8px",background:i%2?C.surface:C.bg,fontSize:12}}>
+        <span style={{minWidth:70,fontWeight:600,color:C.accent}}>{p.code}</span>
+        <span style={{flex:1}}>{p.desc}{p.colour&&p.code!=="AP9001S"?` (${p.colour})`:""}</span>
+        <span style={{fontWeight:600}}>{p.qty} {p.unit}</span></div>)}
+      <div style={{display:"flex",gap:8,marginTop:10}}>
+        <button onClick={()=>printHtmlDoc(buildGaleriePrintHtml({...cfg,clientName}))} style={{fontSize:11,padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer"}}>Printează</button>
+        <button onClick={()=>{if(window.confirm("Ștergi această galerie?")) setClients(p=>p.map(c=>c.id!==clientId?c:{...c,configuratiiGalerie:(c.configuratiiGalerie||[]).filter(x=>x.id!==cfg.id)}));}} style={{fontSize:11,padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",cursor:"pointer"}}>Șterge</button>
+      </div>
+    </div>}
+  </div>;
+}
 function TabConfiguratorGalerie({C,clients,setClients,camereLista,setCamereLista}){
   const [length,setLength]=React.useState(2000);
   const [rod,setRod]=React.useState("Simplă");
@@ -10478,7 +10512,7 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
           <ComenziDan client={client} ci={ci} setClients={setClients} C={C} sb={sb} tday={tday} fmtD={fmtD} field="danComenzi" folder="dan-comenzi" accept=".pdf,.doc,.docx,.xlsx,.xls,.csv,image/*" buttonLabel="+ adaugă comandă"/>
         </div>}
         <ConsumContabilitate client={client} C={C} tday={tday}/>
-        {!(client.configuratiiSina||[]).length&&((client.configuratiiSinaAlta||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length+(client.configuratiiPanou||[]).length+(client.distanteSine||[]).length)>0&&<div style={{marginTop:16}}><PrintMontajOpt client={client} C={C}/></div>}
+        {!(client.configuratiiSina||[]).length&&((client.configuratiiSinaAlta||[]).length+(client.configuratiiRoman||[]).length+(client.configuratiiRulou||[]).length+(client.configuratiiPanou||[]).length+(client.distanteSine||[]).length+(client.configuratiiGalerie||[]).length)>0&&<div style={{marginTop:16}}><PrintMontajOpt client={client} C={C}/></div>}
         {(client.configuratiiSina||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8,flexWrap:"wrap"}}>
             <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600}}>Configurații șină ({(client.configuratiiSina||[]).length})</div>
@@ -10514,6 +10548,10 @@ function TabDan({danEvents,onAddDanTask,onDelDanTask,onUpdDanTask,clients,setCli
               printHtmlDoc(buildRulouPrintHtml({...cfg,clientName:client.name}));
             }}/>
           )}
+        </div>}
+        {(client.configuratiiGalerie||[]).length>0&&<div style={{marginTop:16}}>
+          <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Galerii ({(client.configuratiiGalerie||[]).length})</div>
+          {(client.configuratiiGalerie||[]).map(cfg=><GalerieRowClient key={cfg.id} cfg={cfg} clientId={client.id} clientName={client.name} setClients={setClients} C={C}/>)}
         </div>}
         {(client.configuratiiPanou||[]).length>0&&<div style={{marginTop:16}}>
           <div style={{fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:600,marginBottom:8}}>Panouri ({(client.configuratiiPanou||[]).length})</div>
