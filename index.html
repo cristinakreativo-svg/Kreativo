@@ -1881,14 +1881,14 @@ const esteTipRulou=(t)=>TIPURI_RULOU.some(x=>x[0]===t);
 function golProdusDefault(){
   return {id:gid(), tip:"", material:"", culoare:"", cantitate:"", pretUnitar:"", pretBanda:"25", pretManopera:"25", cantitateBanda:"", cantitateManopera:"", cantitateBandaCustom:false, cantitateManoperaCustom:false, lungimeSinaCm:"", wave:false, pretMontaj:"150", montajInclus:true, latimePliseuCm:"", inaltimePliseuCm:"", grupaPretPliseu:"", latimeJaluzeaCm:"", inaltimeJaluzeaCm:"", lamelaJaluzea:"5", grupaPretJaluzea:"", pretUnitarSina:"", pretUnitarPliseu:"", pretUnitarJaluzea:"", latimeStorCm:"", inaltimeStorCm:"", pretMecanism:"298", cantitateMaterialStor:"", pretBenziManopera:"75", cantitateLining:"", pretLining:"149", tipBanda:"", latimeRulouCm:"", inaltimeRulouCm:"", lungimeSinaManCm:"", calaretiWave:false, consolaPerete:false, pretSinaManCustom:""};
 }
-function normalizeazaCamereOferta(camereRaw){
+function normalizeazaCamereOferta(camereRaw,salvata){
   if(!Array.isArray(camereRaw)||!camereRaw.length) return null;
   return camereRaw.map(c=>({
     id: c&&c.id||gid(),
     numeCamera: (c&&c.numeCamera)||"",
     nrGeamuri: (c&&c.nrGeamuri)||1,
     geamuri: (c&&Array.isArray(c.geamuri)&&c.geamuri.length) ? c.geamuri.map(g=>({id:(g&&g.id)||gid(), nr:(g&&g.nr)||1, lungime:(g&&g.lungime)||"", inaltime:(g&&g.inaltime)||""})) : [{id:gid(),nr:1,lungime:"",inaltime:""}],
-    produse: (c&&Array.isArray(c.produse)&&c.produse.length) ? c.produse.map(pr=>({...golProdusDefault(), ...(pr||{}), id:(pr&&pr.id)||gid()})) : [golProdusDefault()]
+    produse: (c&&Array.isArray(c.produse)&&c.produse.length) ? c.produse.map(pr=>({...golProdusDefault(), ...(salvata&&pr&&pr.montajInclus===undefined?{montajInclus:false}:{}), ...(pr||{}), id:(pr&&pr.id)||gid()})) : [golProdusDefault()]
   }));
 }
 // PDF compatibil cu telefonul: fonturile variabile Google (Source Serif/Sans) ies din Chrome ca fonturi "Type 3",
@@ -8042,7 +8042,7 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
 
   const editeazaOferta=(oferta)=>{
     setNumeClient(oferta.numeClient);
-    setCamere(normalizeazaCamereOferta(oferta.camere).map(c=>({...c, produse:c.produse.map(pr=>{
+    setCamere(normalizeazaCamereOferta(oferta.camere,true).map(c=>({...c, produse:c.produse.map(pr=>{
       const copie={...pr};
       if(esteSina(copie) && !copie.pretUnitarSina){
         const pretVechi=calculeazaPretSina(copie);
@@ -8066,7 +8066,7 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
   };
   const duplicaOfertaCompleta=(oferta)=>{
     setNumeClient(oferta.numeClient);
-    setCamere(normalizeazaCamereOferta(oferta.camere).map(c=>({
+    setCamere(normalizeazaCamereOferta(oferta.camere,true).map(c=>({
       ...c,
       id:gid(),
       geamuri:c.geamuri.map(g=>({...g,id:gid()})),
