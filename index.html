@@ -7974,20 +7974,22 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
       linii.push({tip:pr.tip||"", material:pr.material+((pr.dublata&&(pr.material2||"").trim())?" + "+pr.material2:""), valoare:valoareLinie(pr)});
     }));
     if(!linii.length){ alert("Oferta asta nu are nicio linie de produs."); return; }
-    // Pentru orice tip fără echivalență fixă (ex. „Altele”), cere codul o singură dată per tip întâlnit, nu per linie.
-    const codCache={};
-    const tipuriLipsa=[...new Set(linii.filter(l=>!TIP_COD_FACTURA[l.tip]).map(l=>l.tip))];
-    for(const tip of tipuriLipsa){
-      const eticheta=tip?`tipul „${ETICHETE_TIP_OFERTA[tip]||tip}”`:"produsele fără tip ales";
+    // Pentru fiecare linie fără echivalență fixă (ex. „Altele”) te întreabă punctual codul — la fiecare export,
+    // separat pentru fiecare linie. Codul e valabil doar pentru această comandă; nu se reține nicăieri.
+    for(const l of linii){
+      if(TIP_COD_FACTURA[l.tip]) continue;
+      const tipTxt=l.tip?(ETICHETE_TIP_OFERTA[l.tip]||l.tip):"fără tip";
+      const eticheta=`linia „${l.material}” (${tipTxt}, ${Math.round(l.valoare*100)/100} lei cu TVA)`;
       const cod=window.prompt(`Cod de contabilitate pentru ${eticheta}:`);
       if(cod===null||!cod.trim()){ alert(`Lipsește codul pentru ${eticheta} — exportul se oprește.`); return; }
-      const denumire=window.prompt(`Denumire articol (contabilitate) pentru ${eticheta}:`,tip?tip.toUpperCase():"ALTELE")||"";
-      codCache[tip]={cod:cod.trim(),denumire:denumire.trim()};
+      const denumire=window.prompt(`Denumire articol (contabilitate) pentru ${eticheta}:`,l.material||"ALTELE");
+      if(denumire===null){ alert("Export anulat."); return; }
+      l.codLinie={cod:cod.trim(),denumire:(denumire||"").trim()||l.material};
     }
     // Fiecare produs rămâne o poziție separată în factură — 1 buc fiecare — chiar dacă apare
     // de mai multe ori același tip (ex. 2 perdele): nu se adună, fiecare cu prețul ei.
     const rows=linii.map(l=>{
-      const echiv=TIP_COD_FACTURA[l.tip]||codCache[l.tip];
+      const echiv=TIP_COD_FACTURA[l.tip]||l.codLinie;
       const valoareFaraTva=l.valoare/TVA_FACTOR;
       return {cod:echiv.cod, denumire:echiv.denumire, cantitate:1, pret:Math.round(valoareFaraTva*100)/100, valoareFaraTva};
     });
