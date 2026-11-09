@@ -11704,6 +11704,21 @@ function feConstruiesteRanduri(fact, furn, textLoturi){
       lot:lotManual?lotManual.nume:String(p.kommission||"").trim().slice(0,10).trim(), lotDinFactura:!lotManual&&!!p.kommission};
   });
 }
+// Cursul BNR pe zile: fișierul anual XML al BNR. Pentru weekend/sărbătoare se ia ultima zi lucrătoare dinainte.
+async function feCursBnr(dataRo, moneda){
+  const m=String(dataRo||"").match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if(!m) throw new Error("data facturii necitită");
+  const iso=`${m[3]}-${m[2]}-${m[1]}`;
+  const r=await fetch(`https://www.bnr.ro/files/xml/years/nbrfxrates${m[3]}.xml`);
+  if(!r.ok) throw new Error("BNR a răspuns cu eroare "+r.status);
+  const xml=await r.text();
+  const zile=[]; const re=/<Cube date="(\d{4}-\d{2}-\d{2})">([\s\S]*?)<\/Cube>/g; let x;
+  while((x=re.exec(xml))){ const mm=x[2].match(new RegExp('<Rate currency="'+(moneda||"EUR")+'"[^>]*>([\\d.]+)</Rate>')); if(mm) zile.push({d:x[1],v:parseFloat(mm[1])}); }
+  if(!zile.length) throw new Error("nu am găsit cursuri în fișierul BNR");
+  const ok=zile.filter(z=>z.d<=iso).sort((a,b)=>a.d<b.d?1:-1)[0];
+  if(!ok) throw new Error("nu există curs la sau înainte de data facturii");
+  return {curs:ok.v, dataCurs:ok.d};
+}
 async function feCitestePdf(file){
   if(!window.pdfjsLib) throw new Error("Motorul de citire PDF nu s-a încărcat (verifică internetul).");
   const data=new Uint8Array(await file.arrayBuffer());
@@ -11728,6 +11743,8 @@ function FacturiExterneTab({C}){
   const [fact,setFact]=React.useState(null);
   const [loturi,setLoturi]=React.useState("");
   const [msg,setMsg]=React.useState("");
+  const [curs,setCurs]=React.useState("");
+  const [cursInfo,setCursInfo]=React.useState("");
   const furn=FURNIZORI_EXTERNI[furnKey];
   const incarca=async(file)=>{
     if(!file) return;
@@ -11736,7 +11753,9 @@ function FacturiExterneTab({C}){
       const rows=await feCitestePdf(file);
       const f=feParseazaFactura(rows,furn);
       if(!rows.some(r=>furn.detect.test(r.join(" ")))) f.avertismente.unshift(`PDF-ul nu pare să fie de la ${furn.nume} — verifică furnizorul ales.`);
-      setFact(f); setMsg("");
+      setFact(f); setMsg(""); setCurs(""); setCursInfo("Se caută cursul BNR...");
+      feCursBnr(f.data, f.moneda||furn.moneda).then(c=>{ setCurs(String(c.curs)); const [y,mo,d]=c.dataCurs.split("-"); setCursInfo(`curs BNR din ${d}.${mo}.${y}`+(c.dataCurs!==(f.data||"").split(".").reverse().join("-")?" (ultima zi lucrătoare dinainte)":"")); })
+        .catch(e=>setCursInfo("Nu am putut citi cursul automat ("+(e&&e.message||e)+") — scrie-l tu în casetă."));
     }catch(e){ setMsg("Nu pot citi PDF-ul: "+(e&&e.message||e)); }
   };
   const randuri=fact?feConstruiesteRanduri(fact,furn,loturi):[];
@@ -11770,6 +11789,11 @@ function FacturiExterneTab({C}){
     {msg&&<div style={{marginTop:10,fontSize:13,color:msg.startsWith("Se citește")?C.textMuted:"#B3261E"}}>{msg}</div>}
     {fact&&<div style={{marginTop:16}}>
       <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>Factura {fact.numar||"(nr. necitit)"} · {fact.data||"(dată necitită)"} · {randuri.length} poziții · total factură {fact.totalFactura!=null?fmtN(fact.totalFactura,2):"—"} {fact.moneda||furn.moneda}{fact.transport?` · din care transport ${fmtN(fact.transport,2)}`:""}</div>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:8,fontSize:13,color:C.text}}>
+        <span>Curs {fact.moneda||furn.moneda}/RON la data facturii:</span>
+        <input value={curs} onChange={e=>setCurs(e.target.value)} placeholder="ex. 5.0900" style={{width:90,padding:"5px 8px",fontSize:13,border:`1px solid ${C.border}`,background:C.surface,color:C.text}}/>
+        <span style={{fontSize:12,color:cursInfo.startsWith("Nu am")?"#B3261E":C.textMuted}}>{cursInfo}</span>
+      </div>
       {fact.avertismente.map((a,i)=><div key={i} style={{fontSize:13,color:"#B3261E",marginBottom:6,fontWeight:600}}>⚠ {a}</div>)}
       {!fact.avertismente.length&&<div style={{fontSize:13,color:"#2E7D32",marginBottom:6}}>✓ Suma pozițiilor coincide cu totalul din factură.</div>}
       <table style={{width:"100%",borderCollapse:"collapse",background:C.surface,marginBottom:12}}>
