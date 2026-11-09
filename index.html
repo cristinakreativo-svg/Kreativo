@@ -11690,7 +11690,8 @@ function feParseazaFactura(rows, furn){
   return out;
 }
 // Coulisse: codul din factură (Item No.) = codul din nomenclatorul de contabilitate. Prețul unitar = valoarea după rabat / cantitate.
-function feParseazaCoulisse(rows, furn){
+function feParseazaCoulisse(rows, furn, nom){
+  const NM=nom||NOM_COULISSE;
   const linii=rows.map(r=>r.join(" ").replace(/\s+/g," ").trim()).filter(Boolean);
   const out={produse:[],transport:0,totalFactura:null,numar:"",data:"",moneda:"EUR",avertismente:[],ignorate:[]};
   const n=(x)=>feNum(x);
@@ -11714,7 +11715,7 @@ function feParseazaCoulisse(rows, furn){
   out.produse.forEach(p=>{
     p.codFactura=p.cod;
     if(ALIAS_COD_COULISSE[p.cod]) p.cod=ALIAS_COD_COULISSE[p.cod];
-    const nm=NOM_COULISSE[p.cod];
+    const nm=NM[p.cod]||(p.cod==='CC-1001-W'?NOM_COULISSE['CC-1001-W']:undefined);
     p.rosu=!nm; p.denumire=nm?nm[0]:p.descriere;
     p.pret=p.cantitate?p.betrag/p.cantitate:0;
   });
@@ -11746,6 +11747,18 @@ function feConstruiesteRanduri(fact, furn, textLoturi){
       lot:lotManual?lotManual.nume.toUpperCase():String(p.kommission||furn.lotImplicit||"").trim().split(/[^\p{L}\p{N}]+/u)[0].toUpperCase().slice(0,10), lotDinFactura:!lotManual&&!!p.kommission};
   });
 }
+const NOMK="kreativo_nomenclator_coulisse_v1"; // cheie separată în kreativo_data, folosită doar de tabul Facturi externe
+function feParseazaNomenclator(text){
+  const L=String(text).replace(/^\uFEFF/,"").replace(/\r/g,"").split("\n").filter(x=>x.trim());
+  if(!L.length) throw new Error("fișier gol");
+  const h=L[0].split("\t").map(x=>x.trim().toLowerCase());
+  const iC=h.indexOf("cod"), iD=h.indexOf("denumire"), iU=h.indexOf("um");
+  if(iC<0||iD<0) throw new Error("nu găsesc coloanele „Cod” și „Denumire” — folosește exportul .txt din contabilitate, separat prin tab");
+  const o={};
+  L.slice(1).forEach(l=>{ const p=l.split("\t"); const c=(p[iC]||"").trim(); if(c) o[c]=[(p[iD]||"").trim(),(iU>=0?(p[iU]||""):"").trim()]; });
+  if(Object.keys(o).length<20) throw new Error("am găsit prea puține coduri ("+Object.keys(o).length+") — verifică fișierul");
+  return o;
+}
 async function feCitestePdf(file){
   if(!window.pdfjsLib) throw new Error("Motorul de citire PDF nu s-a încărcat (verifică internetul).");
   const data=new Uint8Array(await file.arrayBuffer());
@@ -11767,18 +11780,54 @@ async function feCitestePdf(file){
 function FacturiExterneTab({C}){
   const [furnKey,setFurnKey]=React.useState("schrader");
   const [fisier,setFisier]=React.useState("");
-  const [fact,setFact]=React.useState(null);
+  const [rowsFact,setRowsFact]=React.useState(null);
+  const [nomInfo,setNomInfo]=React.useState(null); // {coduri,data} dacă ai încărcat tu nomenclatorul
+  const [nomMsg,setNomMsg]=React.useState("");
   const [loturi,setLoturi]=React.useState("");
   const [msg,setMsg]=React.useState("");
   const furn=FURNIZORI_EXTERNI[furnKey];
+  React.useEffect(()=>{
+    let viu=true;
+    (async()=>{
+      try{
+        const {data,error}=await sb.from("kreativo_data").select("value").eq("key",NOMK).maybeSingle();
+        if(!error&&data&&data.value&&viu){ const v=JSON.parse(data.value); if(v&&v.coduri&&Object.keys(v.coduri).length>=20) setNomInfo(v); }
+      }catch(e){ console.log("Nomenclator: nu pot citi din baza de date:",e); }
+    })();
+    return ()=>{ viu=false; };
+  },[]);
+  const nomActiv=nomInfo?nomInfo.coduri:NOM_COULISSE;
+  const fact=React.useMemo(()=>{
+    if(!rowsFact) return null;
+    const f=(furn.tip=="coulisse"?feParseazaCoulisse(rowsFact,furn,nomActiv):feParseazaFactura(rowsFact,furn));
+    if(!rowsFact.some(r=>furn.detect.test(r.join(" ")))) f.avertismente.unshift(`PDF-ul nu pare să fie de la ${furn.nume} — verifică furnizorul ales.`);
+    return f;
+  },[rowsFact,furnKey,nomInfo]);
+  const incarcaNomenclator=(file)=>{
+    if(!file) return;
+    setNomMsg("Se citește...");
+    const rd=new FileReader();
+    rd.onerror=()=>setNomMsg("Fișierul nu poate fi citit.");
+    rd.onload=async(ev)=>{
+      try{
+        const coduri=feParseazaNomenclator(ev.target.result);
+        const nr=Object.keys(coduri).length;
+        const val={coduri,data:new Date().toISOString(),nr,fisier:file.name};
+        const raw=JSON.stringify(val);
+        const up=await sb.from("kreativo_data").update({value:raw}).eq("key",NOMK).select("key");
+        if(up.error) throw up.error;
+        if(!up.data||!up.data.length){ const ins=await sb.from("kreativo_data").insert({key:NOMK,value:raw}); if(ins.error) throw ins.error; }
+        setNomInfo(val); setNomMsg(`Nomenclator salvat: ${nr} coduri.`);
+      }catch(e){ setNomMsg("Nu am salvat nomenclatorul: "+(e&&e.message||e)); }
+    };
+    rd.readAsText(file);
+  };
   const incarca=async(file)=>{
     if(!file) return;
-    setMsg("Se citește..."); setFact(null); setFisier(file.name);
+    setMsg("Se citește..."); setRowsFact(null); setFisier(file.name);
     try{
       const rows=await feCitestePdf(file);
-      const f=(furn.tip=="coulisse"?feParseazaCoulisse:feParseazaFactura)(rows,furn);
-      if(!rows.some(r=>furn.detect.test(r.join(" ")))) f.avertismente.unshift(`PDF-ul nu pare să fie de la ${furn.nume} — verifică furnizorul ales.`);
-      setFact(f); setMsg("");
+      setRowsFact(rows); setMsg("");
     }catch(e){ setMsg("Nu pot citi PDF-ul: "+(e&&e.message||e)); }
   };
   const randuri=fact?feConstruiesteRanduri(fact,furn,loturi):[];
@@ -11810,7 +11859,7 @@ function FacturiExterneTab({C}){
     <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Facturi externe</div>
     <div style={{fontSize:13,color:C.textSub,marginBottom:12}}>Alege furnizorul, încarcă factura PDF și primești Excel pentru contabilitate (cod, denumire, cantitate, preț unitar, serie lot). Transportul, dacă există, se repartizează proporțional cu valoarea produselor. Nimic nu se salvează în aplicație.</div>
     <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
-      <select value={furnKey} onChange={e=>{setFurnKey(e.target.value); setFact(null); setFisier(""); setMsg("");}} style={{padding:"8px 10px",fontSize:13,border:`1px solid ${C.border}`,background:C.surface,color:C.text}}>
+      <select value={furnKey} onChange={e=>{setFurnKey(e.target.value); setRowsFact(null); setFisier(""); setMsg("");}} style={{padding:"8px 10px",fontSize:13,border:`1px solid ${C.border}`,background:C.surface,color:C.text}}>
         {Object.keys(FURNIZORI_EXTERNI).map(k=><option key={k} value={k}>{FURNIZORI_EXTERNI[k].nume}</option>)}
       </select>
       <label style={{display:"inline-block",padding:"9px 16px",background:"#33444D",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>
@@ -11819,6 +11868,13 @@ function FacturiExterneTab({C}){
       </label>
       {fisier&&<span style={{fontSize:12,color:C.textMuted}}>{fisier}</span>}
     </div>
+    {furn.tip=="coulisse"&&<div style={{marginTop:10,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",fontSize:12,color:C.textMuted}}>
+      <label style={{display:"inline-block",padding:"6px 12px",background:"#EEF2F4",color:"#33444D",cursor:"pointer",fontSize:12,fontWeight:600,border:`1px solid ${C.border}`}}>↑ Actualizează nomenclatorul (.txt din contabilitate)
+        <input type="file" accept=".txt,.csv,text/plain" style={{display:"none"}} onChange={e=>{incarcaNomenclator(e.target.files&&e.target.files[0]); e.target.value="";}}/>
+      </label>
+      <span>{nomInfo?`Nomenclator încărcat de tine: ${Object.keys(nomInfo.coduri).length} coduri, la ${new Date(nomInfo.data).toLocaleString("ro-RO")}`:`Nomenclator din aplicație: ${Object.keys(NOM_COULISSE).length} coduri (încă nu ai încărcat unul al tău)`}</span>
+      {nomMsg&&<span style={{color:nomMsg.startsWith("Nu am")?"#B3261E":"#2E7D32",fontWeight:600}}>{nomMsg}</span>}
+    </div>}
     {msg&&<div style={{marginTop:10,fontSize:13,color:msg.startsWith("Se citește")?C.textMuted:"#B3261E"}}>{msg}</div>}
     {fact&&<div style={{marginTop:16}}>
       <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>Factura {fact.numar||"(nr. necitit)"} · {fact.data||"(dată necitită)"} · {randuri.length} poziții · total factură {fact.totalFactura!=null?fmtN(fact.totalFactura,2):"—"} {fact.moneda||furn.moneda}{fact.transport?` · din care transport ${fmtN(fact.transport,2)}`:""}</div>
