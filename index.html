@@ -11791,7 +11791,7 @@ function feConstruiesteRanduri(fact, furn, textLoturi){
       lot:lotManual?lotManual.nume.toUpperCase():String(p.kommission||furn.lotImplicit||"").trim().split(/[^\p{L}\p{N}]+/u)[0].toUpperCase().slice(0,10), lotDinFactura:!lotManual&&!!p.kommission};
   });
 }
-const NOMK="kreativo_nomenclator_coulisse_v1"; // cheie separată în kreativo_data, folosită doar de tabul Facturi externe
+const NOMK_COMUN="kreativo_nomenclator_comun_v1"; // listă unică de coduri din contabilitate, pentru toți furnizorii; cheie separată în kreativo_data, folosită doar de tabul Facturi externe
 function feParseazaNomenclator(text){
   const L=String(text).replace(/^\uFEFF/,"").replace(/\r/g,"").split("\n").filter(x=>x.trim());
   if(!L.length) throw new Error("fișier gol");
@@ -11836,8 +11836,10 @@ function FacturiExterneTab({C}){
     if(!furn.nomKey) return ()=>{ viu=false; };
     (async()=>{
       try{
-        const {data,error}=await sb.from("kreativo_data").select("value").eq("key",furn.nomKey).maybeSingle();
-        if(!error&&data&&data.value&&viu){ const v=JSON.parse(data.value); if(v&&v.coduri&&Object.keys(v.coduri).length>=20) setNomInfo(v); }
+        for(const k of [NOMK_COMUN,furn.nomKey]){
+          const {data,error}=await sb.from("kreativo_data").select("value").eq("key",k).maybeSingle();
+          if(!error&&data&&data.value){ const v=JSON.parse(data.value); if(v&&v.coduri&&Object.keys(v.coduri).length>=20){ if(viu) setNomInfo(v); break; } }
+        }
       }catch(e){ console.log("Nomenclator: nu pot citi din baza de date:",e); }
     })();
     return ()=>{ viu=false; };
@@ -11850,24 +11852,22 @@ function FacturiExterneTab({C}){
     if(!rowsFact.some(r=>furn.detect.test(r.join(" ")))) f.avertismente.unshift(`PDF-ul nu pare să fie de la ${furn.nume} — verifică furnizorul ales.`);
     return f;
   },[rowsFact,furnKey,nomInfo]);
-  const incarcaNomenclator=(file)=>{
-    if(!file) return;
+  const incarcaNomenclator=async(files)=>{
+    if(!files||!files.length) return;
     setNomMsg("Se citește...");
-    const rd=new FileReader();
-    rd.onerror=()=>setNomMsg("Fișierul nu poate fi citit.");
-    rd.onload=async(ev)=>{
-      try{
-        const coduri=feParseazaNomenclator(ev.target.result);
-        const nr=Object.keys(coduri).length;
-        const val={coduri,data:new Date().toISOString(),nr,fisier:file.name};
-        const raw=JSON.stringify(val);
-        const up=await sb.from("kreativo_data").update({value:raw}).eq("key",furn.nomKey).select("key");
-        if(up.error) throw up.error;
-        if(!up.data||!up.data.length){ const ins=await sb.from("kreativo_data").insert({key:furn.nomKey,value:raw}); if(ins.error) throw ins.error; }
-        setNomInfo(val); setNomMsg(`Nomenclator salvat: ${nr} coduri.`);
-      }catch(e){ setNomMsg("Nu am salvat nomenclatorul: "+(e&&e.message||e)); }
-    };
-    rd.readAsText(file);
+    try{
+      const lista=Array.from(files);
+      const texte=await Promise.all(lista.map(f=>new Promise((res,rej)=>{ const rd=new FileReader(); rd.onerror=()=>rej(new Error("fișierul "+f.name+" nu poate fi citit")); rd.onload=()=>res(rd.result); rd.readAsText(f); })));
+      const coduri={}; const detalii=[];
+      texte.forEach((t,i)=>{ let o; try{ o=feParseazaNomenclator(t); }catch(e){ throw new Error(lista[i].name+": "+e.message); } Object.assign(coduri,o); detalii.push(`${lista[i].name} (${Object.keys(o).length})`); });
+      const nr=Object.keys(coduri).length;
+      const val={coduri,data:new Date().toISOString(),nr,fisier:lista.map(f=>f.name).join(", ")};
+      const raw=JSON.stringify(val);
+      const up=await sb.from("kreativo_data").update({value:raw}).eq("key",NOMK_COMUN).select("key");
+      if(up.error) throw up.error;
+      if(!up.data||!up.data.length){ const ins=await sb.from("kreativo_data").insert({key:NOMK_COMUN,value:raw}); if(ins.error) throw ins.error; }
+      setNomInfo(val); setNomMsg(`Nomenclator salvat: ${nr} coduri din ${detalii.join(", ")}.`);
+    }catch(e){ setNomMsg("Nu am salvat nomenclatorul: "+(e&&e.message||e)); }
   };
   const incarca=async(file)=>{
     if(!file) return;
@@ -11916,10 +11916,10 @@ function FacturiExterneTab({C}){
       {fisier&&<span style={{fontSize:12,color:C.textMuted}}>{fisier}</span>}
     </div>
     {furn.nomKey&&<div style={{marginTop:10,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",fontSize:12,color:C.textMuted}}>
-      <label style={{display:"inline-block",padding:"6px 12px",background:"#EEF2F4",color:"#33444D",cursor:"pointer",fontSize:12,fontWeight:600,border:`1px solid ${C.border}`}}>↑ Actualizează nomenclatorul (.txt din contabilitate)
-        <input type="file" accept=".txt,.csv,text/plain" style={{display:"none"}} onChange={e=>{incarcaNomenclator(e.target.files&&e.target.files[0]); e.target.value="";}}/>
+      <label style={{display:"inline-block",padding:"6px 12px",background:"#EEF2F4",color:"#33444D",cursor:"pointer",fontSize:12,fontWeight:600,border:`1px solid ${C.border}`}}>↑ Actualizează nomenclatorul (unul sau mai multe .txt din contabilitate)
+        <input type="file" multiple accept=".txt,.csv,text/plain" style={{display:"none"}} onChange={e=>{incarcaNomenclator(e.target.files); e.target.value="";}}/>
       </label>
-      <span>{nomInfo?`Nomenclator încărcat de tine: ${Object.keys(nomInfo.coduri).length} coduri, la ${new Date(nomInfo.data).toLocaleString("ro-RO")}`:`Nomenclator din aplicație: ${Object.keys(nomDefault).length} coduri (încă nu ai încărcat unul al tău)`}</span>
+      <span>{nomInfo?`Nomenclator comun încărcat de tine: ${Object.keys(nomInfo.coduri).length} coduri, la ${new Date(nomInfo.data).toLocaleString("ro-RO")}`:`Nomenclator din aplicație: ${Object.keys(nomDefault).length} coduri (încă nu ai încărcat unul al tău)`}</span>
       {nomMsg&&<span style={{color:nomMsg.startsWith("Nu am")?"#B3261E":"#2E7D32",fontWeight:600}}>{nomMsg}</span>}
     </div>}
     {msg&&<div style={{marginTop:10,fontSize:13,color:msg.startsWith("Se citește")?C.textMuted:"#B3261E"}}>{msg}</div>}
