@@ -11644,6 +11644,149 @@ const DECL_PASI=[
 
 // ============ CONSUMURI VOPSELE (Declarații) ============
 const CONSUM_VOP_COLORANTI=["MB1095","MG1095","MM1095","MO1095","MR2095","MR1095","MR3095","MS1095","MS2095","MW1095","MW1378","MY1095","MY2095","MY3095"];
+// ---------- Facturi externe: citire PDF + parser pe furnizor (fără salvare în date) ----------
+const FURNIZORI_EXTERNI={
+  schrader:{ nume:"3S Schrader GmbH", detect:/schrader/i, cod:"PLISEEVS2", denumire:"PLISEE VS2", moneda:"EUR" }
+};
+const FE_COST_KW=/(fracht|versand|transport|shipping|freight|porto|delivery|lieferkosten|verpackung)/i;
+const feNum=(s)=>{ const n=parseFloat(String(s).replace(/\./g,"").replace(",",".")); return isNaN(n)?0:n; };
+function feParseazaFactura(rows, furn){
+  const linii=rows.map(r=>r.join(" ").replace(/\s+/g," ").trim()).filter(Boolean);
+  const out={produse:[],transport:0,totalFactura:null,numar:"",data:"",avertismente:[]};
+  let m;
+  for(const l of linii){
+    if(!out.numar && (m=l.match(/^(?:Rechnung\s+)?(\d{4}-\d{6,})$/i))) out.numar=m[1];
+    if(!out.data && (m=l.match(/Belegdatum\s+(\d{2}\.\d{2}\.\d{4})/i))) out.data=m[1];
+    if(m=l.match(/Gesamt\s*\((EUR|USD|RON)\)\s+([\d.]+,\d{2})/i)){ out.totalFactura=feNum(m[2]); out.moneda=m[1].toUpperCase(); }
+  }
+  const iStart=linii.findIndex(l=>/^Pos\.\s+Nr\./i.test(l));
+  let iEnd=linii.findIndex(l=>/^Zwischensumme/i.test(l));
+  if(iEnd<0) iEnd=linii.length;
+  const POS=/^(\d+)\s+(\S+)\s+(.+?)\s+(\d+(?:,\d+)?)\s+(\S+)\s+([\d.]+,\d{2})\s+(?:(\d+(?:,\d+)?)\s*%\s+)?(-?[\d.]+,\d{2})$/;
+  let cur=null;
+  for(let i=Math.max(iStart,0);i<iEnd;i++){
+    const l=linii[i];
+    if(/^Pos\.\s+Nr\./i.test(l)||/^Rechnung\s+\d{4}-\d+\s+Seite/i.test(l)) continue;
+    const mp=l.match(POS);
+    if(mp){
+      const betrag=feNum(mp[8]);
+      if(FE_COST_KW.test(mp[3])||FE_COST_KW.test(mp[2])){ out.transport+=betrag; cur=null; continue; }
+      cur={pos:mp[1],nr:mp[2],descriere:mp[3],cantitate:feNum(mp[4]),um:mp[5],pretLista:feNum(mp[6]),rabat:mp[7]?feNum(mp[7]):0,betrag,kommission:""};
+      out.produse.push(cur); continue;
+    }
+    if(cur && (m=l.match(/^Kommission:\s*(.+)$/i))){ cur.kommission=m[1].trim(); continue; }
+    // rând de cost separat (ex. „Versandkosten 25,00”), în afara descrierilor de produs
+    if(FE_COST_KW.test(l) && (m=l.match(/(-?[\d.]+,\d{2})$/))){ out.transport+=feNum(m[1]); cur=null; }
+  }
+  if(!out.produse.length) out.avertismente.push("Nu am găsit nicio poziție de produs în PDF — formatul facturii nu se potrivește cu parserul acestui furnizor.");
+  const sumP=out.produse.reduce((s,p)=>s+p.betrag,0);
+  out.sumaProduse=Math.round(sumP*100)/100;
+  out.sumaTotal=Math.round((sumP+out.transport)*100)/100;
+  if(out.totalFactura!=null && Math.abs(out.sumaTotal-out.totalFactura)>0.02) out.avertismente.push(`Suma pozițiilor citite (${out.sumaTotal.toFixed(2)}) nu coincide cu totalul din factură (${out.totalFactura.toFixed(2)}) — verifică înainte să folosești Excel-ul.`);
+  if(out.totalFactura==null) out.avertismente.push("Nu am găsit totalul facturii pentru verificare.");
+  return out;
+}
+// Transportul se împarte proporțional cu VALOAREA fiecărei poziții (nu cu cantitatea).
+function feConstruiesteRanduri(fact, furn, textLoturi){
+  const sumP=fact.sumaProduse||0;
+  const loturi=[];
+  String(textLoturi||"").split(/\n/).forEach(l=>{
+    const m=l.trim().match(/^(\d+)\s*(?:[-–—]|la)?\s*(\d+)?\s*[:\s]\s*(.+)$/i);
+    if(m){ const a=Number(m[1]), b=m[2]?Number(m[2]):a; loturi.push({a:Math.min(a,b),b:Math.max(a,b),nume:m[3].trim()}); }
+  });
+  return fact.produse.map((p,i)=>{
+    const nr=i+1;
+    const lotManual=loturi.filter(x=>nr>=x.a&&nr<=x.b).pop();
+    const parteTransport=sumP>0?fact.transport*p.betrag/sumP:0;
+    const valoare=p.betrag+parteTransport;
+    return {nr, pos:p.pos, cod:furn.cod, denumire:furn.denumire, cantitate:p.cantitate,
+      pret:Math.round(valoare/(p.cantitate||1)*10000)/10000, valoare:Math.round(valoare*100)/100,
+      lot:lotManual?lotManual.nume:String(p.kommission||"").trim().slice(0,10).trim(), lotDinFactura:!lotManual&&!!p.kommission};
+  });
+}
+async function feCitestePdf(file){
+  if(!window.pdfjsLib) throw new Error("Motorul de citire PDF nu s-a încărcat (verifică internetul).");
+  const data=new Uint8Array(await file.arrayBuffer());
+  const doc=await pdfjsLib.getDocument({data}).promise;
+  const rows=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const page=await doc.getPage(p);
+    const content=await page.getTextContent();
+    const items=content.items.map(it=>({str:it.str,x:it.transform[4],y:it.transform[5]})).filter(i=>i.str.trim());
+    items.sort((a,b)=>b.y-a.y||a.x-b.x);
+    const lines=[];
+    for(const it of items){ let line=lines.find(l=>Math.abs(l.y-it.y)<=3); if(!line){ line={y:it.y,items:[]}; lines.push(line);} line.items.push(it); }
+    lines.sort((a,b)=>b.y-a.y);
+    for(const line of lines){ line.items.sort((a,b)=>a.x-b.x); rows.push(line.items.map(i=>i.str.trim()).filter(Boolean)); }
+  }
+  return rows;
+}
+
+function FacturiExterneTab({C}){
+  const [furnKey,setFurnKey]=React.useState("schrader");
+  const [fisier,setFisier]=React.useState("");
+  const [fact,setFact]=React.useState(null);
+  const [loturi,setLoturi]=React.useState("");
+  const [msg,setMsg]=React.useState("");
+  const furn=FURNIZORI_EXTERNI[furnKey];
+  const incarca=async(file)=>{
+    if(!file) return;
+    setMsg("Se citește..."); setFact(null); setFisier(file.name);
+    try{
+      const rows=await feCitestePdf(file);
+      const f=feParseazaFactura(rows,furn);
+      if(!rows.some(r=>furn.detect.test(r.join(" ")))) f.avertismente.unshift(`PDF-ul nu pare să fie de la ${furn.nume} — verifică furnizorul ales.`);
+      setFact(f); setMsg("");
+    }catch(e){ setMsg("Nu pot citi PDF-ul: "+(e&&e.message||e)); }
+  };
+  const randuri=fact?feConstruiesteRanduri(fact,furn,loturi):[];
+  const fmtN=(n,d)=>Number(n).toLocaleString("ro-RO",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const totalExcel=randuri.reduce((s,r)=>s+r.cantitate*r.pret,0);
+  const faraLot=randuri.filter(r=>!r.lot).length;
+  const exporta=()=>{
+    if(typeof XLSX==="undefined"){ setMsg("Modulul Excel nu s-a încărcat (verifică internetul) — reîncearcă."); return; }
+    const data=[["Cod","Denumire","Cantitate",`Preț unitar (${(fact&&fact.moneda)||furn.moneda})`,"Serie lot"], ...randuri.map(r=>[r.cod,r.denumire,r.cantitate,r.pret,r.lot])];
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws["!cols"]=[{wch:14},{wch:20},{wch:11},{wch:18},{wch:26}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Factură");
+    XLSX.writeFile(wb,`Factura_externa_${furn.nume.replace(/[^a-zA-Z0-9]+/g,"_")}_${(fact.numar||"fara-nr")}.xlsx`);
+  };
+  const th={padding:"7px 10px",textAlign:"left",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",background:"#33444D",color:"#fff",fontWeight:600};
+  const td={padding:"6px 10px",borderBottom:`1px solid ${C.border}`,fontSize:13,color:C.text};
+  const tdr={...td,textAlign:"right",fontVariantNumeric:"tabular-nums"};
+  return <div style={{maxWidth:1000}}>
+    <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Facturi externe</div>
+    <div style={{fontSize:13,color:C.textSub,marginBottom:12}}>Alege furnizorul, încarcă factura PDF și primești Excel pentru contabilitate (cod, denumire, cantitate, preț unitar, serie lot). Transportul, dacă există, se repartizează proporțional cu valoarea produselor. Nimic nu se salvează în aplicație.</div>
+    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+      <select value={furnKey} onChange={e=>{setFurnKey(e.target.value); setFact(null); setFisier(""); setMsg("");}} style={{padding:"8px 10px",fontSize:13,border:`1px solid ${C.border}`,background:C.surface,color:C.text}}>
+        {Object.keys(FURNIZORI_EXTERNI).map(k=><option key={k} value={k}>{FURNIZORI_EXTERNI[k].nume}</option>)}
+      </select>
+      <label style={{display:"inline-block",padding:"9px 16px",background:"#33444D",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>
+        + Încarcă factura PDF
+        <input type="file" accept=".pdf,application/pdf" style={{display:"none"}} onChange={e=>{incarca(e.target.files&&e.target.files[0]); e.target.value="";}}/>
+      </label>
+      {fisier&&<span style={{fontSize:12,color:C.textMuted}}>{fisier}</span>}
+    </div>
+    {msg&&<div style={{marginTop:10,fontSize:13,color:msg.startsWith("Se citește")?C.textMuted:"#B3261E"}}>{msg}</div>}
+    {fact&&<div style={{marginTop:16}}>
+      <div style={{fontSize:12,color:C.textMuted,marginBottom:8}}>Factura {fact.numar||"(nr. necitit)"} · {fact.data||"(dată necitită)"} · {randuri.length} poziții · total factură {fact.totalFactura!=null?fmtN(fact.totalFactura,2):"—"} {fact.moneda||furn.moneda}{fact.transport?` · din care transport ${fmtN(fact.transport,2)}`:""}</div>
+      {fact.avertismente.map((a,i)=><div key={i} style={{fontSize:13,color:"#B3261E",marginBottom:6,fontWeight:600}}>⚠ {a}</div>)}
+      {!fact.avertismente.length&&<div style={{fontSize:13,color:"#2E7D32",marginBottom:6}}>✓ Suma pozițiilor coincide cu totalul din factură.</div>}
+      <table style={{width:"100%",borderCollapse:"collapse",background:C.surface,marginBottom:12}}>
+        <thead><tr><th style={th}>Nr.</th><th style={th}>Pos.</th><th style={th}>Cod</th><th style={th}>Denumire</th><th style={{...th,textAlign:"right"}}>Cantitate</th><th style={{...th,textAlign:"right"}}>Preț unitar</th><th style={{...th,textAlign:"right"}}>Valoare</th><th style={th}>Serie lot</th></tr></thead>
+        <tbody>{randuri.map(r=><tr key={r.nr}><td style={td}>{r.nr}</td><td style={{...td,color:C.textMuted}}>{r.pos}</td><td style={{...td,fontWeight:700}}>{r.cod}</td><td style={td}>{r.denumire}</td><td style={tdr}>{fmtN(r.cantitate,r.cantitate%1?2:0)}</td><td style={tdr}>{fmtN(r.pret,2)}</td><td style={tdr}>{fmtN(r.cantitate*r.pret,2)}</td><td style={{...td,color:r.lot?(r.lotDinFactura?C.textMuted:C.text):"#B3261E",fontWeight:r.lotDinFactura?400:600}}>{r.lot||"— lipsește"}{r.lotDinFactura?" (din factură)":""}</td></tr>)}
+        <tr><td style={{...td,fontWeight:700}} colSpan={6}>TOTAL</td><td style={{...tdr,fontWeight:700}}>{fmtN(totalExcel,2)}</td><td style={td}></td></tr></tbody>
+      </table>
+      <div style={{fontSize:12,color:C.textSub,marginBottom:4}}>Serie lot (client) — o linie pe interval, după numărul din coloana „Nr.”. Exemplu: <b>1-3 POPESCU</b> și <b>4-20 IONESCU</b>. Pozițiile necuprinse păstrează „Kommission” din factură.</div>
+      <textarea value={loturi} onChange={e=>setLoturi(e.target.value)} rows={4} placeholder={"1-3 POPESCU\n4-20 IONESCU"} style={{width:"100%",boxSizing:"border-box",padding:"8px 10px",fontSize:13,fontFamily:"inherit",border:`1px solid ${C.border}`,background:C.surface,color:C.text}}/>
+      <div style={{display:"flex",gap:10,alignItems:"center",marginTop:10,flexWrap:"wrap"}}>
+        <button onClick={exporta} disabled={!randuri.length} style={{padding:"9px 18px",background:"#33444D",color:"#fff",border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>↓ Generează Excel pentru contabilitate</button>
+        {faraLot>0&&<span style={{fontSize:12,color:"#B3261E"}}>{faraLot} poziții fără serie lot</span>}
+      </div>
+    </div>}
+  </div>;
+}
+
 function ConsumuriVopsele({C}){
   const [msg,setMsg]=React.useState("");
   const [fisier,setFisier]=React.useState("");
@@ -13151,7 +13294,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
     {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu"},{id:"recurente",l:"Recurente"}]},
-    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:authRole==="admin"?[{id:"trezorerie",l:"Cash Flow"},{id:"impozit",l:"Impozit pe profit"}]:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
+    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:authRole==="admin"?[{id:"trezorerie",l:"Cash Flow"},{id:"facturiext",l:"Facturi externe"},{id:"impozit",l:"Impozit pe profit"}]:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
 
@@ -14038,6 +14181,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {tab==="declaratii"&&<DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={authRole==="admin"} mergiLa={setTab}/>}
     {tab==="consumvop"&&authRole==="admin"&&<div style={{maxWidth:1000}}><ConsumuriVopsele C={C}/></div>}
     {tab==="banca"&&authRole==="admin"&&<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>}
+    {tab==="facturiext"&&authRole==="admin"&&<div style={{maxWidth:1000}}><FacturiExterneTab C={C}/></div>}
     {tab==="impozit"&&authRole==="admin"&&<ImpozitProfitTab C={C}/>}
     {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
 
