@@ -11796,7 +11796,7 @@ function FacturiExterneTab({C}){
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Factură");
     if(lipsa.length){
       // Foaia 2: articolele care nu există în nomenclatorul din contabilitate (cele marcate cu roșu) — de creat în contabilitate.
-      const d2=[["Cod","Denumire (din factură)","UM","Cantitate",`Preț unitar (${mon})`,`Valoare (${mon})`,"Serie lot"], ...lipsa.map(r=>[r.cod,r.descriere||r.denumire,r.um,r.cantitate,r.pret,Math.round(r.valoare*100)/100,r.lot])];
+      const d2=[["Cod","Denumire (din factură)","UM","Cantitate",`Preț unitar (${mon})`,`Valoare (${mon})`,"Serie lot"], ...lipsa.map(r=>[String(r.cod).toUpperCase(),String(r.descriere||r.denumire).toUpperCase(),String(r.um||"").toUpperCase(),r.cantitate,r.pret,Math.round(r.valoare*100)/100,r.lot])];
       const ws2=XLSX.utils.aoa_to_sheet(d2);
       ws2["!cols"]=[{wch:14},{wch:44},{wch:8},{wch:11},{wch:18},{wch:16},{wch:12}];
       XLSX.utils.book_append_sheet(wb,ws2,"Articole lipsa");
