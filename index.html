@@ -11741,7 +11741,7 @@ function feConstruiesteRanduri(fact, furn, textLoturi){
     const lotManual=loturi.filter(x=>nr>=x.a&&nr<=x.b).pop();
     const parteTransport=sumP>0?fact.transport*p.betrag/sumP:0;
     const valoare=p.betrag+parteTransport;
-    return {nr, pos:p.pos||String(nr), cod:p.cod||furn.cod, denumire:p.denumire||furn.denumire, rosu:!!p.rosu, cantitate:p.cantitate,
+    return {nr, pos:p.pos||String(nr), cod:p.cod||furn.cod, denumire:p.denumire||furn.denumire, rosu:!!p.rosu, descriere:p.descriere||"", um:p.um||"", cantitate:p.cantitate,
       pret:Math.round(valoare/(p.cantitate||1)*100000)/100000, valoare:Math.round(valoare*100)/100,
       lot:lotManual?lotManual.nume.toUpperCase():String(p.kommission||furn.lotImplicit||"").trim().split(/[^\p{L}\p{N}]+/u)[0].toUpperCase().slice(0,10), lotDinFactura:!lotManual&&!!p.kommission};
   });
@@ -11788,10 +11788,19 @@ function FacturiExterneTab({C}){
   const nrRosii=randuri.filter(r=>r.rosu).length;
   const exporta=()=>{
     if(typeof XLSX==="undefined"){ setMsg("Modulul Excel nu s-a încărcat (verifică internetul) — reîncearcă."); return; }
-    const data=[["Cod","Denumire","Cantitate",`Preț unitar (${(fact&&fact.moneda)||furn.moneda})`,"Serie lot"], ...randuri.map(r=>[r.cod,r.denumire,r.cantitate,r.pret,r.lot])];
+    const mon=(fact&&fact.moneda)||furn.moneda;
+    const gasite=randuri.filter(r=>!r.rosu), lipsa=randuri.filter(r=>r.rosu);
+    const data=[["Cod","Denumire","Cantitate",`Preț unitar (${mon})`,"Serie lot"], ...gasite.map(r=>[r.cod,r.denumire,r.cantitate,r.pret,r.lot])];
     const ws=XLSX.utils.aoa_to_sheet(data);
     ws["!cols"]=[{wch:14},{wch:20},{wch:11},{wch:18},{wch:26}];
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Factură");
+    if(lipsa.length){
+      // Foaia 2: articolele care nu există în nomenclatorul din contabilitate (cele marcate cu roșu) — de creat în contabilitate.
+      const d2=[["Cod","Denumire (din factură)","UM","Cantitate",`Preț unitar (${mon})`,`Valoare (${mon})`,"Serie lot"], ...lipsa.map(r=>[r.cod,r.descriere||r.denumire,r.um,r.cantitate,r.pret,Math.round(r.valoare*100)/100,r.lot])];
+      const ws2=XLSX.utils.aoa_to_sheet(d2);
+      ws2["!cols"]=[{wch:14},{wch:44},{wch:8},{wch:11},{wch:18},{wch:16},{wch:12}];
+      XLSX.utils.book_append_sheet(wb,ws2,"Articole lipsa");
+    }
     XLSX.writeFile(wb,`Factura_externa_${furn.nume.replace(/[^a-zA-Z0-9]+/g,"_")}_${(fact.numar||"fara-nr")}.xlsx`);
   };
   const th={padding:"7px 10px",textAlign:"left",fontSize:11,textTransform:"uppercase",letterSpacing:"0.05em",background:"#33444D",color:"#fff",fontWeight:600};
