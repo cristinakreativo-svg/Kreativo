@@ -7046,6 +7046,7 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients,openInit,onOp
   const [impOpen,setImpOpen]=React.useState(false);
   const [impSel,setImpSel]=React.useState({});
   const [doarAcc,setDoarAcc]=React.useState(true);
+  const [doarActivi,setDoarActivi]=React.useState(true);
   const lista=Array.isArray(comenzi)?comenzi:[];
   const comanda=lista.find(o=>o.id===openId)||null;
   const inpS={padding:"5px 6px",border:`1px solid ${C.border}`,background:C.bg,color:C.text,fontSize:12,width:"100%",boxSizing:"border-box",fontFamily:"inherit"};
@@ -7070,9 +7071,9 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients,openInit,onOp
   (clients||[]).forEach(c=>(c.oferte||[]).forEach(of=>(of.camere||[]).forEach(cam=>(cam.produse||[]).forEach(pr=>{
     if(pr.tip!=="pliseu") return;
     if(!(Number(String(pr.latimePliseuCm).replace(",","."))>0 && Number(String(pr.inaltimePliseuCm).replace(",","."))>0)) return;
-    candidatiToate.push({key:`${of.id}|${pr.id}`,client:c.name,oferta:of.numar,denumire:of.denumire||"",acceptata:!!of.acceptata,camera:cam.numeCamera||"",pr});
+    candidatiToate.push({key:`${of.id}|${pr.id}`,client:c.name,finalizat:c.stadiu==="finalizat",oferta:of.numar,denumire:of.denumire||"",acceptata:!!of.acceptata,camera:cam.numeCamera||"",pr});
   }))));
-  const candidati=doarAcc?candidatiToate.filter(x=>x.acceptata):candidatiToate;
+  const candidati=candidatiToate.filter(x=>(!doarAcc||x.acceptata)&&(!doarActivi||!x.finalizat));
   const deja=new Map();
   lista.forEach(o=>(o.linii||[]).forEach(l=>{ if(l.src) deja.set(l.src,o.numar); }));
   const adaugaSelectate=()=>{
@@ -7174,8 +7175,9 @@ function ComenziFurnizori({clients,comenzi,setComenzi,C,setClients,openInit,onOp
 
     {impOpen&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:"12px 14px",marginBottom:14}}>
       <div style={{fontSize:12,fontWeight:600,color:C.text,marginBottom:8}}>Plisee din oferte ({candidati.length} găsite, {noiDisponibile.length} încă necomandate)</div>
-      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.text,marginBottom:8,cursor:"pointer"}}><input type="checkbox" checked={doarAcc} onChange={e=>{setDoarAcc(e.target.checked);setImpSel({});}}/> Doar din oferte acceptate{doarAcc&&candidatiToate.length>candidati.length?` (mai sunt ${candidatiToate.length-candidati.length} în oferte neacceptate — debifează ca să le vezi)`:""}</label>
-      {candidati.length===0&&<div style={{fontSize:12,color:C.textMuted}}>{doarAcc?"Nu există plisee cu dimensiuni în oferte acceptate. Debifează „Doar din oferte acceptate” sau adaugă rânduri de mână.":"Nu există nicio ofertă cu produs „Pliseu” cu dimensiuni completate. Poți adăuga rânduri de mână."}</div>}
+      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.text,marginBottom:4,cursor:"pointer"}}><input type="checkbox" checked={doarActivi} onChange={e=>{setDoarActivi(e.target.checked);setImpSel({});}}/> Doar clienți activi (fără cei finalizați)</label>
+      <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.text,marginBottom:8,cursor:"pointer"}}><input type="checkbox" checked={doarAcc} onChange={e=>{setDoarAcc(e.target.checked);setImpSel({});}}/> Doar din oferte acceptate{(doarAcc||doarActivi)&&candidatiToate.length>candidati.length?` (${candidatiToate.length-candidati.length} ascunse de filtre — debifează ca să le vezi)`:""}</label>
+      {candidati.length===0&&<div style={{fontSize:12,color:C.textMuted}}>{(doarAcc||doarActivi)?"Nu există plisee cu dimensiuni care să treacă de filtre. Debifează „Doar din oferte acceptate” / „Doar clienți activi” sau adaugă rânduri de mână.":"Nu există nicio ofertă cu produs „Pliseu” cu dimensiuni completate. Poți adăuga rânduri de mână."}</div>}
       {candidati.length>0&&<>
         <div style={{display:"flex",gap:8,marginBottom:8,flexWrap:"wrap"}}>
           <button onClick={()=>{const s={};noiDisponibile.forEach(x=>{s[x.key]=true;});setImpSel(s);}} style={btn(false)}>Bifează toate necomandatele</button>
