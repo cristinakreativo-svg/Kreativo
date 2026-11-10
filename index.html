@@ -12072,6 +12072,266 @@ function UitTab({C}){
   </div>;
 }
 
+const POPK="zz_poprire_salariu_v1"; // cheie ascunsă pentru Nico/Dan (politica de acces exclude cheile care încep cu zz_); folosită doar de modulul Poprire salariu
+const POP_LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+const popLunaTxt=(l)=>{const m=/^(\d{4})-(\d{2})$/.exec(l||"");return m?`${POP_LUNI[+m[2]-1]} ${m[1]}`:(l||"");};
+const popLunaUrm=(l)=>{const m=/^(\d{4})-(\d{2})$/.exec(l||"");if(!m)return tday().slice(0,7);let y=+m[1],mo=+m[2]+1;if(mo>12){mo=1;y++;}return `${y}-${String(mo).padStart(2,"0")}`;};
+const popR2=(x)=>Math.round((Number(x)+Number.EPSILON)*100)/100;
+const popNum=(s)=>{const n=Number(String(s==null?"":s).replace(/\s/g,"").replace(",","."));return isFinite(n)?n:0;};
+const popEx=(d)=>String((d&&d.executor)||"").trim().toUpperCase();
+// soldul unui dosar înainte de luna L = suma − plățile din lunile anterioare
+const popSold=(ang,d,luna)=>popR2((Number(d.suma)||0)-(ang.luni||[]).filter(m=>m.luna<luna).reduce((s,m)=>s+(Number((m.plati||{})[d.id])||0),0));
+// propunere pentru o lună: plafon = net × procent; repartizat direct proporțional cu soldul rămas al dosarelor active
+function popPropune(ang,luna,net){
+  const pool=popR2(net*(Number(ang.procent)||50)/100);
+  const act=(ang.dosare||[]).filter(d=>(d.luna||"0000-00")<=luna).map(d=>({d,bal:popSold(ang,d,luna)})).filter(x=>x.bal>0.004);
+  const tot=act.reduce((s,x)=>s+x.bal,0);
+  const plati={};
+  if(!act.length||pool<=0) return {pool,plati};
+  if(pool>=tot-0.004){ act.forEach(x=>{plati[x.d.id]=x.bal;}); return {pool,plati}; }
+  act.forEach(x=>{plati[x.d.id]=popR2(pool*x.bal/tot);});
+  const ids=Object.keys(plati);
+  const dif=popR2(pool-ids.reduce((s,id)=>s+plati[id],0));
+  if(dif!==0){ const cand=ids.filter(id=>{const b=act.find(x=>x.d.id===id).bal;return plati[id]+dif>=0&&plati[id]+dif<=b+0.001;}).sort((a,b)=>plati[b]-plati[a])[0]; if(cand) plati[cand]=popR2(plati[cand]+dif); }
+  return {pool,plati};
+}
+// estimare: câte luni mai sunt până la achitare, cu venitul net dat
+function popEstimeaza(ang,net){
+  const ultima=(ang.luni||[]).map(m=>m.luna).sort().pop()||tday().slice(0,7);
+  const a2={...ang,luni:[...(ang.luni||[])]};
+  let luna=ultima,n=0;
+  const rest=()=>(a2.dosare||[]).reduce((s,d)=>s+popSold(a2,d,"9999-99"),0);
+  while(rest()>0.004&&n<600){
+    luna=popLunaUrm(luna); const p=popPropune(a2,luna,net);
+    if(!Object.keys(p.plati).length&&!(a2.dosare||[]).some(d=>(d.luna||"")>luna)) return null;
+    a2.luni.push({luna,net,plati:p.plati}); n++;
+  }
+  return n>=600?null:{luni:n,pana:luna};
+}
+
+function PoprireTab({C}){
+  const [data,setData]=React.useState(null);
+  const [ver,setVer]=React.useState(null); // null = cheia nu există încă în baza de date
+  const [stare,setStare]=React.useState("incarc");
+  const [msg,setMsg]=React.useState("");
+  const [angId,setAngId]=React.useState(null);
+  const [fd,setFd]=React.useState({nr:"",ex:"",suma:"",luna:""});
+  const [fl,setFl]=React.useState(null);
+  const fmtN=(n,d)=>Number(n).toLocaleString("ro-RO",{minimumFractionDigits:d,maximumFractionDigits:d});
+  const f2=(n)=>fmtN(n,2);
+  const incarca=async()=>{
+    setStare("incarc");
+    try{
+      const {data:r,error}=await sb.from("kreativo_data").select("value,version").eq("key",POPK).maybeSingle();
+      if(error) throw error;
+      if(r&&r.value){ const v=JSON.parse(r.value); setData(v); setVer(r.version==null?0:r.version); setAngId(p=>p&&(v.angajati||[]).some(a=>a.id===p)?p:((v.angajati||[])[0]||{}).id||null); }
+      else{ setData({v:1,angajati:[]}); setVer(null); }
+      setStare("ok");
+    }catch(e){ setStare("eroare"); setMsg("Nu pot citi datele din baza de date: "+(e&&e.message||e)); }
+  };
+  React.useEffect(()=>{ incarca(); },[]);
+  const salveaza=async(nou)=>{
+    try{
+      const raw=JSON.stringify(nou);
+      if(ver===null){
+        const ins=await sb.from("kreativo_data").insert({key:POPK,value:raw}).select("version");
+        if(ins.error) throw ins.error;
+        setVer((ins.data&&ins.data[0]&&ins.data[0].version)||1);
+      }else{
+        const up=await sb.from("kreativo_data").update({value:raw}).eq("key",POPK).eq("version",ver).select("version");
+        if(up.error) throw up.error;
+        if(!up.data||!up.data.length){ setMsg("Datele au fost modificate în altă fereastră — NU s-a salvat nimic. Am reîncărcat versiunea din baza de date; repetă operația."); await incarca(); return false; }
+        setVer(up.data[0].version);
+      }
+      setData(nou); setMsg("✓ Salvat în baza de date."); return true;
+    }catch(e){ setMsg("NU s-a salvat: "+(e&&e.message||e)); return false; }
+  };
+  if(stare==="incarc") return <div style={{fontSize:13,color:C.textMuted}}>Se încarcă…</div>;
+  if(stare==="eroare") return <div><div style={{color:"#B04040",fontSize:13,marginBottom:10}}>{msg}</div><button onClick={incarca} style={{padding:"7px 14px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:12}}>Reîncearcă</button></div>;
+  const lista=data.angajati||[];
+  const ang=lista.find(a=>a.id===angId)||null;
+  const copie=()=>JSON.parse(JSON.stringify(data));
+  const modif=(fn)=>{ const nou=copie(); const a=nou.angajati.find(x=>x.id===angId); if(!a) return Promise.resolve(false); fn(a); return salveaza(nou); };
+  const inp={padding:"6px 8px",border:`1px solid ${C.border}`,background:C.bg,color:C.text,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"};
+  const btn=(p)=>({padding:"7px 14px",border:p?"none":`1px solid ${C.border}`,background:p?C.accent:"transparent",color:p?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:p?600:400});
+  const titlu={fontSize:11,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:C.text,margin:"22px 0 8px"};
+  const th={padding:"6px 8px",fontSize:11,textAlign:"left",color:C.textSub,borderBottom:`1px solid ${C.border}`,fontWeight:600,whiteSpace:"nowrap"};
+  const td={padding:"6px 8px",fontSize:12,color:C.text,borderBottom:`1px solid ${C.border}`,whiteSpace:"nowrap"};
+  const tdr={...td,textAlign:"right"};
+  const gidp=()=>Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+
+  const angNou=async()=>{
+    const nume=(window.prompt("Numele angajatului:")||"").trim(); if(!nume) return;
+    const a={id:gidp(),nume,procent:50,dosare:[],luni:[]};
+    const nou=copie(); nou.angajati.push(a);
+    if(await salveaza(nou)) setAngId(a.id);
+  };
+  const stergeAng=async()=>{
+    if(!ang) return;
+    if(!window.confirm(`Ștergi complet angajatul ${ang.nume}, cu toate dosarele și lunile înregistrate? Nu se poate recupera.`)) return;
+    const nou=copie(); nou.angajati=nou.angajati.filter(a=>a.id!==ang.id);
+    if(await salveaza(nou)) setAngId((nou.angajati[0]||{}).id||null);
+  };
+  const adaugaDosar=async()=>{
+    const nr=fd.nr.trim(), ex=fd.ex.trim(), suma=popNum(fd.suma), luna=fd.luna||(()=>{const u=(ang.luni||[]).map(m=>m.luna).sort().pop();return u?popLunaUrm(u):tday().slice(0,7);})();
+    if(!nr||!ex||!(suma>0)){ alert("Completează nr. dosar, executorul și suma (mai mare ca 0)."); return; }
+    if((ang.dosare||[]).some(d=>d.nr.trim().toLowerCase()===nr.toLowerCase()&&popEx(d)===ex.toUpperCase())){ alert("Dosarul există deja la acest executor."); return; }
+    if(await modif(a=>{ a.dosare.push({id:gidp(),nr,executor:ex,suma,luna}); })) setFd({nr:"",ex:"",suma:"",luna:""});
+  };
+  const stergeDosar=async(d)=>{
+    if((ang.luni||[]).some(m=>Number((m.plati||{})[d.id])>0)){ alert("Dosarul are plăți înregistrate, deci nu se poate șterge. Dacă e achitat, rămâne în evidență cu restul 0."); return; }
+    if(!window.confirm(`Ștergi dosarul ${d.nr} (${d.executor})?`)) return;
+    await modif(a=>{ a.dosare=a.dosare.filter(x=>x.id!==d.id); });
+  };
+  const editeazaDosar=async(d)=>{
+    const s=window.prompt(`Suma totală a dosarului ${d.nr} (lei):`,String(d.suma)); if(s===null) return;
+    const v=popNum(s); if(!(v>0)){ alert("Sumă invalidă."); return; }
+    const l=window.prompt("Se aplică începând cu luna (AAAA-LL):",d.luna||""); if(l===null) return;
+    if(!/^\d{4}-\d{2}$/.test(l.trim())){ alert("Format lună invalid, ex. 2026-05."); return; }
+    await modif(a=>{ const x=a.dosare.find(y=>y.id===d.id); x.suma=v; x.luna=l.trim(); });
+  };
+  const setProcent=async(v)=>{ const p=popNum(v); if(!(p>0&&p<=100)){ alert("Procent între 1 și 100."); return; } if(p!==Number(ang.procent)) await modif(a=>{ a.procent=p; }); };
+
+  // ---- formular lună ----
+  const deschideLuna=(m)=>{
+    if(m){ setFl({luna:m.luna,net:String(m.net),plati:Object.fromEntries(Object.entries(m.plati||{}).map(([k,v])=>[k,String(v)])),nou:false}); return; }
+    const ultima=(ang.luni||[]).slice().sort((a,b)=>a.luna.localeCompare(b.luna)).pop();
+    const luna=ultima?popLunaUrm(ultima.luna):tday().slice(0,7);
+    const net=ultima?String(ultima.net):"";
+    const pr=net?popPropune(ang,luna,popNum(net)):{plati:{}};
+    setFl({luna,net,plati:Object.fromEntries(Object.entries(pr.plati).map(([k,v])=>[k,String(v)])),nou:true});
+  };
+  const recalcFl=(luna,net)=>{
+    const pr=popPropune(ang,luna,popNum(net));
+    setFl(p=>({...p,luna,net,plati:Object.fromEntries(Object.entries(pr.plati).map(([k,v])=>[k,String(v)]))}));
+  };
+  const salveazaLuna=async()=>{
+    const net=popNum(fl.net);
+    if(!/^\d{4}-\d{2}$/.test(fl.luna)){ alert("Alege luna."); return; }
+    if(!(net>0)){ alert("Completează venitul net."); return; }
+    if(fl.nou&&(ang.luni||[]).some(m=>m.luna===fl.luna)){ alert(`${popLunaTxt(fl.luna)} există deja. Deschide-o din istoric ca să o modifici.`); return; }
+    const plati={}; let tot=0;
+    for(const d of ang.dosare){ const v=popR2(popNum(fl.plati[d.id])); if(v<0){ alert("Sume negative nu sunt permise."); return; } if(v>0){ const sold=popSold(ang,d,fl.luna); if(v>sold+0.01){ alert(`Dosarul ${d.nr}: plata ${f2(v)} depășește restul ${f2(sold)}.`); return; } plati[d.id]=v; tot+=v; } }
+    const pool=popR2(net*(Number(ang.procent)||50)/100);
+    if(tot>pool+0.01&&!window.confirm(`Total ${f2(tot)} lei depășește plafonul de ${ang.procent}% din net (${f2(pool)} lei). Salvezi oricum?`)) return;
+    const ok=await modif(a=>{
+      const vechi=a.luni.find(m=>m.luna===fl.luna);
+      const nm={luna:fl.luna,net,plati,platit:(vechi&&vechi.platit)||{}};
+      a.luni=a.luni.filter(m=>m.luna!==fl.luna).concat([nm]).sort((x,y)=>x.luna.localeCompare(y.luna));
+    });
+    if(ok) setFl(null);
+  };
+  const stergeLuna=async(m)=>{ if(window.confirm(`Ștergi luna ${popLunaTxt(m.luna)}? Soldurile dosarelor se recalculează.`)) await modif(a=>{ a.luni=a.luni.filter(x=>x.luna!==m.luna); }); };
+  const marcheazaPlatit=async(m,ex,v)=>modif(a=>{ const x=a.luni.find(y=>y.luna===m.luna); x.platit=x.platit||{}; if(v) x.platit[ex]=tday(); else delete x.platit[ex]; });
+
+  // ---- calcule de afișare ----
+  const dosare=ang?(ang.dosare||[]):[];
+  const luni=ang?(ang.luni||[]).slice().sort((a,b)=>a.luna.localeCompare(b.luna)):[];
+  const achitat=(d)=>luni.reduce((s,m)=>s+(Number((m.plati||{})[d.id])||0),0);
+  const rest=(d)=>popR2((Number(d.suma)||0)-achitat(d));
+  const restTot=dosare.reduce((s,d)=>s+rest(d),0);
+  const activ=dosare.filter(d=>rest(d)>0.004);
+  const pondere=(d)=>restTot>0&&rest(d)>0.004?rest(d)/restTot*100:0;
+  const executori=[...new Set(dosare.map(popEx))];
+  const ultimaNet=luni.length?luni[luni.length-1].net:0;
+  const est=ang&&ultimaNet>0&&restTot>0.004?popEstimeaza(ang,ultimaNet):null;
+  const exportaXlsx=()=>{
+    const aoa=[[ang.nume],[],["Dosar nr","Executor","Suma","Achitat","Rest","Procent din rest"]];
+    dosare.forEach(d=>aoa.push([d.nr,d.executor,d.suma,popR2(achitat(d)),rest(d),Math.round(pondere(d)*100000)/100000]));
+    aoa.push(["","Total",popR2(dosare.reduce((s,d)=>s+d.suma,0)),popR2(dosare.reduce((s,d)=>s+achitat(d),0)),popR2(restTot),""]);
+    aoa.push([]);
+    aoa.push(["Luna","Venit net",`${ang.procent}% poprire`,...dosare.map(d=>`${d.nr} ${d.executor}`),"Total plătit"]);
+    luni.forEach(m=>aoa.push([popLunaTxt(m.luna),m.net,popR2(m.net*ang.procent/100),...dosare.map(d=>Number((m.plati||{})[d.id])||0),popR2(dosare.reduce((s,d)=>s+(Number((m.plati||{})[d.id])||0),0))]));
+    aoa.push(["Total","","",...dosare.map(d=>popR2(achitat(d))),popR2(dosare.reduce((s,d)=>s+achitat(d),0))]);
+    aoa.push(["Rest de plată","","",...dosare.map(d=>rest(d)),popR2(restTot)]);
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    const pl=[["Luna","Executor","Dosare","Total de plată","Plătit la"]];
+    luni.slice().reverse().forEach(m=>executori.forEach(ex=>{
+      const ds=dosare.filter(d=>popEx(d)===ex&&Number((m.plati||{})[d.id])>0); if(!ds.length) return;
+      pl.push([popLunaTxt(m.luna),ex,ds.map(d=>`${d.nr}: ${f2(m.plati[d.id])}`).join("; "),popR2(ds.reduce((s,d)=>s+Number(m.plati[d.id]),0)),(m.platit||{})[ex]||""]);
+    }));
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Popriri"); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(pl),"Plăți executori");
+    XLSX.writeFile(wb,`Poprire_${ang.nume.replace(/[^\p{L}\p{N}]+/gu,"_")}.xlsx`);
+  };
+
+  const prop=fl&&ang?popPropune(ang,fl.luna,popNum(fl.net)):null;
+  const totFl=fl&&ang?popR2(dosare.reduce((s,d)=>s+popNum(fl.plati[d.id]),0)):0;
+  return <div>
+    <div style={{fontSize:11,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:C.text,marginBottom:6}}>Poprire salariu</div>
+    <div style={{fontSize:12,color:C.textSub,marginBottom:12,maxWidth:820}}>Pe fiecare lună, suma poprită (maxim {ang?ang.procent:50}% din venitul net) se repartizează direct proporțional cu restul de plată al fiecărui dosar. Se face o singură plată pe executor pe lună. Datele se salvează în baza de date, accesibile doar contului de administrator.</div>
+    {msg&&<div style={{fontSize:12,color:msg.startsWith("✓")?"#3A6A3A":"#B04040",marginBottom:10}}>{msg}</div>}
+    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+      {lista.length>0&&<select value={angId||""} onChange={e=>{setAngId(e.target.value);setFl(null);setMsg("");}} style={{...inp,minWidth:200}}>{lista.map(a=><option key={a.id} value={a.id}>{a.nume}</option>)}</select>}
+      <button onClick={angNou} style={btn(lista.length===0)}>+ Angajat cu poprire</button>
+      {ang&&<button onClick={stergeAng} style={btn(false)}>Șterge angajatul</button>}
+      {ang&&<button onClick={exportaXlsx} style={btn(false)}>↓ Export Excel</button>}
+    </div>
+    {!ang&&<div style={{fontSize:13,color:C.textMuted,padding:"20px 0"}}>Niciun angajat. Apasă „+ Angajat cu poprire”.</div>}
+    {ang&&<>
+      <div style={{display:"flex",gap:10,alignItems:"center",marginTop:14,fontSize:12,color:C.textSub}}>Limită poprire din venitul net (%): <input defaultValue={ang.procent} key={ang.id+"-"+ang.procent} onBlur={e=>setProcent(e.target.value)} style={{...inp,width:70,textAlign:"right"}}/></div>
+
+      <div style={titlu}>Dosare de poprire</div>
+      <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",minWidth:700}}>
+        <thead><tr><th style={th}>Dosar nr.</th><th style={th}>Executor</th><th style={{...th,textAlign:"right"}}>Suma</th><th style={th}>Din luna</th><th style={{...th,textAlign:"right"}}>Achitat</th><th style={{...th,textAlign:"right"}}>Rest</th><th style={{...th,textAlign:"right"}}>% din rest</th><th style={th}></th></tr></thead>
+        <tbody>
+          {dosare.map(d=><tr key={d.id} style={{opacity:rest(d)>0.004?1:.5}}>
+            <td style={td}>{d.nr}</td><td style={td}>{d.executor}</td><td style={tdr}>{f2(d.suma)}</td><td style={td}>{popLunaTxt(d.luna)}</td><td style={tdr}>{f2(achitat(d))}</td><td style={{...tdr,fontWeight:600}}>{f2(rest(d))}</td><td style={tdr}>{pondere(d)>0?fmtN(pondere(d),3)+" %":"achitat"}</td>
+            <td style={td}><button onClick={()=>editeazaDosar(d)} style={{border:"none",background:"transparent",color:C.textSub,cursor:"pointer",fontSize:12}}>Editează</button><button onClick={()=>stergeDosar(d)} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:13}}>🗑</button></td>
+          </tr>)}
+          {dosare.length>0&&<tr><td style={{...td,fontWeight:700}} colSpan={2}>Total</td><td style={{...tdr,fontWeight:700}}>{f2(dosare.reduce((s,d)=>s+d.suma,0))}</td><td style={td}></td><td style={{...tdr,fontWeight:700}}>{f2(dosare.reduce((s,d)=>s+achitat(d),0))}</td><td style={{...tdr,fontWeight:700}}>{f2(restTot)}</td><td style={td} colSpan={2}></td></tr>}
+        </tbody></table></div>
+      {dosare.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"8px 0"}}>Niciun dosar încă.</div>}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:10}}>
+        <input placeholder="Dosar nr. (ex. 182/2023)" value={fd.nr} onChange={e=>setFd({...fd,nr:e.target.value})} style={{...inp,width:170}}/>
+        <input placeholder="Executor" value={fd.ex} onChange={e=>setFd({...fd,ex:e.target.value})} style={{...inp,width:150}} list="pop-ex"/>
+        <datalist id="pop-ex">{[...new Set(dosare.map(d=>d.executor))].map(x=><option key={x} value={x}/>)}</datalist>
+        <input placeholder="Suma (lei)" value={fd.suma} onChange={e=>setFd({...fd,suma:e.target.value})} style={{...inp,width:110,textAlign:"right"}}/>
+        <span style={{fontSize:12,color:C.textSub}}>de la luna</span><input type="month" value={fd.luna} onChange={e=>setFd({...fd,luna:e.target.value})} style={{...inp,width:150}}/>
+        <button onClick={adaugaDosar} style={btn(true)}>+ Adaugă dosar</button>
+      </div>
+      <div style={{fontSize:11,color:C.textMuted,marginTop:4}}>Dosarul nou intră în repartizare începând cu luna aleasă (dacă nu alegi nimic: luna următoare ultimei luni introduse, sau luna curentă dacă n-ai introdus nicio lună); la intrare se repartizează proporțional cu restul de plată al tuturor dosarelor active.</div>
+
+      <div style={titlu}>Luna de plată</div>
+      {!fl&&<button onClick={()=>deschideLuna(null)} disabled={dosare.length===0} style={btn(true)}>+ Lună nouă</button>}
+      {fl&&<div style={{border:`1px solid ${C.accent}`,background:C.surface,padding:"12px 14px",maxWidth:760}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
+          <span style={{fontSize:12,color:C.textSub}}>Luna</span><input type="month" value={fl.luna} disabled={!fl.nou} onChange={e=>recalcFl(e.target.value,fl.net)} style={{...inp,width:150}}/>
+          <span style={{fontSize:12,color:C.textSub}}>Venit net (lei)</span><input value={fl.net} onChange={e=>recalcFl(fl.luna,e.target.value)} style={{...inp,width:110,textAlign:"right"}}/>
+          <span style={{fontSize:12,color:C.textSub}}>Plafon {ang.procent}%: <b style={{color:C.text}}>{f2(prop?prop.pool:0)}</b> lei</span>
+          {!fl.nou&&<button onClick={()=>recalcFl(fl.luna,fl.net)} style={btn(false)}>Recalculează propunerea</button>}
+        </div>
+        <table style={{borderCollapse:"collapse",width:"100%"}}><thead><tr><th style={th}>Dosar</th><th style={th}>Executor</th><th style={{...th,textAlign:"right"}}>Rest înainte</th><th style={{...th,textAlign:"right"}}>De plătit (lei)</th></tr></thead><tbody>
+          {dosare.filter(d=>(d.luna||"0000-00")<=fl.luna&&(popSold(ang,d,fl.luna)>0.004||popNum(fl.plati[d.id])>0)).map(d=><tr key={d.id}><td style={td}>{d.nr}</td><td style={td}>{d.executor}</td><td style={tdr}>{f2(popSold(ang,d,fl.luna))}</td><td style={tdr}><input value={fl.plati[d.id]==null?"":fl.plati[d.id]} onChange={e=>setFl(p=>({...p,plati:{...p.plati,[d.id]:e.target.value}}))} style={{...inp,width:110,textAlign:"right"}}/></td></tr>)}
+          <tr><td style={{...td,fontWeight:700}} colSpan={3}>Total</td><td style={{...tdr,fontWeight:700,color:prop&&totFl>prop.pool+0.01?"#B04040":C.text}}>{f2(totFl)}</td></tr>
+        </tbody></table>
+        <div style={{fontSize:12,color:C.textSub,margin:"8px 0"}}>Plăți pe executor: {executori.map(ex=>{ const s=popR2(dosare.filter(d=>popEx(d)===ex).reduce((t,d)=>t+popNum(fl.plati[d.id]),0)); return s>0?`${ex} ${f2(s)} lei`:null; }).filter(Boolean).join(" · ")||"—"}</div>
+        <div style={{display:"flex",gap:8}}><button onClick={salveazaLuna} style={btn(true)}>Salvează luna</button><button onClick={()=>setFl(null)} style={btn(false)}>Anulează</button></div>
+      </div>}
+      {est&&<div style={{fontSize:12,color:C.textSub,marginTop:10}}>Estimare: cu venitul net de {f2(ultimaNet)} lei, toate dosarele se achită în aproximativ {est.luni} luni (până în {popLunaTxt(est.pana)}).</div>}
+
+      {luni.length>0&&<>
+        <div style={titlu}>Istoric lunar</div>
+        <div style={{overflowX:"auto"}}><table style={{borderCollapse:"collapse",minWidth:700}}>
+          <thead><tr><th style={th}>Luna</th><th style={{...th,textAlign:"right"}}>Net</th><th style={{...th,textAlign:"right"}}>{ang.procent}%</th>{dosare.map(d=><th key={d.id} style={{...th,textAlign:"right"}}>{d.nr}<br/><span style={{fontWeight:400}}>{d.executor}</span></th>)}<th style={{...th,textAlign:"right"}}>Total</th><th style={th}></th></tr></thead>
+          <tbody>
+            {luni.map(m=><tr key={m.luna}><td style={td}>{popLunaTxt(m.luna)}</td><td style={tdr}>{f2(m.net)}</td><td style={tdr}>{f2(m.net*ang.procent/100)}</td>{dosare.map(d=><td key={d.id} style={tdr}>{Number((m.plati||{})[d.id])>0?f2(m.plati[d.id]):""}</td>)}<td style={{...tdr,fontWeight:600}}>{f2(dosare.reduce((s,d)=>s+(Number((m.plati||{})[d.id])||0),0))}</td><td style={td}><button onClick={()=>deschideLuna(m)} style={{border:"none",background:"transparent",color:C.textSub,cursor:"pointer",fontSize:12}}>Modifică</button><button onClick={()=>stergeLuna(m)} style={{border:"none",background:"transparent",color:C.textMuted,cursor:"pointer",fontSize:13}}>🗑</button></td></tr>)}
+            <tr><td style={{...td,fontWeight:700}} colSpan={3}>Total achitat</td>{dosare.map(d=><td key={d.id} style={{...tdr,fontWeight:700}}>{f2(achitat(d))}</td>)}<td style={{...tdr,fontWeight:700}}>{f2(dosare.reduce((s,d)=>s+achitat(d),0))}</td><td style={td}></td></tr>
+            <tr><td style={{...td,fontWeight:700}} colSpan={3}>Rest de plată</td>{dosare.map(d=><td key={d.id} style={{...tdr,fontWeight:700}}>{f2(rest(d))}</td>)}<td style={{...tdr,fontWeight:700}}>{f2(restTot)}</td><td style={td}></td></tr>
+          </tbody></table></div>
+
+        <div style={titlu}>Plăți către executori (o plată pe executor pe lună)</div>
+        <table style={{borderCollapse:"collapse",minWidth:700}}><thead><tr><th style={th}>Luna</th><th style={th}>Executor</th><th style={th}>Dosare incluse</th><th style={{...th,textAlign:"right"}}>Total de plată</th><th style={th}>Plătit</th></tr></thead><tbody>
+          {luni.slice().reverse().flatMap(m=>executori.map(ex=>{
+            const ds=dosare.filter(d=>popEx(d)===ex&&Number((m.plati||{})[d.id])>0); if(!ds.length) return null;
+            const plt=(m.platit||{})[ex];
+            return <tr key={m.luna+ex}><td style={td}>{popLunaTxt(m.luna)}</td><td style={td}>{ex}</td><td style={{...td,whiteSpace:"normal",fontSize:11,color:C.textSub}}>{ds.map(d=>`${d.nr}: ${f2(m.plati[d.id])}`).join(" · ")}</td><td style={{...tdr,fontWeight:600}}>{f2(ds.reduce((s,d)=>s+Number(m.plati[d.id]),0))}</td><td style={td}><label style={{cursor:"pointer",display:"flex",gap:6,alignItems:"center"}}><input type="checkbox" checked={!!plt} onChange={e=>marcheazaPlatit(m,ex,e.target.checked)}/>{plt?<span style={{fontSize:11,color:"#3A6A3A"}}>plătit {plt}</span>:<span style={{fontSize:11,color:"#B04040"}}>de plătit</span>}</label></td></tr>;
+          }))}
+        </tbody></table>
+      </>}
+    </>}
+  </div>;
+}
+
 function ConsumuriVopsele({C}){
   const [msg,setMsg]=React.useState("");
   const [fisier,setFisier]=React.useState("");
@@ -13579,7 +13839,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
     {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
     {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu"},{id:"recurente",l:"Recurente"}]},
-    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:authRole==="admin"?[{id:"trezorerie",l:"Cash Flow"},{id:"facturiext",l:"Facturi externe"},{id:"uit",l:"Generare UIT"},{id:"impozit",l:"Impozit pe profit"}]:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
+    {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:authRole==="admin"?[{id:"trezorerie",l:"Cash Flow"},{id:"facturiext",l:"Facturi externe"},{id:"uit",l:"Generare UIT"},{id:"poprire",l:"Poprire salariu"},{id:"impozit",l:"Impozit pe profit"}]:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
 
@@ -14467,6 +14727,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     {tab==="consumvop"&&authRole==="admin"&&<div style={{maxWidth:1000}}><ConsumuriVopsele C={C}/></div>}
     {tab==="banca"&&authRole==="admin"&&<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>}
     {tab==="uit"&&authRole==="admin"&&<div style={{maxWidth:1000}}><UitTab C={C}/></div>}
+    {tab==="poprire"&&authRole==="admin"&&<div style={{maxWidth:1100}}><PoprireTab C={C}/></div>}
     {tab==="facturiext"&&authRole==="admin"&&<div style={{maxWidth:1000}}><FacturiExterneTab C={C}/></div>}
     {tab==="impozit"&&authRole==="admin"&&<ImpozitProfitTab C={C}/>}
     {tab==="trezorerie"&&<CashFlowTab trezorerie={trezorerie} setTrezorerie={setTrezorerie} bilete={bilete} setBilete={setBilete} furnizoriLista={furnizoriLista} setFurnizoriLista={setFurnizoriLista} C={C} card={card} inp={inp} btnP={btnP} btnS={btnS} row={row} fmtD={fmtD} tday={tday} gid={gid} daysTo={daysTo}/> }
