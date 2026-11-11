@@ -11559,9 +11559,16 @@ function bancaDetalii(t,eticheteStandard){
   return t.lines.slice(1).filter(l=>!eticheteStandard.includes(l)&&!/^Referinta bancii/i.test(l)&&!/^[0-9a-f]{4,}(-[0-9a-f]{2,})+$/i.test(l)&&!/^RO\d{2}[A-Z]{4}\d+$/.test(l)&&!/^Nr\. Card:/i.test(l)&&!/^Data:\s*\d{2}-\d{2}-\d{4}/.test(l)).join(" ");
 }
 // grupează pe nume (A–Z); în grup plățile rămân după dată; totalul pe nume. Un nume cu o singură plată rămâne o singură linie (fără antet).
+// numele după care se grupează: fără codul de după „*” (ex. FACEBK *26SWEF… → FACEBK, GOOGLE*ADS… → GOOGLE) și fără numărul final (OMV 1471 → OMV, DEDEMAN 095 → DEDEMAN)
+function bancaNumeGrup(w){
+  let n=String(w||"").trim();
+  const st=n.indexOf("*"); if(st>0) n=n.slice(0,st);
+  n=n.replace(/[\s\-\.,;:]+$/,"").replace(/(\s+\d+)+$/,"").replace(/[\s\-\.,;:]+$/,"").trim();
+  return n||String(w||"").trim();
+}
 function bancaGrupeAlfa(items,getWho,getDate,getSuma){
   const m=new Map();
-  items.forEach(x=>{ const nume=String(getWho(x)||"").trim(); const k=nume.toUpperCase(); if(!m.has(k)) m.set(k,{nume,items:[],cap:true}); m.get(k).items.push(x); });
+  items.forEach(x=>{ const nume=bancaNumeGrup(getWho(x)); const k=nume.toUpperCase(); if(!m.has(k)) m.set(k,{nume,items:[],cap:true}); m.get(k).items.push(x); });
   const g=[...m.values()];
   g.forEach(gr=>{ gr.items.sort((a,b)=>String(getDate(a)).localeCompare(String(getDate(b)))); gr.total=Math.round(gr.items.reduce((t,x)=>t+(Number(getSuma(x))||0),0)*100)/100; });
   g.sort((a,b)=>a.nume.localeCompare(b.nume,"ro",{sensitivity:"base"}));
@@ -11598,15 +11605,15 @@ function bancaTiparesteGestiune(gest,perioada,nume){
     const L=gest.filter(g=>g.sectiune===id).map(g=>g.t).sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date)));
     const tot=L.reduce((s,t)=>s+(t.amount||0),0);
     const rand=(t)=>`<tr><td>${esc(t.date)}</td><td>${esc(t.who)}</td><td class="n">${f(t.amount)}</td><td>${esc(det(t))}</td><td class="box"><span class="cb"></span></td></tr>`;
-    const rows=id==="incasari"?L.map(rand).join(""):bancaGrupeAlfa(L,t=>t.who,t=>bancaIso(t.date),t=>t.amount).map(gr=>gr.items.length>1?`<tr class="g"><td colspan="2">${esc(gr.nume)} · ${gr.items.length} plăți</td><td class="n">${f(gr.total)}</td><td colspan="2"></td></tr>`+gr.items.map(rand).join(""):rand(gr.items[0])).join("");
-    return `<h2>${esc(titlu)} (${L.length}) — total ${f(tot)} lei</h2>`+(L.length?`<table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>Detalii</th><th>Introdus</th></tr></thead><tbody>${rows}</tbody></table>`:"<div>Nimic.</div>");
+    const rows=id==="incasari"?L.map(rand).join(""):bancaGrupeAlfa(L,t=>t.who,t=>bancaIso(t.date),t=>t.amount).map(gr=>`<tbody class="grp">`+(gr.items.length>1?`<tr class="g"><td colspan="2">${esc(gr.nume)} · ${gr.items.length} plăți</td><td class="n">${f(gr.total)}</td><td colspan="2"></td></tr>`+gr.items.map(rand).join(""):rand(gr.items[0]))+`</tbody>`).join("");
+    return `<h2>${esc(titlu)} (${L.length}) — total ${f(tot)} lei</h2>`+(L.length?`<table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>Detalii</th><th>Introdus</th></tr></thead>${id==="incasari"?`<tbody>${rows}</tbody>`:rows}</table>`:"<div>Nimic.</div>");
   }).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — gestiune</title><style>
   @page{size:A4 portrait;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px}
   h1{font-size:22px;margin:0 0 2px} h2{font-size:17px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:13px;color:#555;margin-bottom:6px}
   table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:12.5px;padding:7px;border:1px solid #888}
   td{border:1px solid #888;padding:8px 7px;font-size:13.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.4cm;text-align:center} .cb{display:inline-block;width:.55cm;height:.55cm;border:2px solid #000;border-radius:2px}
-  thead{display:table-header-group} tr{page-break-inside:avoid} tr.g td{background:#e4e4e4;font-weight:700}</style></head><body>
+  thead{display:table-header-group} tr{page-break-inside:avoid} tr.g td{background:#e4e4e4;font-weight:700} tbody.grp{break-inside:avoid;page-break-inside:avoid} tbody.grp>tr:first-child>td{border-top:3px solid #000}</style></head><body>
   <h1>Gestiune — de introdus</h1><div class="meta">${esc(nume||"")} · perioada ${esc(perioada||"")} · tipărit ${new Date().toLocaleDateString("ro-RO")}</div>${corp}</body></html>`;
   printHtmlDoc(html);
 }
@@ -11618,15 +11625,15 @@ function bancaTiparesteRestante(items){
     const L=items.filter(r=>r.sect===id).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
     if(!L.length) return "";
     const rand=(r)=>`<tr><td>${esc(bancaFmtD(r.data))}</td><td>${esc(r.who)}</td><td class="n">${f(r.suma)}</td><td>${esc(r.detalii)}</td><td class="box"><span class="cb"></span></td></tr>`;
-    const rows=(id==="plati"||id==="card")?bancaGrupeAlfa(L,r=>r.who,r=>r.data,r=>r.suma).map(gr=>gr.items.length>1?`<tr class="g"><td colspan="2">${esc(gr.nume)} · ${gr.items.length} plăți</td><td class="n">${f(gr.total)}</td><td colspan="2"></td></tr>`+gr.items.map(rand).join(""):rand(gr.items[0])).join(""):L.map(rand).join("");
-    return `<h2>${esc(titlu)} (${L.length}) — total ${f(L.reduce((s,r)=>s+r.suma,0))} lei</h2><table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>${det}</th><th>Gata</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const rows=(id==="plati"||id==="card")?bancaGrupeAlfa(L,r=>r.who,r=>r.data,r=>r.suma).map(gr=>`<tbody class="grp">`+(gr.items.length>1?`<tr class="g"><td colspan="2">${esc(gr.nume)} · ${gr.items.length} plăți</td><td class="n">${f(gr.total)}</td><td colspan="2"></td></tr>`+gr.items.map(rand).join(""):rand(gr.items[0]))+`</tbody>`).join(""):L.map(rand).join("");
+    return `<h2>${esc(titlu)} (${L.length}) — total ${f(L.reduce((s,r)=>s+r.suma,0))} lei</h2><table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>${det}</th><th>Gata</th></tr></thead>${(id==="plati"||id==="card")?rows:`<tbody>${rows}</tbody>`}</table>`;
   }).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — de făcut</title><style>
   @page{size:A4 portrait;margin:12mm} body{font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px}
   h1{font-size:22px;margin:0 0 2px} h2{font-size:17px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:13px;color:#555;margin-bottom:6px}
   table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:12.5px;padding:7px;border:1px solid #888}
   td{border:1px solid #888;padding:8px 7px;font-size:13.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.4cm;text-align:center} .cb{display:inline-block;width:.55cm;height:.55cm;border:2px solid #000;border-radius:2px}
-  thead{display:table-header-group} tr{page-break-inside:avoid} tr.g td{background:#e4e4e4;font-weight:700}</style></head><body>
+  thead{display:table-header-group} tr{page-break-inside:avoid} tr.g td{background:#e4e4e4;font-weight:700} tbody.grp{break-inside:avoid;page-break-inside:avoid} tbody.grp>tr:first-child>td{border-top:3px solid #000}</style></head><body>
   <h1>Bancă — ce am de făcut</h1><div class="meta">tipărit ${new Date().toLocaleDateString("ro-RO")}</div>${corp||"<div>Nimic de făcut.</div>"}</body></html>`;
   printHtmlDoc(html);
 }
@@ -12987,14 +12994,14 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
                 <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:4}}>{titlu} · {L.length} · {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei{sec==="card"&&L.length>0&&<span style={{fontWeight:400,fontSize:12,color:C.textSub}}> — bifează „Pe notă” plățile care merg pe 6021.G.01 / 5121.000 (câte o linie pe fiecare plată, fără terț). Bifate: {nBif} · {bancaSuma(L.filter(g=>g.bifat).reduce((s,g)=>s+Math.abs(g.t.amount),0))} lei</span>}{sec==="card"&&L.length>0&&<button onClick={()=>setOvr(o=>{const n={...o}; if(nBif===L.length) L.forEach(g=>{delete n[g.t.key];}); else L.forEach(g=>{ if(!n[g.t.key]) n[g.t.key]={debit:"6021.G.01",credit:"5121.000",expl:"Plati cu cardul",agg:false,card:true}; }); return n;})} style={{...btn(false),marginLeft:10,padding:"3px 10px",fontSize:11}}>{nBif===L.length?"Debifează toate":"Bifează toate"}</button>}</div>
                 {L.length===0?<div style={{fontSize:12,color:C.textMuted}}>Nimic.</div>:
                 <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
-                  {(sec==="incasari"?L.map((g,ix)=>({nume:"#"+ix,items:[g],cap:false})):bancaGrupeAlfa(L,g=>g.t.who,g=>bancaIso(g.t.date),g=>g.t.amount)).map(gr=><React.Fragment key={"g|"+gr.nume}>
+                  {(sec==="incasari"?L.map((g,ix)=>({nume:"#"+ix,items:[g],cap:false})):bancaGrupeAlfa(L,g=>g.t.who,g=>bancaIso(g.t.date),g=>g.t.amount)).map(gr=><div key={"g|"+gr.nume} style={gr.cap?{borderTop:`2px solid ${C.textSub}`,marginTop:8}:undefined}>
                   {gr.cap&&gr.items.length>1&&<div style={{display:"flex",gap:10,alignItems:"center",padding:"6px 8px",fontSize:12,fontWeight:700,color:C.text,background:C.bg,borderBottom:`1px solid ${C.border}`}}><span>{gr.nume}</span><span style={{fontWeight:400,color:C.textSub}}>· {gr.items.length} plăți</span><span style={{flex:1}}/><span>{bancaSuma(gr.total)} lei</span></div>}
                   {gr.items.map(g=>{const t=g.t;const det=sec==="incasari"?bancaDetalii(t,["Incasare"]):sec==="plati"?bancaDetalii(t,["Transfer ING Business","Plata bilet la ordin"]):"";
                     return <div key={t.key} style={{display:"grid",gridTemplateColumns:(sec==="card"?"26px ":"")+"84px 1.4fr 100px 1.6fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:`1px solid ${C.border}`,background:g.bifat?C.accentLight:"transparent"}}>
                       {sec==="card"&&<input type="checkbox" checked={!!g.bifat} title="Pe notă: 6021.G.01 / 5121.000" onChange={()=>setOvr(o=>{const n={...o}; if(g.bifat) delete n[t.key]; else n[t.key]={debit:"6021.G.01",credit:"5121.000",expl:"Plati cu cardul",agg:false,card:true}; return n;})} style={{width:16,height:16}}/>}
                       <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
                       <div style={{textAlign:"right"}}>{bancaSuma(t.amount)}</div><div style={{fontSize:11,color:C.textSub}}>{det}{g.bifat&&built.excluded.some(x=>x.key===t.key)&&<span style={{color:"#8B4A2B"}}>Nu se generează: Transart are deja în 5121 o sumă identică la aceeași dată. <a href="#" onClick={(e)=>{e.preventDefault();setOvr(o=>({...o,[t.key]:{...o[t.key],force:true}}));}} style={{color:C.accent,fontWeight:600}}>Totuși generează</a></span>}{g.bifat&&ovrEff[t.key]&&ovrEff[t.key].force&&<span style={{color:"#2F6B2F"}}>Generată forțat (ignoră Transart)</span>}</div>
-                    </div>;})}</React.Fragment>)}
+                    </div>;})}</div>)}
                 </div></div>}
               </div>;})}
           </div>
@@ -13029,15 +13036,15 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
             <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:4}}><div style={{fontSize:13,fontWeight:600,color:C.text}}>{titlu} · de făcut {nef.length}/{L.length} · {bancaSuma(nef.reduce((s,r)=>s+r.suma,0))} lei</div>{id==="card"&&nef.length>0&&<><div style={{flex:1}}/><button onClick={contaCardBifate} style={btn(true)}>Generează note pentru cele bifate „Pe notă” ({nef.filter(r=>selCard[kCard(r)]).length} · {bancaSuma(nef.filter(r=>selCard[kCard(r)]).reduce((a,r)=>a+Math.abs(r.suma),0))} lei)</button></>}</div>
             <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
               {id==="card"&&<div style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"4px 8px",fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}><div>Pe notă</div><div title="Făcut în alt fel (bon introdus)">Gata</div><div>Data</div><div>Comerciant</div><div style={{textAlign:"right"}}>Sumă</div><div>Detalii</div></div>}
-              {id==="card"&&grup.map(gr=><React.Fragment key={"g|"+gr.nume}>{hdrG(gr)}{gr.items.map((r,i)=><div key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
+              {id==="card"&&grup.map(gr=><div key={"g|"+gr.nume} style={gr.cap?{borderTop:`2px solid ${C.textSub}`,marginTop:8}:undefined}>{hdrG(gr)}{gr.items.map((r,i)=><div key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
                 <input type="checkbox" disabled={!!r.gata} checked={!!selCard[kCard(r)]&&!r.gata} onChange={()=>setSelCard(o=>({...o,[kCard(r)]:!o[kCard(r)]}))} style={{width:16,height:16}}/>
                 <input type="checkbox" checked={!!r.gata} onChange={()=>gataRestant(r)} style={{width:16,height:16}}/>
                 <div>{bancaFmtD(r.data)}</div><div style={{fontWeight:600}}>{r.who}</div><div style={{textAlign:"right"}}>{bancaSuma(r.suma)}</div><div style={{fontSize:11,color:C.textSub}}>{r.detalii}</div>
-              </div>)}</React.Fragment>)}
-              {id!=="card"&&grup.map(gr=><React.Fragment key={"g|"+gr.nume}>{hdrG(gr)}{gr.items.map((r,i)=><label key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,cursor:"pointer",textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
+              </div>)}</div>)}
+              {id!=="card"&&grup.map(gr=><div key={"g|"+gr.nume} style={gr.cap?{borderTop:`2px solid ${C.textSub}`,marginTop:8}:undefined}>{hdrG(gr)}{gr.items.map((r,i)=><label key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,cursor:"pointer",textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
                 <input type="checkbox" checked={!!r.gata} onChange={()=>gataRestant(r)} style={{width:16,height:16}}/>
                 <div>{bancaFmtD(r.data)}</div><div style={{fontWeight:600}}>{r.who}</div><div style={{textAlign:"right"}}>{bancaSuma(r.suma)}</div><div style={{fontSize:11,color:C.textSub}}>{r.detalii}</div>
-              </label>)}</React.Fragment>)}
+              </label>)}</div>)}
             </div></div>
           </div>;})}
       </div>;
