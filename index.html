@@ -11558,6 +11558,15 @@ const bancaSuma=(x)=>(Number(x)||0).toLocaleString("ro-RO",{minimumFractionDigit
 function bancaDetalii(t,eticheteStandard){
   return t.lines.slice(1).filter(l=>!eticheteStandard.includes(l)&&!/^Referinta bancii/i.test(l)&&!/^[0-9a-f]{4,}(-[0-9a-f]{2,})+$/i.test(l)&&!/^RO\d{2}[A-Z]{4}\d+$/.test(l)&&!/^Nr\. Card:/i.test(l)&&!/^Data:\s*\d{2}-\d{2}-\d{4}/.test(l)).join(" ");
 }
+// grupează pe nume (A–Z); în grup plățile rămân după dată; totalul pe nume. Un nume cu o singură plată rămâne o singură linie (fără antet).
+function bancaGrupeAlfa(items,getWho,getDate,getSuma){
+  const m=new Map();
+  items.forEach(x=>{ const nume=String(getWho(x)||"").trim(); const k=nume.toUpperCase(); if(!m.has(k)) m.set(k,{nume,items:[],cap:true}); m.get(k).items.push(x); });
+  const g=[...m.values()];
+  g.forEach(gr=>{ gr.items.sort((a,b)=>String(getDate(a)).localeCompare(String(getDate(b)))); gr.total=Math.round(gr.items.reduce((t,x)=>t+(Number(getSuma(x))||0),0)*100)/100; });
+  g.sort((a,b)=>a.nume.localeCompare(b.nume,"ro",{sensitivity:"base"}));
+  return g;
+}
 function bancaTiparesteLista(built,perioada,nume){
   const esc=(v)=>String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const f=(x)=>(Number(x)||0).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -11588,7 +11597,8 @@ function bancaTiparesteGestiune(gest,perioada,nume){
   const corp=sect.map(([id,titlu,col,det])=>{
     const L=gest.filter(g=>g.sectiune===id).map(g=>g.t).sort((a,b)=>bancaIso(a.date).localeCompare(bancaIso(b.date)));
     const tot=L.reduce((s,t)=>s+(t.amount||0),0);
-    const rows=L.map(t=>`<tr><td>${esc(t.date)}</td><td>${esc(t.who)}</td><td class="n">${f(t.amount)}</td><td>${esc(det(t))}</td><td class="box"><span class="cb"></span></td></tr>`).join("");
+    const rand=(t)=>`<tr><td>${esc(t.date)}</td><td>${esc(t.who)}</td><td class="n">${f(t.amount)}</td><td>${esc(det(t))}</td><td class="box"><span class="cb"></span></td></tr>`;
+    const rows=id==="incasari"?L.map(rand).join(""):bancaGrupeAlfa(L,t=>t.who,t=>bancaIso(t.date),t=>t.amount).map(gr=>gr.items.length>1?`<tr class="g"><td colspan="2">${esc(gr.nume)} · ${gr.items.length} plăți</td><td class="n">${f(gr.total)}</td><td colspan="2"></td></tr>`+gr.items.map(rand).join(""):rand(gr.items[0])).join("");
     return `<h2>${esc(titlu)} (${L.length}) — total ${f(tot)} lei</h2>`+(L.length?`<table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>Detalii</th><th>Introdus</th></tr></thead><tbody>${rows}</tbody></table>`:"<div>Nimic.</div>");
   }).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — gestiune</title><style>
@@ -11596,7 +11606,7 @@ function bancaTiparesteGestiune(gest,perioada,nume){
   h1{font-size:22px;margin:0 0 2px} h2{font-size:17px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:13px;color:#555;margin-bottom:6px}
   table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:12.5px;padding:7px;border:1px solid #888}
   td{border:1px solid #888;padding:8px 7px;font-size:13.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.4cm;text-align:center} .cb{display:inline-block;width:.55cm;height:.55cm;border:2px solid #000;border-radius:2px}
-  thead{display:table-header-group} tr{page-break-inside:avoid}</style></head><body>
+  thead{display:table-header-group} tr{page-break-inside:avoid} tr.g td{background:#e4e4e4;font-weight:700}</style></head><body>
   <h1>Gestiune — de introdus</h1><div class="meta">${esc(nume||"")} · perioada ${esc(perioada||"")} · tipărit ${new Date().toLocaleDateString("ro-RO")}</div>${corp}</body></html>`;
   printHtmlDoc(html);
 }
@@ -11607,7 +11617,8 @@ function bancaTiparesteRestante(items){
   const corp=sect.map(([id,titlu,col,det])=>{
     const L=items.filter(r=>r.sect===id).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
     if(!L.length) return "";
-    const rows=L.map(r=>`<tr><td>${esc(bancaFmtD(r.data))}</td><td>${esc(r.who)}</td><td class="n">${f(r.suma)}</td><td>${esc(r.detalii)}</td><td class="box"><span class="cb"></span></td></tr>`).join("");
+    const rand=(r)=>`<tr><td>${esc(bancaFmtD(r.data))}</td><td>${esc(r.who)}</td><td class="n">${f(r.suma)}</td><td>${esc(r.detalii)}</td><td class="box"><span class="cb"></span></td></tr>`;
+    const rows=(id==="plati"||id==="card")?bancaGrupeAlfa(L,r=>r.who,r=>r.data,r=>r.suma).map(gr=>gr.items.length>1?`<tr class="g"><td colspan="2">${esc(gr.nume)} · ${gr.items.length} plăți</td><td class="n">${f(gr.total)}</td><td colspan="2"></td></tr>`+gr.items.map(rand).join(""):rand(gr.items[0])).join(""):L.map(rand).join("");
     return `<h2>${esc(titlu)} (${L.length}) — total ${f(L.reduce((s,r)=>s+r.suma,0))} lei</h2><table><thead><tr><th>Data</th><th>${col}</th><th>Sumă (lei)</th><th>${det}</th><th>Gata</th></tr></thead><tbody>${rows}</tbody></table>`;
   }).join("");
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>Bancă — de făcut</title><style>
@@ -11615,7 +11626,7 @@ function bancaTiparesteRestante(items){
   h1{font-size:22px;margin:0 0 2px} h2{font-size:17px;margin:20px 0 6px;page-break-after:avoid} .meta{font-size:13px;color:#555;margin-bottom:6px}
   table{border-collapse:collapse;width:100%} th{background:#eee;text-align:left;font-size:12.5px;padding:7px;border:1px solid #888}
   td{border:1px solid #888;padding:8px 7px;font-size:13.5px;vertical-align:middle} td.n{text-align:right;white-space:nowrap} td.box{width:1.4cm;text-align:center} .cb{display:inline-block;width:.55cm;height:.55cm;border:2px solid #000;border-radius:2px}
-  thead{display:table-header-group} tr{page-break-inside:avoid}</style></head><body>
+  thead{display:table-header-group} tr{page-break-inside:avoid} tr.g td{background:#e4e4e4;font-weight:700}</style></head><body>
   <h1>Bancă — ce am de făcut</h1><div class="meta">tipărit ${new Date().toLocaleDateString("ro-RO")}</div>${corp||"<div>Nimic de făcut.</div>"}</body></html>`;
   printHtmlDoc(html);
 }
@@ -12260,34 +12271,37 @@ function PoprireTab({C}){
     const esc=(t)=>String(t==null?"":t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     const panaL=pLuna||(luni.length?luni[luni.length-1].luna:"");
     const lm=luni.filter(m=>m.luna<=panaL);
-    if(!lm.length){ alert("Nu există nicio lună înregistrată."); return; }
-    const exe=pEx?[pEx]:executori.filter(ex=>dosare.some(d=>popEx(d)===ex&&lm.some(m=>Number((m.plati||{})[d.id])>0)));
-    if(!exe.length){ alert("Niciun executor cu plăți până la luna aleasă."); return; }
-    const soldLa=(d)=>popR2((Number(d.suma)||0)-lm.reduce((s,m)=>s+(Number((m.plati||{})[d.id])||0),0));
-    const sectiuni=exe.map((ex,i)=>{
-      const ds=dosare.filter(d=>popEx(d)===ex);
-      const rows=lm.map(m=>{ const tot=popR2(ds.reduce((s,d)=>s+(Number((m.plati||{})[d.id])||0),0)); if(tot<=0) return ""; const dt=(m.platit||{})[ex]; return `<tr><td>${esc(popLunaTxt(m.luna))}</td>${ds.map(d=>`<td class="r">${Number((m.plati||{})[d.id])>0?f2(m.plati[d.id]):""}</td>`).join("")}<td class="r b">${f2(tot)}</td><td>${dt?esc(fmtD(dt)):""}</td></tr>`; }).join("");
-      const totD=(d)=>popR2(lm.reduce((s,m)=>s+(Number((m.plati||{})[d.id])||0),0));
-      const totAll=popR2(ds.reduce((s,d)=>s+totD(d),0));
-      return `<div class="sec" style="${i>0?"page-break-before:always":""}">
-        <h1>Situația popririi pe salariu</h1>
-        <p><b>Debitor (angajat):</b> ${esc(ang.nume)}<br><b>Executor:</b> ${esc(ex)}<br><b>Situație întocmită la:</b> ${esc(fmtD(tday()))} &nbsp;·&nbsp; <b>plăți incluse până la:</b> ${esc(popLunaTxt(panaL))}</p>
-        <h2>Dosare</h2>
-        <table><thead><tr><th>Dosar nr.</th><th class="r">Suma dosarului (lei)</th><th class="r">Total achitat (lei)</th><th class="r">Rest de plată (lei)</th></tr></thead><tbody>
-        ${ds.map(d=>`<tr><td>${esc(d.nr)}</td><td class="r">${f2(d.suma)}</td><td class="r">${f2(totD(d))}</td><td class="r b">${f2(soldLa(d))}</td></tr>`).join("")}
-        <tr class="t"><td>Total</td><td class="r">${f2(ds.reduce((s,d)=>s+d.suma,0))}</td><td class="r">${f2(totAll)}</td><td class="r">${f2(ds.reduce((s,d)=>s+soldLa(d),0))}</td></tr></tbody></table>
-        <h2>Plăți efectuate către executor (lei)</h2>
-        <table><thead><tr><th>Luna</th>${ds.map(d=>`<th class="r">${esc(d.nr)}</th>`).join("")}<th class="r">Total plată</th><th>Data plății</th></tr></thead><tbody>${rows}
-        <tr class="t"><td>Total</td>${ds.map(d=>`<td class="r">${f2(totD(d))}</td>`).join("")}<td class="r">${f2(totAll)}</td><td></td></tr></tbody></table>
-        <p class="n">Sumele sunt reținute din venitul net lunar al debitorului, în limita de ${esc(ang.procent)}%, și repartizate între dosare direct proporțional cu restul de plată al fiecăruia.</p>
-      </div>`;
-    }).join("");
+    const mCur=luni.find(m=>m.luna===panaL);
+    if(!mCur){ alert("Alege o lună înregistrată."); return; }
+    const ds=dosare.filter(d=>(d.luna||"0000-00")<=panaL);
+    const ach=(d)=>popR2(lm.reduce((s,m)=>s+(Number((m.plati||{})[d.id])||0),0));
+    const rst=(d)=>popR2((Number(d.suma)||0)-ach(d));
+    const rstTot=ds.reduce((s,d)=>s+rst(d),0);
+    // înainte de plata lunii alese (baza pe care s-a făcut împărțirea)
+    const exe=[...new Set(ds.map(popEx))];
+    const plataEx=(ex)=>popR2(ds.filter(d=>popEx(d)===ex).reduce((s,d)=>s+(Number((mCur.plati||{})[d.id])||0),0));
+    const totPlata=popR2(exe.reduce((s,ex)=>s+plataEx(ex),0));
+    const plafon=popR2(mCur.net*(Number(ang.procent)||50)/100);
+    const prc=(x,t)=>t>0?fmtN(x/t*100,2)+" %":"—";
     const html=`<!doctype html><html><head><meta charset="utf-8"><title>Situație poprire</title><style>
       @page{size:A4;margin:16mm} body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#000}
-      h1{font-size:17px;margin:0 0 10px} h2{font-size:13px;margin:16px 0 6px}
-      table{border-collapse:collapse;width:100%} th,td{border:1px solid #444;padding:4px 7px;text-align:left} th{background:#eee;font-size:11px}
-      .r{text-align:right} .b{font-weight:700} .t td{font-weight:700;background:#f3f3f3} .n{font-size:10.5px;color:#444;margin-top:14px}
-    </style></head><body>${sectiuni}</body></html>`;
+      h1{font-size:17px;margin:0 0 10px} h2{font-size:13px;margin:18px 0 6px}
+      table{border-collapse:collapse;width:100%} th,td{border:1px solid #444;padding:5px 7px;text-align:left} th{background:#eee;font-size:11px}
+      .r{text-align:right} .b{font-weight:700} .t td{font-weight:700;background:#f3f3f3} .n{font-size:10.5px;color:#444;margin-top:12px;line-height:1.45}
+    </style></head><body>
+      <h1>Situația popririi pe salariu</h1>
+      <p><b>Debitor (angajat):</b> ${esc(ang.nume)}<br><b>Situație întocmită la:</b> ${esc(fmtD(tday()))} &nbsp;·&nbsp; <b>plăți incluse până la:</b> ${esc(popLunaTxt(panaL))}</p>
+      <h2>Dosare de poprire</h2>
+      <table><thead><tr><th>Dosar nr.</th><th>Executor</th><th class="r">Suma dosarului (lei)</th><th>Din luna</th><th class="r">Total achitat (lei)</th><th class="r">Rest de plată (lei)</th><th class="r">% din rest</th></tr></thead><tbody>
+      ${ds.map(d=>`<tr><td>${esc(d.nr)}</td><td>${esc(d.executor)}</td><td class="r">${f2(d.suma)}</td><td>${esc(popLunaTxt(d.luna))}</td><td class="r">${f2(ach(d))}</td><td class="r b">${f2(rst(d))}</td><td class="r">${rst(d)>0.004?fmtN(rst(d)/rstTot*100,3)+" %":"achitat"}</td></tr>`).join("")}
+      <tr class="t"><td colspan="2">Total</td><td class="r">${f2(ds.reduce((s,d)=>s+d.suma,0))}</td><td></td><td class="r">${f2(ds.reduce((s,d)=>s+ach(d),0))}</td><td class="r">${f2(rstTot)}</td><td class="r">${rstTot>0.004?"100 %":""}</td></tr></tbody></table>
+      <h2>Cum se împarte poprirea lunii ${esc(popLunaTxt(panaL))}</h2>
+      <p style="margin:0 0 6px">Venit net: <b>${f2(mCur.net)} lei</b> &nbsp;·&nbsp; Maximum poprit (${esc(ang.procent)}%): <b>${f2(plafon)} lei</b></p>
+      <table><thead><tr><th>Executor</th><th>Dosare</th><th class="r">Plată în ${esc(popLunaTxt(panaL))} (lei)</th><th class="r">Pondere din suma poprită</th></tr></thead><tbody>
+      ${exe.map(ex=>{ const dd=ds.filter(d=>popEx(d)===ex&&Number((mCur.plati||{})[d.id])>0); return `<tr><td>${esc(ex)}</td><td>${dd.map(d=>`${esc(d.nr)}: ${f2(mCur.plati[d.id])}`).join("<br>")}</td><td class="r b">${f2(plataEx(ex))}</td><td class="r">${prc(plataEx(ex),totPlata)}</td></tr>`; }).join("")}
+      <tr class="t"><td colspan="2">Total</td><td class="r">${f2(totPlata)}</td><td class="r">${totPlata>0?"100 %":""}</td></tr></tbody></table>
+      <p class="n">Suma poprită lunar nu depășește ${esc(ang.procent)}% din venitul net al debitorului. Ea se repartizează între toate dosarele direct proporțional cu restul de plată al fiecărui dosar (coloana „% din rest"), iar fiecărui executor i se face o singură plată pe lună, egală cu suma dosarelor lui.</p>
+    </body></html>`;
     printHtmlDocCuImagini(html);
   };
   const prop=fl&&ang?popPropune(ang,fl.luna,popNum(fl.net)):null;
@@ -12357,9 +12371,7 @@ function PoprireTab({C}){
 
         <div style={titlu}>Plăți către executori (o plată pe executor pe lună)</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:10}}>
-          <span style={{fontSize:12,color:C.textSub}}>Situație pentru</span>
-          <select value={pEx} onChange={e=>setPEx(e.target.value)} style={{...inp,minWidth:150}}><option value="">toți executorii (câte o pagină)</option>{executori.map(x=><option key={x} value={x}>{x}</option>)}</select>
-          <span style={{fontSize:12,color:C.textSub}}>cu plăți până la</span>
+          <span style={{fontSize:12,color:C.textSub}}>Situație de printat (ambii executori), cu plăți până la</span>
           <select value={pLuna||luni[luni.length-1].luna} onChange={e=>setPLuna(e.target.value)} style={{...inp,minWidth:150}}>{luni.slice().reverse().map(m=><option key={m.luna} value={m.luna}>{popLunaTxt(m.luna)}</option>)}</select>
           <button onClick={tipareste} style={btn(true)}>🖨 Printează situația</button>
         </div>
@@ -12975,12 +12987,14 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
                 <div style={{fontSize:13,fontWeight:600,color:C.text,marginBottom:4}}>{titlu} · {L.length} · {bancaSuma(L.reduce((s,g)=>s+g.t.amount,0))} lei{sec==="card"&&L.length>0&&<span style={{fontWeight:400,fontSize:12,color:C.textSub}}> — bifează „Pe notă” plățile care merg pe 6021.G.01 / 5121.000 (câte o linie pe fiecare plată, fără terț). Bifate: {nBif} · {bancaSuma(L.filter(g=>g.bifat).reduce((s,g)=>s+Math.abs(g.t.amount),0))} lei</span>}{sec==="card"&&L.length>0&&<button onClick={()=>setOvr(o=>{const n={...o}; if(nBif===L.length) L.forEach(g=>{delete n[g.t.key];}); else L.forEach(g=>{ if(!n[g.t.key]) n[g.t.key]={debit:"6021.G.01",credit:"5121.000",expl:"Plati cu cardul",agg:false,card:true}; }); return n;})} style={{...btn(false),marginLeft:10,padding:"3px 10px",fontSize:11}}>{nBif===L.length?"Debifează toate":"Bifează toate"}</button>}</div>
                 {L.length===0?<div style={{fontSize:12,color:C.textMuted}}>Nimic.</div>:
                 <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
-                  {L.map(g=>{const t=g.t;const det=sec==="incasari"?bancaDetalii(t,["Incasare"]):sec==="plati"?bancaDetalii(t,["Transfer ING Business","Plata bilet la ordin"]):"";
+                  {(sec==="incasari"?L.map((g,ix)=>({nume:"#"+ix,items:[g],cap:false})):bancaGrupeAlfa(L,g=>g.t.who,g=>bancaIso(g.t.date),g=>g.t.amount)).map(gr=><React.Fragment key={"g|"+gr.nume}>
+                  {gr.cap&&gr.items.length>1&&<div style={{display:"flex",gap:10,alignItems:"center",padding:"6px 8px",fontSize:12,fontWeight:700,color:C.text,background:C.bg,borderBottom:`1px solid ${C.border}`}}><span>{gr.nume}</span><span style={{fontWeight:400,color:C.textSub}}>· {gr.items.length} plăți</span><span style={{flex:1}}/><span>{bancaSuma(gr.total)} lei</span></div>}
+                  {gr.items.map(g=>{const t=g.t;const det=sec==="incasari"?bancaDetalii(t,["Incasare"]):sec==="plati"?bancaDetalii(t,["Transfer ING Business","Plata bilet la ordin"]):"";
                     return <div key={t.key} style={{display:"grid",gridTemplateColumns:(sec==="card"?"26px ":"")+"84px 1.4fr 100px 1.6fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:C.text,borderBottom:`1px solid ${C.border}`,background:g.bifat?C.accentLight:"transparent"}}>
                       {sec==="card"&&<input type="checkbox" checked={!!g.bifat} title="Pe notă: 6021.G.01 / 5121.000" onChange={()=>setOvr(o=>{const n={...o}; if(g.bifat) delete n[t.key]; else n[t.key]={debit:"6021.G.01",credit:"5121.000",expl:"Plati cu cardul",agg:false,card:true}; return n;})} style={{width:16,height:16}}/>}
                       <div>{bancaFmtD(bancaIso(t.date))}</div><div style={{fontWeight:600}}>{t.who}</div>
                       <div style={{textAlign:"right"}}>{bancaSuma(t.amount)}</div><div style={{fontSize:11,color:C.textSub}}>{det}{g.bifat&&built.excluded.some(x=>x.key===t.key)&&<span style={{color:"#8B4A2B"}}>Nu se generează: Transart are deja în 5121 o sumă identică la aceeași dată. <a href="#" onClick={(e)=>{e.preventDefault();setOvr(o=>({...o,[t.key]:{...o[t.key],force:true}}));}} style={{color:C.accent,fontWeight:600}}>Totuși generează</a></span>}{g.bifat&&ovrEff[t.key]&&ovrEff[t.key].force&&<span style={{color:"#2F6B2F"}}>Generată forțat (ignoră Transart)</span>}</div>
-                    </div>;})}
+                    </div>;})}</React.Fragment>)}
                 </div></div>}
               </div>;})}
           </div>
@@ -13009,19 +13023,21 @@ function BancaModul({procesate,setProcesate,reguli,setReguli,authEmail,C}){
         {sect.map(([id,titlu])=>{
           const L=R.filter(r=>r.sect===id).sort((a,b)=>String(a.data).localeCompare(String(b.data)));
           if(!L.length) return null; const nef=L.filter(r=>!r.gata);
+          const grup=(id==="plati"||id==="card")?bancaGrupeAlfa(L,r=>r.who,r=>r.data,r=>r.suma):L.map((r,ix)=>({nume:"#"+ix,items:[r],cap:false}));
+          const hdrG=(gr)=>gr.cap&&gr.items.length>1?<div style={{display:"flex",gap:10,alignItems:"center",padding:"6px 8px",fontSize:12,fontWeight:700,color:C.text,background:C.bg,borderBottom:`1px solid ${C.border}`}}><span>{gr.nume}</span><span style={{fontWeight:400,color:C.textSub}}>· {gr.items.length} plăți</span><span style={{flex:1}}/><span>{bancaSuma(gr.total)} lei</span></div>:null;
           return <div key={id} style={{marginTop:14}}>
             <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:4}}><div style={{fontSize:13,fontWeight:600,color:C.text}}>{titlu} · de făcut {nef.length}/{L.length} · {bancaSuma(nef.reduce((s,r)=>s+r.suma,0))} lei</div>{id==="card"&&nef.length>0&&<><div style={{flex:1}}/><button onClick={contaCardBifate} style={btn(true)}>Generează note pentru cele bifate „Pe notă” ({nef.filter(r=>selCard[kCard(r)]).length} · {bancaSuma(nef.filter(r=>selCard[kCard(r)]).reduce((a,r)=>a+Math.abs(r.suma),0))} lei)</button></>}</div>
             <div style={{overflowX:"auto"}}><div style={{minWidth:640}}>
               {id==="card"&&<div style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"4px 8px",fontSize:10,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}><div>Pe notă</div><div title="Făcut în alt fel (bon introdus)">Gata</div><div>Data</div><div>Comerciant</div><div style={{textAlign:"right"}}>Sumă</div><div>Detalii</div></div>}
-              {id==="card"&&L.map((r,i)=><div key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
+              {id==="card"&&grup.map(gr=><React.Fragment key={"g|"+gr.nume}>{hdrG(gr)}{gr.items.map((r,i)=><div key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"60px 28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
                 <input type="checkbox" disabled={!!r.gata} checked={!!selCard[kCard(r)]&&!r.gata} onChange={()=>setSelCard(o=>({...o,[kCard(r)]:!o[kCard(r)]}))} style={{width:16,height:16}}/>
                 <input type="checkbox" checked={!!r.gata} onChange={()=>gataRestant(r)} style={{width:16,height:16}}/>
                 <div>{bancaFmtD(r.data)}</div><div style={{fontWeight:600}}>{r.who}</div><div style={{textAlign:"right"}}>{bancaSuma(r.suma)}</div><div style={{fontSize:11,color:C.textSub}}>{r.detalii}</div>
-              </div>)}
-              {id!=="card"&&L.map((r,i)=><label key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,cursor:"pointer",textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
+              </div>)}</React.Fragment>)}
+              {id!=="card"&&grup.map(gr=><React.Fragment key={"g|"+gr.nume}>{hdrG(gr)}{gr.items.map((r,i)=><label key={r.ref+"|"+r.data+"|"+r.suma+"|"+i} style={{display:"grid",gridTemplateColumns:"28px 84px 1.4fr 100px 1.8fr",gap:8,padding:"6px 8px",alignItems:"center",fontSize:12,color:r.gata?C.textMuted:C.text,borderBottom:`1px solid ${C.border}`,cursor:"pointer",textDecoration:r.gata?"line-through":"none",background:r.gata?C.bg:"transparent"}}>
                 <input type="checkbox" checked={!!r.gata} onChange={()=>gataRestant(r)} style={{width:16,height:16}}/>
                 <div>{bancaFmtD(r.data)}</div><div style={{fontWeight:600}}>{r.who}</div><div style={{textAlign:"right"}}>{bancaSuma(r.suma)}</div><div style={{fontSize:11,color:C.textSub}}>{r.detalii}</div>
-              </label>)}
+              </label>)}</React.Fragment>)}
             </div></div>
           </div>;})}
       </div>;
