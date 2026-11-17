@@ -1439,10 +1439,11 @@ ${data.discountHtml||""}
 
 <div style="display:flex;justify-content:flex-end;margin:18px 0 0;padding-top:10px;border-top:2px solid #A0845C">
 <div style="text-align:right">
-<div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:4px">Total ofertă</div>
+<div style="font:400 .78em/1 'Source Sans 3',Calibri,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8A7A64;margin-bottom:4px">${data.tvaHtml?"Total fără TVA":"Total ofertă"}</div>
 <div style="font:600 1.7em/1 'Source Serif 4',Cambria,Georgia,serif;color:#2A2118">${data.totalTxt||(data.totalGeneral+" lei")}</div>
 </div>
 </div>
+${data.tvaHtml||""}
 
 <p style="margin:16px 0 4px;font-size:.92em;color:#4A3F31">${data.notaMoneda||"Prețurile sunt exprimate în lei și includ TVA."}</p>
 <p style="margin:0 0 4px;font-size:.92em;color:#4A3F31">La lansarea comenzii se achită un avans de 50% din valoarea ofertei; diferența se achită cu o zi înaintea livrării.</p>
@@ -7383,8 +7384,8 @@ const TVA_FACTOR=1.21; // cota de TVA folosită de Cristina la scoaterea prețul
 // Discount pe ofertă: sumă fixă (lei) sau procent din valoarea produselor. Nu poate depăși valoarea ofertei.
 // Moneda de afișare a ofertei (lei implicit). Valorile rămân stocate în lei; la o ofertă transformată în euro
 // se convertesc doar la afișare, cu cursul ales de Cristina (MON.rate = lei pentru 1 euro).
-const MON={cur:"lei",rate:1};
-const setMoneda=(of)=>{ if(of&&of.moneda==="EUR"&&Number(of.curs)>0){MON.cur="EUR";MON.rate=Number(of.curs);} else {MON.cur="lei";MON.rate=1;} };
+const MON={cur:"lei",rate:1,faraTva:false};
+const setMoneda=(of)=>{ MON.faraTva=!!(of&&of.faraTva); if(of&&of.moneda==="EUR"&&Number(of.curs)>0){MON.cur="EUR";MON.rate=Number(of.curs);} else {MON.cur="lei";MON.rate=1;} };
 const eurV=(x)=>Math.round((Number(x)||0)/MON.rate*100)/100;
 const mv=(x)=>MON.cur==="lei"?x:eurV(x);
 const fmEur=(v)=>Number(v).toLocaleString("ro-RO",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
@@ -7806,7 +7807,8 @@ function OfertaClientSection({client,ci,setClients,C,catalogMateriale,catalogSin
   const valoareLinieM=(pr)=>MON.cur==="lei"?valoareLinie(pr):(esteSinaManuala(pr)?mv(valoareSinaManuala(pr)):Math.round((mv(valoareMaterial1(pr))+mv(valoareMaterial2(pr))+mv(valoareBanda(pr))+mv(valoareManopera(pr))+mv(valoareBenziManopera(pr))+mv(valoareMecanism(pr))+mv(valoareLining(pr))+mv(valoareMontaj(pr)))*100)/100);
   const subtotalCameraM=(c)=>MON.cur==="lei"?subtotalCamera(c):Math.round(c.produse.reduce((s,pr)=>s+valoareLinieM(pr),0)*100)/100;
   const totaluriOferta=(camereList,dLei)=>{ const sub=camereList.reduce((s,c)=>s+subtotalCameraM(c),0); const disc=mv(dLei||0); return {sub, disc, total:MON.cur==="lei"?sub-disc:Math.round((sub-disc)*100)/100}; };
-  const dateMoneda=(of)=>(of&&of.moneda==="EUR"&&Number(of.curs)>0)?{notaMoneda:`Prețurile sunt exprimate în euro, includ TVA și se vor calcula la cursul ${(of.cursText||"BNR").replace(/</g,"&lt;")} din ziua plății.`}:{};
+  const tvaHtmlBuild=(tot)=>{ const sub=Number(tot)||0; const tva=Math.round(sub*(TVA_FACTOR-1)*100)/100; const tt=Math.round((sub+tva)*100)/100; const st='font:400 .95em/1.5 \'Source Sans 3\',Calibri,sans-serif;color:#4A3F31'; return `<div style="display:flex;justify-content:flex-end;margin:6px 0 0"><table style="border-collapse:collapse;text-align:right"><tr><td style="padding:2px 14px 2px 0;${st}">Valoare TVA 21%</td><td style="padding:2px 0;${st}">${fmEur(tva)}</td></tr><tr><td style="padding:6px 14px 2px 0;border-top:1px solid #A0845C;font:700 1.05em/1.3 \'Source Sans 3\',Calibri,sans-serif;color:#2A2118;text-transform:uppercase;letter-spacing:.06em">Total cu TVA</td><td style="padding:6px 0 2px;border-top:1px solid #A0845C;font:700 1.3em/1.2 \'Source Serif 4\',Cambria,Georgia,serif;color:#2A2118">${fmEur(tt)}</td></tr></table></div>`; };
+  const dateMoneda=(of,tot)=>(of&&of.moneda==="EUR"&&of.faraTva&&Number(of.curs)>0)?{tvaHtml:tvaHtmlBuild(tot),notaMoneda:"Prețurile din ofertă sunt exprimate în euro și nu includ TVA; TVA (21%) este adăugat la final. Plata se face în lei, la cursul BNR din ziua plății."}:(of&&of.moneda==="EUR"&&Number(of.curs)>0)?{notaMoneda:`Prețurile sunt exprimate în euro, includ TVA și se vor calcula la cursul ${(of.cursText||"BNR").replace(/</g,"&lt;")} din ziua plății.`}:{};
   const subtotalProduse=camere.reduce((s,c)=>s+subtotalCamera(c),0);
   const discountLei=calculeazaDiscountLei(subtotalProduse,discountTip,discountVal);
   const totalGeneral=subtotalProduse-discountLei;
@@ -7900,8 +7902,8 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
         <td style="padding:5px 8px;border-bottom:1px solid #D3DBD6">Material</td>
         <td style="padding:5px 8px;border-bottom:1px solid #D3DBD6">Culoare</td>
         <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Cantitate</td>
-        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Preț unitar</td>
-        <td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Valoare</td>
+        <td style="padding:5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Preț unitar${MON.faraTva?" (fără TVA)":""}</td>
+        <td style="padding:5px 0 5px 8px;text-align:right;border-bottom:1px solid #D3DBD6">Valoare${MON.faraTva?" (fără TVA)":""}</td>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -8022,7 +8024,7 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
       const t=totaluriOferta(oferta.camere,oferta.discountLei||0);
       return buildOferta({
         numar:oferta.numar, dataFmt:fmtD(oferta.data), numeClient:oferta.numeClient,
-        camereHtml: camereHtmlBuild(oferta.camere), necesarHtml: necesarHtmlBuild(oferta.camere), totalGeneral: t.total.toFixed(0), totalTxt: fm(t.total), ...dateMoneda(oferta),
+        camereHtml: camereHtmlBuild(oferta.camere), necesarHtml: necesarHtmlBuild(oferta.camere), totalGeneral: t.total.toFixed(0), totalTxt: fm(t.total), ...dateMoneda(oferta,t.total),
         discountHtml: discountHtmlBuild(t.sub,t.disc,oferta.discountTip,oferta.discountVal,oferta.camere.length+1),
         clientId: client.id, ofertaId: oferta.id, observatii: oferta.observatii||"", linie: oferta.linie||"perdele",
       });
@@ -8213,7 +8215,7 @@ const rMontajG=(pr)=>`<tr><td style="padding:5px 8px 5px 0;border-bottom:1px sol
       if(!existent){ alert("Oferta editată nu mai există — a fost cumva ștearsă între timp."); setEditingId(null); return; }
       setMoneda(existent);
       const tt=totaluriOferta(camereClean,discountLei);
-      const html=buildOferta({numar:existent.numar, dataFmt:fmtD(existent.data), numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:tt.total.toFixed(0), totalTxt:fm(tt.total), ...dateMoneda(existent), discountHtml:discountHtmlBuild(tt.sub,tt.disc,discountTip,discountVal,camereClean.length+1), clientId:client.id, ofertaId:existent.id, observatii:observatii.trim(), linie});
+      const html=buildOferta({numar:existent.numar, dataFmt:fmtD(existent.data), numeClient:numeClient.trim(), camereHtml:camereHtmlBuild(camereClean), necesarHtml:necesarHtmlBuild(camereClean), totalGeneral:tt.total.toFixed(0), totalTxt:fm(tt.total), ...dateMoneda(existent,tt.total), discountHtml:discountHtmlBuild(tt.sub,tt.disc,discountTip,discountVal,camereClean.length+1), clientId:client.id, ofertaId:existent.id, observatii:observatii.trim(), linie});
       const totalEurNou=existent.moneda==="EUR"?tt.total:undefined;
       setMoneda(null);
       const ofertaActualizata={...existent, ...(totalEurNou!==undefined?{totalEur:totalEurNou}:{}), numeClient:numeClient.trim(), camere:camereClean, total:totalGeneral, subtotalProduse, discountTip, discountVal:String(discountVal||"").trim(), discountLei, editedHtml:undefined, observatii:observatii.trim(), linie};
