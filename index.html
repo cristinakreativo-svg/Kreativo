@@ -11501,7 +11501,10 @@ function bancaTransartRows(objs){
   for(const o of objs){
     const iso=bancaIsoAny(g(o,"dataic")); if(!iso) continue;
     if(hasCont&&!/^5121/.test(String(g(o,"cont")||"").trim())) continue; // rândurile-oglindă (cont 5191 etc.) se ignoră
-    out.push({iso,d:num(g(o,"sumad")),c:num(g(o,"sumac")),expl:String(g(o,"explicatii")||"").trim(),nota:g(o,"nrnota"),tip:String(g(o,"tipdoc")||"").trim(),cor:String(g(o,"corespondent")||"").trim()});
+    let dd=num(g(o,"sumad")), cc=num(g(o,"sumac"));
+    if(cc<0){ dd+=-cc; cc=0; } // credit negativ (stornare) = debit; efectul net pe 5121 rămâne identic
+    if(dd<0){ cc+=-dd; dd=0; }
+    out.push({iso,d:dd,c:cc,expl:String(g(o,"explicatii")||"").trim(),nota:g(o,"nrnota"),tip:String(g(o,"tipdoc")||"").trim(),cor:String(g(o,"corespondent")||"").trim()});
   }
   return out;
 }
@@ -11522,7 +11525,33 @@ function bancaExclude(built,rows){
   const dirT=(t)=>t.amount>0?1:-1;
   const note=[];
   const retNote=[],compNote=[];
-  for(const n of built.note){
+  // un rând din Transart poate acoperi 2-3 plăți din extras din aceeași zi/direcție (ex. 2 × 66,30 operate ca un singur rând de 132,60)
+  const pre=new Set();
+  {
+    const all=[]; built.note.forEach(n=>{ if(n.ret||n.comp||n.force) return; (n.tx||[]).forEach(t=>all.push(t)); });
+    built.manual.forEach(m=>all.push(m.t)); built.gestiune.forEach(g=>all.push(g.t));
+    for(const row of pool){
+      if(row.used) continue;
+      for(const dir of [1,-1]){
+        const v=dir>0?row.d:row.c; if(!(v>0)||row.used) continue;
+        const cand=all.filter(t=>!pre.has(t.key)&&bancaIso(t.date)===row.iso&&dirT(t)===dir);
+        const n=cand.length; if(n<2||n>14) continue;
+        const A=(t)=>Math.abs(t.amount); let gasit=null;
+        if(cand.some(t=>Math.abs(A(t)-v)<0.005)) continue; // există deja o plată identică: o potrivește logica obișnuită
+        for(let i=0;i<n&&!gasit;i++)for(let j=i+1;j<n&&!gasit;j++){
+          if(Math.abs(A(cand[i])+A(cand[j])-v)<0.005) gasit=[cand[i],cand[j]];
+          else for(let k=j+1;k<n&&!gasit;k++) if(Math.abs(A(cand[i])+A(cand[j])+A(cand[k])-v)<0.005) gasit=[cand[i],cand[j],cand[k]];
+        }
+        if(gasit){ row.used=true; gasit.forEach(t=>{pre.add(t.key); excluded.push(t);}); }
+      }
+    }
+  }
+  for(let n of built.note){
+    if(n.tx&&n.tx.length&&!n.ret&&!n.comp&&!n.force&&n.tx.some(t=>pre.has(t.key))){
+      const ramase=n.tx.filter(t=>!pre.has(t.key));
+      if(!ramase.length) continue;
+      n={...n,tx:ramase,suma:Math.round(ramase.reduce((s,t)=>s+Math.abs(t.amount),0)*100)/100};
+    }
     if(n.ret){ retNote.push(n); continue; }
     if(n.comp){ compNote.push(n); continue; }
     if(n.force){ note.push(n); continue; } // bifat de utilizator: se generează chiar dacă Transart are deja o sumă identică
@@ -11537,7 +11566,7 @@ function bancaExclude(built,rows){
   compNote.forEach(c=>{ const pr=note.find(n=>n.grup===c.grup&&!n.comp); if(pr){ const i=note.indexOf(pr); note.splice(i+1,0,{...c,suma:pr.suma,tx:pr.tx}); } }); // linia a doua urmează linia de bancă rămasă
   const exK=new Set(excluded.map(t=>t.key)); retNote.forEach(n=>{ if(!exK.has(n.tx[0].key)) note.push(n); }); // reținerea se exportă doar dacă plata nu e deja în Transart
   const vazut=new Set(); const ex2=excluded.filter(t=>!vazut.has(t.key)&&vazut.add(t.key));
-  return {note,manual:keep(built.manual,m=>m.t),gestiune:keep(built.gestiune,g=>g.t),excluded:ex2};
+  return {note,manual:keep(built.manual.filter(m=>!pre.has(m.t.key)),m=>m.t),gestiune:keep(built.gestiune.filter(g=>!pre.has(g.t.key)),g=>g.t),excluded:ex2};
 }
 
 // ============ MODUL BANCĂ — interfață ============
@@ -12632,7 +12661,101 @@ function ImpozitProfitTab({C}){
   </div>;
 }
 
-function DeclaratiiTab({declaratii,setDeclaratii,C,esteAdmin,mergiLa}){
+
+// ============ DE FĂCUT (reminder-uri personale, doar admin) — cheie zz_ => ascunsă pentru Nico/Dan ============
+const TASKK="zz_taskuri_declaratii_v1";
+function TaskuriTab({C}){
+  const [data,setData]=React.useState({v:1,taskuri:[],facute:[]});
+  const [ver,setVer]=React.useState(null);
+  const [stare,setStare]=React.useState("incarc");
+  const [msg,setMsg]=React.useState("");
+  const [txt,setTxt]=React.useState("");
+  const [arataFacute,setArataFacute]=React.useState(false);
+  const incarca=async()=>{
+    setStare("incarc");
+    try{
+      const {data:r,error}=await sb.from("kreativo_data").select("value,version").eq("key",TASKK).maybeSingle();
+      if(error) throw error;
+      if(r&&r.value){ const v=JSON.parse(r.value); setData({v:1,taskuri:v.taskuri||[],facute:v.facute||[]}); setVer(r.version==null?0:r.version); }
+      else{ setData({v:1,taskuri:[],facute:[]}); setVer(null); }
+      setStare("ok");
+    }catch(e){ setStare("eroare"); setMsg("Nu pot citi lista din baza de date: "+(e&&e.message||e)); }
+  };
+  React.useEffect(()=>{ incarca(); },[]);
+  const salveaza=async(nou)=>{
+    try{
+      const raw=JSON.stringify(nou);
+      if(ver===null){
+        const ins=await sb.from("kreativo_data").insert({key:TASKK,value:raw}).select("version");
+        if(ins.error) throw ins.error;
+        setVer((ins.data&&ins.data[0]&&ins.data[0].version)||1);
+      }else{
+        const up=await sb.from("kreativo_data").update({value:raw}).eq("key",TASKK).eq("version",ver).select("version");
+        if(up.error) throw up.error;
+        if(!up.data||!up.data.length){ setMsg("Lista a fost modificată în altă fereastră — NU s-a salvat nimic. Am reîncărcat-o; repetă operația."); await incarca(); return false; }
+        setVer(up.data[0].version);
+      }
+      setData(nou); setMsg(""); return true;
+    }catch(e){ setMsg("NU s-a salvat: "+(e&&e.message||e)); return false; }
+  };
+  if(stare==="incarc") return <div style={{fontSize:13,color:C.textMuted}}>Se încarcă…</div>;
+  if(stare==="eroare") return <div><div style={{color:"#B04040",fontSize:13,marginBottom:10}}>{msg}</div><button onClick={incarca} style={{padding:"7px 14px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:12}}>Reîncearcă</button></div>;
+  const copie=()=>JSON.parse(JSON.stringify(data));
+  const adauga=async()=>{
+    const t=txt.trim(); if(!t) return;
+    const nou=copie(); nou.taskuri.push({id:gid(),text:t,data:tday()});
+    if(await salveaza(nou)) setTxt("");
+  };
+  const bifeaza=(id)=>{
+    const nou=copie(); const i=nou.taskuri.findIndex(x=>x.id===id); if(i<0) return;
+    const [t]=nou.taskuri.splice(i,1);
+    nou.facute=[{...t,facut:tday()},...(nou.facute||[])].slice(0,30);
+    salveaza(nou);
+  };
+  const refa=(id)=>{
+    const nou=copie(); const i=nou.facute.findIndex(x=>x.id===id); if(i<0) return;
+    const [t]=nou.facute.splice(i,1); const {facut,...rest}=t;
+    nou.taskuri.push(rest); salveaza(nou);
+  };
+  const golesteFacute=()=>{ if(!window.confirm("Ștergi definitiv lista Făcute recent?")) return; const nou=copie(); nou.facute=[]; salveaza(nou); };
+  const fmt=(iso)=>iso&&iso.length===10?iso.slice(8,10)+"."+iso.slice(5,7):"";
+  return <div style={{maxWidth:640}}>
+    <div style={{display:"flex",gap:8,marginBottom:14}}>
+      <input value={txt} onChange={e=>setTxt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter") adauga();}} placeholder="Scrie ce ai de făcut și apasă Enter…" style={{flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:14,outline:"none"}}/>
+      <button onClick={adauga} style={{padding:"9px 16px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>Adaugă</button>
+    </div>
+    {msg&&<div style={{fontSize:12,color:"#B04040",marginBottom:10}}>{msg}</div>}
+    {data.taskuri.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"18px 0"}}>Nimic de făcut. 🎉</div>}
+    {data.taskuri.map(t=><label key={t.id} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"11px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6,cursor:"pointer"}}>
+      <input type="checkbox" checked={false} onChange={()=>bifeaza(t.id)} style={{marginTop:3,width:17,height:17,cursor:"pointer"}}/>
+      <span style={{flex:1,fontSize:14,color:C.text,lineHeight:1.4,wordBreak:"break-word"}}>{t.text}</span>
+      <span style={{fontSize:11,color:C.textMuted}}>{fmt(t.data)}</span>
+    </label>)}
+    {(data.facute||[]).length>0&&<div style={{marginTop:22}}>
+      <button onClick={()=>setArataFacute(v=>!v)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:12,padding:0}}>{arataFacute?"▾":"▸"} Făcute recent ({data.facute.length})</button>
+      {arataFacute&&<div style={{marginTop:8}}>
+        {data.facute.map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 10px",fontSize:13,color:C.textMuted}}>
+          <span style={{flex:1,textDecoration:"line-through",wordBreak:"break-word"}}>{t.text}</span>
+          <span style={{fontSize:11}}>{fmt(t.facut)}</span>
+          <button onClick={()=>refa(t.id)} style={{fontSize:11,padding:"3px 8px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer"}}>Refă</button>
+        </div>)}
+        <button onClick={golesteFacute} style={{marginTop:6,fontSize:11,padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",color:C.textMuted,cursor:"pointer"}}>Golește lista</button>
+      </div>}
+    </div>}
+  </div>;
+}
+function DeclaratiiTab(props){
+  const [sub,setSub]=React.useState("pasi");
+  const C=props.C;
+  if(!props.taskuri) return <DeclaratiiPasiTab {...props}/>;
+  return <div>
+    <div style={{display:"flex",gap:6,marginBottom:16}}>
+      {[["pasi","Pașii lunii"],["taskuri","De făcut"]].map(([v,l])=><button key={v} onClick={()=>setSub(v)} style={{padding:"7px 14px",border:`1px solid ${sub===v?C.accent:C.border}`,background:sub===v?C.accent:"transparent",color:sub===v?"#fff":C.textSub,cursor:"pointer",fontSize:12,fontWeight:600}}>{l}</button>)}
+    </div>
+    {sub==="pasi"?<DeclaratiiPasiTab {...props}/>:<TaskuriTab C={C}/>}
+  </div>;
+}
+function DeclaratiiPasiTab({declaratii,setDeclaratii,C,esteAdmin,mergiLa}){
   const azi=tday();
   const lunaPrec=(()=>{let y=+azi.slice(0,4),m=+azi.slice(5,7)-1;if(m<1){m=12;y-=1;}return y+"-"+String(m).padStart(2,"0");})();
   const [luna,setLuna]=React.useState(lunaPrec);
@@ -13945,7 +14068,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         {[["nico","Croitorie"],["cfg","Configurator șină"],["declaratii","Declarații"],["banca","Bancă"]].map(([v,l])=><button key={v} onClick={()=>setNicoView(v)} style={{padding:"7px 14px",border:`1px solid ${nicoView===v?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:nicoView===v?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:nicoView===v?600:400}}>{l}</button>)}
       </div>
       {nicoView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={[]}/>:
-      nicoView==="declaratii"?<div style={{maxWidth:900}}><DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={true} mergiLa={setNicoView}/></div>:
+      nicoView==="declaratii"?<div style={{maxWidth:900}}><DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={true} mergiLa={setNicoView} taskuri={authRole==="admin"}/></div>:
       nicoView==="banca"?<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>:<TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale} readOnly={true}/>}
     </div>;
   }
@@ -14800,7 +14923,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       <div style={{fontSize:13,color:C.textMuted,maxWidth:360,margin:"0 auto",lineHeight:1.7}}>Planul pentru Benjamin Moore — sesiune dedicată.</div>
     </div>}
 
-    {tab==="declaratii"&&<DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={authRole==="admin"} mergiLa={setTab}/>}
+    {tab==="declaratii"&&<DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={authRole==="admin"} mergiLa={setTab} taskuri={authRole==="admin"}/>}
     {tab==="consumvop"&&authRole==="admin"&&<div style={{maxWidth:1000}}><ConsumuriVopsele C={C}/></div>}
     {tab==="banca"&&authRole==="admin"&&<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>}
     {tab==="uit"&&authRole==="admin"&&<div style={{maxWidth:1000}}><UitTab C={C}/></div>}
