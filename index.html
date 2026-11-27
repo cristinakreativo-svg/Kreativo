@@ -2179,7 +2179,7 @@ function impactScore(task,cat,prio) {
 
 const C={bg:"#EDF0ED",surface:"#F7F9F7",border:"#DCE3DF",text:"#1F2A30",textSub:"#34444C",textMuted:"#5F7078",accent:"#33444D",accentLight:"#E6ECE8",danger:"#1F2A30",dangerLight:"#F7F9F7",warn:"#34444C",warnLight:"#F7F9F7"};
 
-function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onOraChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
+function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,asignat,onAsignatChange,eticheta,onEtichetaChange,etichete,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onOraChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
   const [d,setD]=useState(date||"");
   const [o,setO]=useState(ora||"");
@@ -2199,6 +2199,8 @@ function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,fu
         style={{fontSize:12,border:`1px solid ${ov?"#C4CFCA":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
       <Ora24 value={o} onChange={v=>{setO(v);onOraChange&&onOraChange(v);}} title="Ora (dacă e o programare/întâlnire)"
         style={{fontSize:12,border:`1px solid ${C.border}`,background:C.surface,color:C.textSub,outline:"none"}}/>
+      {onEtichetaChange&&<EtichetaInput value={eticheta||""} etichete={etichete||[]} onCommit={onEtichetaChange} listId={"et-"+dlId}/>}
+      {onAsignatChange&&<select title="Cui îi alocă sarcina (apare în „Taskurile mele” la el)" value={asignat||""} onChange={e=>onAsignatChange(e.target.value)} style={{fontSize:11,border:`1px solid ${asignat?C.accent:C.border}`,padding:"3px 4px",background:C.surface,color:asignat?C.accent:C.textMuted,outline:"none",flexShrink:0,fontWeight:asignat?700:400}}><option value="">alocat: —</option><option value="nico">Nico</option><option value="dan">Dan</option></select>}
       {onAchizChange&&<button title={achiz?"Marcat pt. achiziție":"Necesită achiziție material"} onClick={()=>onAchizChange(!achiz)} style={{background:"none",border:`1px solid ${achiz?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:achiz?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>achiz</button>}
       <button title={notif?"Notificare activă":"Activează notificare"} onClick={()=>onNotifChange&&onNotifChange(!notif)} style={{background:"none",border:`1px solid ${notif?C.accent:C.border}`,cursor:"pointer",fontSize:10,color:notif?C.accent:C.textMuted,padding:"2px 6px",flexShrink:0,letterSpacing:"0.04em"}}>not</button>
       <button onClick={onDelete} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:16,flexShrink:0}}>×</button>
@@ -12662,6 +12664,105 @@ function ImpozitProfitTab({C}){
 }
 
 
+
+// ============ ETICHETE PE SARCINI (taskEticheta, vector paralel cu tasks) ============
+const ETICHETE_IMPLICITE=["Croitorie","Factură","Montaj","Comandă materiale","Măsurători","Livrare"];
+const listaEtichete=(clients)=>{
+  const seen=new Map();
+  (clients||[]).forEach(c=>(c.taskEticheta||[]).forEach(e=>{const t=(e||"").trim();if(t&&!seen.has(t.toLowerCase()))seen.set(t.toLowerCase(),t);}));
+  ETICHETE_IMPLICITE.forEach(e=>{if(!seen.has(e.toLowerCase()))seen.set(e.toLowerCase(),e);});
+  return Array.from(seen.values()).sort((a,b)=>a.localeCompare(b,"ro"));
+};
+const normEticheta=(v,clients)=>{
+  const t=(v||"").trim(); if(!t) return "";
+  const ex=listaEtichete(clients).find(e=>e.toLowerCase()===t.toLowerCase());
+  return ex||t;
+};
+function EtichetaInput({value,etichete,onCommit,listId,wide}){
+  const [v,setV]=useState(value||"");
+  useEffect(()=>{setV(value||"");},[value]);
+  const commit=()=>{ if((v||"").trim()!==(value||"")) onCommit((v||"").trim()); };
+  return <>
+    <input list={listId} value={v} placeholder="etichetă…" title="Etichetă (alege una sau scrie una nouă). Sarcinile cu aceeași etichetă se văd grupate în Calendar → Pe etichete."
+      onChange={e=>setV(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter"){e.target.blur();}}}
+      style={{fontSize:11,width:wide||96,border:`1px solid ${value?C.accent:C.border}`,padding:"3px 6px",background:C.surface,color:value?C.accent:C.textMuted,outline:"none",flexShrink:0,fontWeight:value?700:400}}/>
+    <datalist id={listId}>{etichete.map(e=><option key={e} value={e}/>)}</datalist>
+  </>;
+}
+const taskuriToate=(clients)=>{
+  const out=[];
+  (clients||[]).forEach((c,ci)=>(c.tasks||[]).forEach((t,ti)=>{
+    if((c.done||[])[ti]) return;
+    out.push({ci,ti,client:c.name||"",text:typeof t==="object"?t.title:t,data:(c.dates||[])[ti]||"",ora:(c.oraTask||[])[ti]||"",who:(c.taskAsignat||[])[ti]||"",eticheta:((c.taskEticheta||[])[ti]||"").trim()});
+  }));
+  return out;
+};
+function TaskuriPeEtichete({clients,setClients,C,fmtD,tday}){
+  const [pers,setPers]=useState("toti");
+  const [deschis,setDeschis]=useState({});
+  const etichete=listaEtichete(clients);
+  const toate=taskuriToate(clients).filter(t=>pers==="toti"||(pers==="nealocate"?!t.who:t.who===pers));
+  const grupe={};
+  toate.forEach(t=>{const k=t.eticheta||"";(grupe[k]=grupe[k]||[]).push(t);});
+  const chei=Object.keys(grupe).sort((a,b)=>a===""?1:b===""?-1:a.localeCompare(b,"ro"));
+  const bifeaza=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,done:(c.done||[]).map((d,j)=>j===ti?true:d)}));
+  const setPar=(ci,ti,key,v)=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:(c.tasks||[]).length},(_,j)=>(c[key]||[])[j]||"");a[ti]=v;return {...c,[key]:a};}));
+  const btn=(id,l)=><button key={id} onClick={()=>setPers(id)} style={{padding:"5px 12px",border:`1px solid ${pers===id?C.accent:C.border}`,background:pers===id?"#33444D":C.surface,color:pers===id?"#fff":C.textSub,cursor:"pointer",fontSize:12}}>{l}</button>;
+  return <div style={{maxWidth:820}}>
+    <div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>Toate sarcinile nebifate din fișele clienților, grupate pe etichete. Bifezi aici și sarcina dispare din fișa clientului. Eticheta se pune și se schimbă și de aici.</div>
+    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>{btn("toti","Toți")}{btn("nico","Nico")}{btn("dan","Dan")}{btn("nealocate","Nealocate / ale mele")}</div>
+    {chei.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"18px 0"}}>Nicio sarcină.</div>}
+    {chei.map(k=>{
+      const lista=grupe[k].slice().sort((a,b)=>(a.data||"9999").localeCompare(b.data||"9999")||a.client.localeCompare(b.client,"ro"));
+      const nume=k||"Fără etichetă";
+      const open=k===""?!!deschis[""]:deschis[k]!==false;
+      return <div key={k||"_"} style={{marginBottom:16}}>
+        <div onClick={()=>setDeschis(d=>({...d,[k]:!open}))} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:6}}>
+          <span style={{fontSize:12,color:C.textMuted}}>{open?"▾":"▸"}</span>
+          <span style={{fontSize:13,fontWeight:700,color:k?C.accent:C.textSub,textTransform:"uppercase",letterSpacing:"0.06em"}}>{nume}</span>
+          <span style={{fontSize:12,background:k?C.accent:C.border,color:k?"#fff":C.textSub,padding:"1px 9px",fontWeight:700}}>{lista.length}</span>
+        </div>
+        {open&&lista.map(t=>{const ov=t.data&&t.data<tday();return <div key={t.ci+"-"+t.ti} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:4,flexWrap:"wrap"}}>
+          <input type="checkbox" checked={false} onChange={()=>bifeaza(t.ci,t.ti)} style={{width:16,height:16,cursor:"pointer",flexShrink:0}}/>
+          <div style={{flex:1,minWidth:180}}>
+            <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>{t.client}</div>
+            <div style={{fontSize:13,color:C.text,lineHeight:1.35,wordBreak:"break-word"}}>{t.text}</div>
+          </div>
+          {t.data?<span style={{fontSize:12,color:ov?C.danger:C.textSub,flexShrink:0}}>{fmtD(t.data)}{t.ora?" "+t.ora:""}</span>:<span style={{fontSize:11,color:C.textMuted,flexShrink:0}}>fără dată</span>}
+          <select value={t.who} onChange={e=>setPar(t.ci,t.ti,"taskAsignat",e.target.value)} style={{fontSize:11,border:`1px solid ${t.who?C.accent:C.border}`,padding:"3px 4px",background:C.surface,color:t.who?C.accent:C.textMuted,outline:"none",flexShrink:0,fontWeight:t.who?700:400}}><option value="">alocat: —</option><option value="nico">Nico</option><option value="dan">Dan</option></select>
+          <EtichetaInput value={t.eticheta} etichete={etichete} listId={"etl-"+t.ci+"-"+t.ti} onCommit={v=>setPar(t.ci,t.ti,"taskEticheta",normEticheta(v,clients))}/>
+        </div>;})}
+      </div>;
+    })}
+  </div>;
+}
+
+// ============ TASKURILE MELE (sarcinile din fișele clienților alocate lui Nico / Dan) ============
+const taskuriAlocate=(clients,who)=>{
+  const out=[];
+  (clients||[]).forEach((c,ci)=>(c.tasks||[]).forEach((t,ti)=>{
+    if((c.taskAsignat||[])[ti]!==who||(c.done||[])[ti]) return;
+    out.push({ci,ti,client:c.name||"",eticheta:((c.taskEticheta||[])[ti]||"").trim(),text:typeof t==="object"?t.title:t,data:(c.dates||[])[ti]||"",ora:(c.oraTask||[])[ti]||"",achiz:(c.achizitii||[])[ti]||false,material:(c.achizMaterial||[])[ti]||"",cant:(c.achizCantitate||[])[ti]||"",furn:(c.achizFurnizor||[])[ti]||""});
+  }));
+  return out.sort((a,b)=>(a.data||"9999").localeCompare(b.data||"9999")||a.client.localeCompare(b.client));
+};
+function TaskuriMele({clients,setClients,who,C,fmtD,tday}){
+  const lista=taskuriAlocate(clients,who);
+  const bifeaza=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,done:(c.done||[]).map((d,j)=>j===ti?true:d)}));
+  return <div style={{maxWidth:720}}>
+    <div style={{fontSize:12,color:C.textMuted,marginBottom:12}}>Sarcinile alocate ție din fișele clienților. Când bifezi, sarcina dispare.</div>
+    {lista.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"18px 0"}}>Nu ai nicio sarcină alocată.</div>}
+    {(()=>{const arataGr=lista.some(t=>t.eticheta);const ord=[];const seenE={};lista.forEach(t=>{const k=t.eticheta||"";if(!seenE[k]){seenE[k]=1;ord.push(k);}});ord.sort((a,b)=>a===""?1:b===""?-1:a.localeCompare(b,"ro"));return (arataGr?ord:[null]).map(g=><React.Fragment key={g===null?"_":g||"_f"}>{arataGr&&<div style={{fontSize:12,fontWeight:700,color:C.accent,textTransform:"uppercase",letterSpacing:"0.06em",margin:"12px 0 6px"}}>{g||"Fără etichetă"} ({lista.filter(t=>(t.eticheta||"")===g).length})</div>}{lista.filter(t=>g===null||(t.eticheta||"")===g).map(t=>{const ov=t.data&&t.data<tday();return <label key={t.ci+"-"+t.ti} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"11px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6,cursor:"pointer"}}>
+      <input type="checkbox" checked={false} onChange={()=>bifeaza(t.ci,t.ti)} style={{marginTop:3,width:17,height:17,cursor:"pointer"}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em"}}>{t.client}</div>
+        <div style={{fontSize:14,color:C.text,lineHeight:1.4,wordBreak:"break-word"}}>{t.text}</div>
+        {t.achiz&&(t.material||t.cant||t.furn)&&<div style={{fontSize:12,color:C.textSub,marginTop:3}}>{[t.material,t.cant,t.furn&&("furnizor: "+t.furn)].filter(Boolean).join(" · ")}</div>}
+      </div>
+      {t.data&&<span style={{fontSize:12,color:ov?C.danger:C.textSub,flexShrink:0}}>{fmtD(t.data)}{t.ora?" "+t.ora:""}</span>}
+    </label>;})}</React.Fragment>);})()}
+  </div>;
+}
 // ============ DE FĂCUT (reminder-uri personale, doar admin) — cheie zz_ => ascunsă pentru Nico/Dan ============
 const TASKK="zz_taskuri_declaratii_v1";
 function TaskuriTab({C}){
@@ -13302,6 +13403,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   const [cliFilter,setCliFilter]=useState("all");
   const [ofFilter,setOfFilter]=useState("active");
   const [cliCalMonth,setCliCalMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
+  const [calVed,setCalVed]=useState("zile");
   const [calGridMonth,setCalGridMonth]=useState(()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()};});
   const [addingObMare,setAddingObMare]=useState(false);
   const [newObMareName,setNewObMareName]=useState("");
@@ -13679,7 +13781,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   const togCliOpen=(ci)=>setClients(p=>p.map((c,i)=>i!==ci?{...c,open:false}:{...c,open:!c.open}));
   const addCliTask=(ci)=>{const v=(newTask[ci]||"").trim();if(!v) return;setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:[...c.tasks,v],done:[...c.done,false],dates:[...(c.dates||[]),""],motoare:[...(c.motoare||[])]}));setNewTask(p=>({...p,[ci]:""}));setAddingTo(null);};
   const updCliDate=(ci,ti,v)=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const d=Array.from({length:c.tasks.length},(_,j)=>(c.dates||[])[j]||"");d[ti]=v;return {...c,dates:d};}));
-  const delCliTask=(ci,ti)=>setClients(p=>p.map((c,i)=>i!==ci?c:{...c,tasks:c.tasks.filter((_,j)=>j!==ti),done:c.done.filter((_,j)=>j!==ti),dates:(c.dates||[]).filter((_,j)=>j!==ti)}));
+  const delCliTask=(ci,ti)=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const nc={...c,tasks:c.tasks.filter((_,j)=>j!==ti),done:c.done.filter((_,j)=>j!==ti),dates:(c.dates||[]).filter((_,j)=>j!==ti)};['oraTask','notifs','achizitii','achizMaterial','achizFurnizor','achizCantitate','taskAsignat','taskEticheta'].forEach(k=>{if(Array.isArray(c[k])) nc[k]=c[k].filter((_,j)=>j!==ti);});return nc;}));
   const delCli=(ci)=>setClients(p=>p.filter((_,i)=>i!==ci));
   const addCli=()=>{const n=newCliName.trim();if(!n) return;setClients(p=>[...p,{id:gid(),name:n,tasks:[],done:[],dates:[],motoare:[],open:false,...(tab==="oferte"?{stadiu:"oferta"}:{})}]);setNewCliName("");setAddingCli(false);};
 
@@ -14065,9 +14167,10 @@ function AppInner({authRole,authEmail,onLogout}) {
         <div style={{fontSize:11,marginTop:6,fontWeight:700,color:staleTab||protectMode?"#B5504A":C.accent}}>{staleTab?"● date vechi — reîncarcă pagina (Ctrl+F5), salvarea e oprită":protectMode?"● mod protejat — salvare blocată":!supabaseOk?"● offline — nu se salvează":savingKeys.size>0?"● se salvează…":"✓ salvat automat"}</div>
       </div>
       <div style={{display:"flex",gap:6,marginBottom:16}}>
-        {[["nico","Croitorie"],["cfg","Configurator șină"],["declaratii","Declarații"],["banca","Bancă"]].map(([v,l])=><button key={v} onClick={()=>setNicoView(v)} style={{padding:"7px 14px",border:`1px solid ${nicoView===v?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:nicoView===v?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:nicoView===v?600:400}}>{l}</button>)}
+        {[["nico","Croitorie"],["taskuri","Taskurile mele"+(taskuriAlocate(clients,"nico").length?" ("+taskuriAlocate(clients,"nico").length+")":"")],["cfg","Configurator șină"],["declaratii","Declarații"],["banca","Bancă"]].map(([v,l])=><button key={v} onClick={()=>setNicoView(v)} style={{padding:"7px 14px",border:`1px solid ${nicoView===v?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:nicoView===v?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:nicoView===v?600:400}}>{l}</button>)}
       </div>
-      {nicoView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={[]}/>:
+      {nicoView==="taskuri"?<TaskuriMele clients={clients} setClients={setClients} who="nico" C={C} fmtD={fmtD} tday={tday}/>:
+      nicoView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={[]}/>:
       nicoView==="declaratii"?<div style={{maxWidth:900}}><DeclaratiiTab declaratii={declaratii} setDeclaratii={setDeclaratii} C={C} esteAdmin={true} mergiLa={setNicoView} taskuri={authRole==="admin"}/></div>:
       nicoView==="banca"?<BancaModul procesate={bancaProc} setProcesate={setBancaProc} reguli={bancaReguli} setReguli={setBancaReguli} authEmail={authEmail} C={C}/>:<TabNico clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.nico} onAddBlocat={(s,e,m)=>addZiBlocata("nico",s,e,m)} onDelBlocat={id=>delZiBlocata("nico",id)} comandaExecutieCounter={comandaExecutieCounter} setComandaExecutieCounter={setComandaExecutieCounter} catalogMateriale={catalogMateriale} readOnly={true}/>}
     </div>;
@@ -14084,6 +14187,7 @@ function AppInner({authRole,authEmail,onLogout}) {
       </div>
       <div style={{display:"flex",gap:6,marginBottom:16}}>
         <button onClick={()=>setDanView("dan")} style={{padding:"7px 14px",border:`1px solid ${danView==="dan"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="dan"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="dan"?500:400}}>Montaje</button>
+        <button onClick={()=>setDanView("taskuri")} style={{padding:"7px 14px",border:`1px solid ${danView==="taskuri"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="taskuri"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="taskuri"?500:400}}>{"Taskurile mele"+(taskuriAlocate(clients,"dan").length?" ("+taskuriAlocate(clients,"dan").length+")":"")}</button>
         <button onClick={()=>setDanView("mb")} style={{padding:"7px 14px",border:`1px solid ${danView==="mb"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="mb"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="mb"?500:400}}>MotionBlinds</button>
         <button onClick={()=>setDanView("cfg")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfg"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfg"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfg"?500:400}}>Configurator șină</button>
         <button onClick={()=>setDanView("cfgroman")} style={{padding:"7px 14px",border:`1px solid ${danView==="cfgroman"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="cfgroman"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="cfgroman"?500:400}}>Configurator stor roman</button>
@@ -14095,6 +14199,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         <button onClick={()=>setDanView("dist")} style={{padding:"7px 14px",border:`1px solid ${danView==="dist"?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:danView==="dist"?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:danView==="dist"?500:400}}>Distanțe șine</button>
       </div>
       {danView==="dan"?<TabDan danEvents={data.events.filter(e=>e.dan)} onAddDanTask={addDanTask} onDelDanTask={delEv} onUpdDanTask={updDanTask} clients={clients} setClients={setClients} sb={sb} tday={tday} fmtD={fmtD} C={C} blocate={zileBlocate.dan} onAddBlocat={(s,e,m)=>addZiBlocata("dan",s,e,m)} onDelBlocat={id=>delZiBlocata("dan",id)} rulouMateriale={rulouMateriale} setRulouMateriale={setRulouMateriale} camereLista={camereLista} setCamereLista={setCamereLista} contractCounter={contractCounter} setContractCounter={setContractCounter} pvCounter={pvCounter} setPvCounter={setPvCounter} catalogMateriale={catalogMateriale} catalogSine={catalogSine} catalogPlisse={catalogPlisse} catalogJaluzele={catalogJaluzele} ofertaCounter={ofertaCounter} setOfertaCounter={setOfertaCounter} setDanView={setDanView} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente} catalogSinaSimpla={catalogSinaSimpla} catalogStorRomanElectric={catalogStorRomanElectric} catalogOrac={catalogOrac}/>:
+      danView==="taskuri"?<TaskuriMele clients={clients} setClients={setClients} who="dan" C={C} fmtD={fmtD} tday={tday}/>:
       danView==="mb"?<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>:
       danView==="cfg"?<TabConfigurator C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
       danView==="cfgroman"?<TabConfiguratorRoman C={C} clients={clients} setClients={setClients} camereLista={camereLista} setCamereLista={setCamereLista} pendingEditCfg={pendingEditCfg} setPendingEditCfg={setPendingEditCfg} catalogCostComponente={catalogCostComponente}/>:
@@ -14397,7 +14502,9 @@ function AppInner({authRole,authEmail,onLogout}) {
     {tab==="calendar"&&<div>
       <div style={{...row,marginBottom:16}}>
         <div style={{flex:1,fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",fontWeight:600}}>Calendar centralizat</div>
+        {[["zile","Pe zile"],["etichete","Pe etichete"]].map(([id,l])=><button key={id} onClick={()=>setCalVed(id)} style={{padding:"6px 14px",border:`1px solid ${calVed===id?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:calVed===id?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:calVed===id?500:400}}>{l}</button>)}
       </div>
+      {calVed==="etichete"?<TaskuriPeEtichete clients={clients} setClients={setClients} C={C} fmtD={fmtD} tday={tday}/>:<>
 
       {(()=>{
         const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
@@ -14478,6 +14585,7 @@ function AppInner({authRole,authEmail,onLogout}) {
           </div>;
         });
       })()}
+    </>}
     </div>}
 
     {(tab==="clients"||tab==="oferte")&&<div>
@@ -14708,7 +14816,7 @@ function AppInner({authRole,authEmail,onLogout}) {
             </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
-              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} ora={(client.oraTask||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onOraChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const o=Array.from({length:c.tasks.length},(_,j)=>(c.oraTask||[])[j]||"");o[ti]=v;return {...c,oraTask:o};}))} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
+              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} ora={(client.oraTask||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} asignat={(client.taskAsignat||[])[ti]||""} onAsignatChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.taskAsignat||[])[j]||"");a[ti]=v;return {...c,taskAsignat:a};}))} eticheta={(client.taskEticheta||[])[ti]||""} etichete={listaEtichete(clients)} onEtichetaChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.taskEticheta||[])[j]||"");a[ti]=normEticheta(v,p);return {...c,taskEticheta:a};}))} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onOraChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const o=Array.from({length:c.tasks.length},(_,j)=>(c.oraTask||[])[j]||"");o[ti]=v;return {...c,oraTask:o};}))} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
             })}
             {addingTo===ci?<div style={{...row,marginTop:8}}>
               <input autoFocus value={newTask[ci]||""} onChange={e=>setNewTask(p=>({...p,[ci]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addCliTask(ci);if(e.key==="Escape")setAddingTo(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
