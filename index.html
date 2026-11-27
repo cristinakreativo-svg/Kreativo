@@ -12780,6 +12780,7 @@ function PlanificareLivrari({C}){
   const [sub,setSub]=useState("comenzi");
   const [clientNou,setClientNou]=useState("");
   const [arataLivrate,setArataLivrate]=useState(false);
+  const [deschis,setDeschis]=useState({});
   const hoy=new Date();
   const [luna,setLuna]=useState({y:hoy.getFullYear(),m:hoy.getMonth()});
   const citeste=async()=>{
@@ -12824,7 +12825,7 @@ function PlanificareLivrari({C}){
   const upd=(id,patch)=>modifica(d=>{const o=d.comenzi.find(x=>x.id===id); if(o) Object.assign(o,patch);});
   const comandaNoua=(client)=>({id:gid(),client,nr:"",valoare:0,avans:0,dataAvans:"",avansIncasat:false,livrare:"",livrareNeplan:false,prodDe:"",prodPana:"",prodGata:false,livrat:false,obs:""});
   const adaugaComanda=(client)=>modifica(d=>{d.comenzi.push(comandaNoua(client));});
-  const adaugaClient=async()=>{const n=clientNou.trim(); if(!n) return; if(await adaugaComanda(n)) setClientNou("");};
+  const adaugaClient=async()=>{const n=clientNou.trim(); if(!n) return; if(await adaugaComanda(n)){ setClientNou(""); setDeschis(d=>({...d,[n]:true})); }};
   const sterge=(id)=>{ if(!window.confirm("Ștergi această comandă?")) return; modifica(d=>{d.comenzi=d.comenzi.filter(x=>x.id!==id);}); };
   const redenumesteClient=(vechi,nou)=>{const n=(nou||"").trim(); if(!n||n===vechi) return; modifica(d=>{d.comenzi.forEach(o=>{if(o.client===vechi)o.client=n;});});};
 
@@ -12863,8 +12864,7 @@ function PlanificareLivrari({C}){
   };
 
   const vedereComenzi=()=><div>
-    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>{sumBox("Total comenzi",T.valoare)}{sumBox("Total avansuri",T.avans)}{sumBox("Total rest de plată",T.rest,true)}</div>
-    <div style={{display:"flex",gap:8,marginBottom:18}}>
+    <div style={{display:"flex",gap:8,marginBottom:12}}>
       <input value={clientNou} onChange={e=>setClientNou(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")adaugaClient();}} placeholder="Client nou — scrie numele și apasă Enter…" style={{flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:14,outline:"none"}}/>
       <button onClick={adaugaClient} style={{padding:"9px 16px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Client</button>
     </div>
@@ -12873,14 +12873,35 @@ function PlanificareLivrari({C}){
       {neplan.map(o=><div key={o.id} style={{fontSize:13,color:C.text,padding:"2px 0"}}><b>{o.client}</b>{o.nr?" — "+o.nr:""} · valoare {plFm(plNum(o.valoare))} · rest {plFm(rest(o))}</div>)}
     </div>}
     {active.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"14px 0"}}>Nicio comandă activă. Adaugă un client mai sus.</div>}
-    {grupe(active).map(g=>{const t=tot(g.items);return <div key={g.client} style={{marginBottom:20}}>
-      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",padding:"8px 0",borderBottom:`2px solid ${plCuloare(g.client)}`,marginBottom:8}}>
-        <div style={{flex:1,minWidth:160}}><PlFld label="Client" value={g.client} onCommit={v=>redenumesteClient(g.client,v)}/></div>
-        <div style={{fontSize:12,color:C.textSub}}>{g.items.length} {g.items.length===1?"comandă":"comenzi"} · total <b>{plFm(t.valoare)}</b> · avans <b>{plFm(t.avans)}</b> · rest <b style={{color:C.accent}}>{plFm(t.rest)}</b></div>
-        <button onClick={()=>adaugaComanda(g.client)} style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>+ comandă</button>
+    {active.length>0&&<div style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
+      <button onClick={()=>{const d={};grupe(active).forEach(g=>{d[g.client]=true;});setDeschis(d);}} style={{padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:11}}>Extinde toți</button>
+      <button onClick={()=>setDeschis({})} style={{padding:"4px 10px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:11}}>Restrânge toți</button>
+      <span style={{fontSize:11,color:C.textMuted}}>{grupe(active).length} clienți · {active.length} comenzi</span>
+    </div>}
+    {active.length>0&&<div style={{display:"grid",gridTemplateColumns:"minmax(140px,1fr) 70px 110px 100px 110px",gap:8,padding:"0 12px 4px",fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}><span>Client</span><span style={{textAlign:"right"}}>Comenzi</span><span style={{textAlign:"right"}}>Total comandă</span><span style={{textAlign:"right"}}>Avans</span><span style={{textAlign:"right"}}>Rest de plată</span></div>}
+    {grupe(active).map(g=>{const t=tot(g.items);const open=!!deschis[g.client];return <div key={g.client} style={{marginBottom:6}}>
+      <div onClick={()=>setDeschis(d=>({...d,[g.client]:!open}))} style={{display:"grid",gridTemplateColumns:"minmax(140px,1fr) 70px 110px 100px 110px",gap:8,alignItems:"center",padding:"9px 12px",background:C.surface,border:`1px solid ${C.border}`,borderLeft:`4px solid ${plCuloare(g.client)}`,cursor:"pointer"}}>
+        <span style={{fontSize:14,fontWeight:700,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><span style={{fontSize:11,color:C.textMuted,marginRight:6}}>{open?"▾":"▸"}</span>{g.client}</span>
+        <span style={{textAlign:"right",fontSize:12,color:C.textSub}}>{g.items.length}</span>
+        <span style={{textAlign:"right",fontSize:13}}>{plFm(t.valoare)}</span>
+        <span style={{textAlign:"right",fontSize:13}}>{plFm(t.avans)}</span>
+        <b style={{textAlign:"right",fontSize:13,color:C.accent}}>{plFm(t.rest)}</b>
       </div>
-      {g.items.map(cardComanda)}
+      {open&&<div style={{padding:"10px 0 4px 10px",borderLeft:`4px solid ${plCuloare(g.client)}`,marginLeft:0}}>
+        <div style={{display:"flex",alignItems:"flex-end",gap:10,marginBottom:8}}>
+          <div style={{flex:1,minWidth:160,maxWidth:320}}><PlFld label="Client (redenumește)" value={g.client} onCommit={v=>{redenumesteClient(g.client,v);}}/></div>
+          <button onClick={()=>adaugaComanda(g.client)} style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>+ comandă</button>
+        </div>
+        {g.items.map(cardComanda)}
+      </div>}
     </div>;})}
+    {active.length>0&&<div style={{display:"grid",gridTemplateColumns:"minmax(140px,1fr) 70px 110px 100px 110px",gap:8,alignItems:"center",padding:"11px 12px",background:C.accent,color:"#fff",marginTop:10,fontWeight:700}}>
+      <span style={{textTransform:"uppercase",letterSpacing:"0.06em",fontSize:12}}>Total general</span>
+      <span style={{textAlign:"right",fontSize:12}}>{active.length}</span>
+      <span style={{textAlign:"right",fontSize:14}}>{plFm(T.valoare)}</span>
+      <span style={{textAlign:"right",fontSize:14}}>{plFm(T.avans)}</span>
+      <span style={{textAlign:"right",fontSize:14}}>{plFm(T.rest)}</span>
+    </div>}
     {livrate.length>0&&<div style={{marginTop:22}}>
       <button onClick={()=>setArataLivrate(v=>!v)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:12,padding:0}}>{arataLivrate?"▾":"▸"} Livrate ({livrate.length}) · {plFm(tot(livrate).valoare)} lei</button>
       {arataLivrate&&<div style={{marginTop:8}}>{grupe(livrate).map(g=><div key={g.client} style={{marginBottom:10}}><div style={{fontSize:12,fontWeight:700,color:C.textSub,marginBottom:4}}>{g.client}</div>{g.items.map(cardComanda)}</div>)}</div>}
