@@ -14388,7 +14388,7 @@ function AppInner({authRole,authEmail,onLogout}) {
   const GRUPURI=[
     {titlu:"Zilnic",items:[{id:"focus",l:"Focus"},{id:"review",l:"Review & Plan"},{id:"calendar",l:"Calendar"}]},
     {titlu:"Vânzări",items:[{id:"clients",l:"Clienți"},{id:"oferte",l:"Oferte"},{id:"cataloage",l:"Cataloage"},{id:"achizitii",l:"Achiziții"}]},
-    {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu"},{id:"recurente",l:"Recurente"}]},
+    {titlu:"Operațiuni",items:[{id:"motionblinds",l:"MotionBlinds"},{id:"nico",l:"Nico"},{id:"dan",l:"Dan"},{id:"tudor",l:"Radu",sub:[{id:"tudor",l:"Vopsele"},{id:"tudor_plan",l:"Planificare"}]},{id:"recurente",l:"Recurente"}]},
     {titlu:"Financiar",items:[{id:"contabilitate",l:"Contabilitate",sub:authRole==="admin"?[{id:"trezorerie",l:"Cash Flow"},{id:"facturiext",l:"Facturi externe"},{id:"uit",l:"Generare UIT"},{id:"poprire",l:"Poprire salariu"},{id:"impozit",l:"Impozit pe profit"}]:[{id:"trezorerie",l:"Cash Flow"}]},{id:"declaratii",l:"Declarații",sub:authRole==="admin"?[{id:"banca",l:"Bancă"},{id:"consumvop",l:"Consumuri vopsele"}]:[]}]},
     {titlu:"Birou",items:[{id:"administrativ",l:"Administrativ"},{id:"marketing",l:"Marketing"},{id:"personal",l:"Personal"}]}
   ];
@@ -15164,8 +15164,10 @@ function AppInner({authRole,authEmail,onLogout}) {
     </div>}
 
     {tab==="tudor"&&<div>
-      <PlanificareTabs C={C} modul={raduModul} setModul={setRaduModul} oferte={authRole==="admin"?(clients||[]).flatMap(cl=>(cl.oferte||[]).map(of=>({client:cl.name||"",label:`${of.numar||""} — ${cl.name||""} — ${of.moneda==="EUR"?plFm(of.totalEur||of.total||0)+" EUR"+(of.faraTva?" fără TVA":""):plFm(of.total||0)+" lei"}`}))):[]} vopsele={<VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C} comenziFurn={comenziFurnizori} setComenziFurn={setComenziFurnizori} onDeschideComandaFurn={(id)=>{setOpenComandaFurn(id);setAchizSub("comenzi");setTab("achizitii");}}/>}/>
+      <VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C} comenziFurn={comenziFurnizori} setComenziFurn={setComenziFurnizori} onDeschideComandaFurn={(id)=>{setOpenComandaFurn(id);setAchizSub("comenzi");setTab("achizitii");}}/>
     </div>}
+
+    {tab==="tudor_plan"&&<div><PlanificareLivrari C={C} oferte={authRole==="admin"?(clients||[]).flatMap(cl=>(cl.oferte||[]).map(of=>({client:cl.name||"",label:`${of.numar||""} — ${cl.name||""} — ${of.moneda==="EUR"?plFm(of.totalEur||of.total||0)+" EUR"+(of.faraTva?" fără TVA":""):plFm(of.total||0)+" lei"}`}))):[]}/></div>}
 
     {tab==="motionblinds"&&<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
 
