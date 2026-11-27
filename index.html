@@ -12747,6 +12747,213 @@ function TaskuriPeEtichete({clients,setClients,C,fmtD,tday}){
   </div>;
 }
 
+// ============ PLANIFICARE PRODUCȚIE / LIVRĂRI (Radu + admin) — cheie proprie, fără legătură cu vopselele ============
+const PLVK="kreativo_planificare_livrari_v1";
+const plNum=v=>{const n=parseFloat(String(v==null?"":v).replace(/\s/g,"").replace(",","."));return isNaN(n)?0:n;};
+const plFm=n=>(Math.round((n||0)*100)/100).toLocaleString("ro-RO",{maximumFractionDigits:2});
+const plCulori=["#5B7FA0","#8E75A8","#5C8A6B","#B07A4F","#A0566B","#4F8A8B","#8A7F3F","#6B6FA8"];
+const plCuloare=(nume)=>{let h=0;for(const ch of (nume||"")) h=(h*31+ch.charCodeAt(0))%997;return plCulori[h%plCulori.length];};
+function PlFld({label,value,type,onCommit,w,ph,align}){
+  const [v,setV]=useState(value==null?"":String(value));
+  useEffect(()=>{setV(value==null?"":String(value));},[value]);
+  const dt=type==="date";
+  return <div style={{display:"flex",flexDirection:"column",gap:2,flex:w?`0 0 ${w}px`:"1 1 120px",minWidth:0}}>
+    <label style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>{label}</label>
+    <input type={dt?"date":"text"} value={v} placeholder={ph||""}
+      onChange={e=>{setV(e.target.value);if(dt)onCommit(e.target.value);}}
+      onBlur={()=>{if(!dt&&v!==(value==null?"":String(value)))onCommit(v);}}
+      onKeyDown={e=>{if(e.key==="Enter"&&!dt)e.target.blur();}}
+      style={{fontSize:13,border:`1px solid ${C.border}`,padding:"5px 7px",background:C.surface,color:C.text,outline:"none",minWidth:0,textAlign:align||"left"}}/>
+  </div>;
+}
+function PlChk({label,checked,onChange}){
+  return <label style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:checked?C.accent:C.textSub,cursor:"pointer",fontWeight:checked?700:400,whiteSpace:"nowrap"}}>
+    <input type="checkbox" checked={!!checked} onChange={e=>onChange(e.target.checked)} style={{width:15,height:15,cursor:"pointer"}}/>{label}
+  </label>;
+}
+function PlanificareLivrari({C}){
+  const [data,setData]=useState({v:1,comenzi:[]});
+  const dataRef=useRef(data);
+  const verRef=useRef(null);
+  const [stare,setStare]=useState("incarc");
+  const [msg,setMsg]=useState("");
+  const [sub,setSub]=useState("comenzi");
+  const [clientNou,setClientNou]=useState("");
+  const [arataLivrate,setArataLivrate]=useState(false);
+  const hoy=new Date();
+  const [luna,setLuna]=useState({y:hoy.getFullYear(),m:hoy.getMonth()});
+  const citeste=async()=>{
+    const {data:r,error}=await sb.from("kreativo_data").select("value,version").eq("key",PLVK).maybeSingle();
+    if(error) throw error;
+    let d={v:1,comenzi:[]},ver=null;
+    if(r&&r.value){ const x=JSON.parse(r.value); d={v:1,comenzi:Array.isArray(x.comenzi)?x.comenzi:[]}; ver=r.version==null?0:r.version; }
+    dataRef.current=d; verRef.current=ver; setData(d);
+  };
+  const incarca=async()=>{
+    setStare("incarc");
+    try{ await citeste(); setStare("ok"); }
+    catch(e){ setStare("eroare"); setMsg("Nu pot citi planificarea din baza de date: "+(e&&e.message||e)); }
+  };
+  useEffect(()=>{incarca();},[]);
+  // aplică o modificare pe versiunea curentă; dacă altcineva a salvat între timp, reîncarcă și reaplică
+  const modifica=async(fn)=>{
+    try{
+      for(let k=0;k<3;k++){
+        const nou=JSON.parse(JSON.stringify(dataRef.current)); fn(nou);
+        const raw=JSON.stringify(nou);
+        if(verRef.current===null){
+          const ins=await sb.from("kreativo_data").insert({key:PLVK,value:raw}).select("version");
+          if(ins.error){ await citeste(); continue; }
+          verRef.current=(ins.data&&ins.data[0]&&ins.data[0].version)||1;
+        }else{
+          const up=await sb.from("kreativo_data").update({value:raw}).eq("key",PLVK).eq("version",verRef.current).select("version");
+          if(up.error) throw up.error;
+          if(!up.data||!up.data.length){ await citeste(); continue; }
+          verRef.current=up.data[0].version;
+        }
+        dataRef.current=nou; setData(nou); setMsg(""); return true;
+      }
+      setMsg("NU s-a salvat (modificări simultane). Reîncarcă pagina și repetă."); return false;
+    }catch(e){ setMsg("NU s-a salvat: "+(e&&e.message||e)); return false; }
+  };
+  if(stare==="incarc") return <div style={{fontSize:13,color:C.textMuted}}>Se încarcă…</div>;
+  if(stare==="eroare") return <div><div style={{color:"#B04040",fontSize:13,marginBottom:10}}>{msg}</div><button onClick={incarca} style={{padding:"7px 14px",border:`1px solid ${C.border}`,background:"transparent",color:C.textSub,cursor:"pointer",fontSize:12}}>Reîncearcă</button></div>;
+
+  const comenzi=data.comenzi||[];
+  const rest=o=>Math.max(0,plNum(o.valoare)-plNum(o.avans));
+  const upd=(id,patch)=>modifica(d=>{const o=d.comenzi.find(x=>x.id===id); if(o) Object.assign(o,patch);});
+  const comandaNoua=(client)=>({id:gid(),client,nr:"",valoare:0,avans:0,dataAvans:"",avansIncasat:false,livrare:"",livrareNeplan:false,prodDe:"",prodPana:"",prodGata:false,livrat:false,obs:""});
+  const adaugaComanda=(client)=>modifica(d=>{d.comenzi.push(comandaNoua(client));});
+  const adaugaClient=async()=>{const n=clientNou.trim(); if(!n) return; if(await adaugaComanda(n)) setClientNou("");};
+  const sterge=(id)=>{ if(!window.confirm("Ștergi această comandă?")) return; modifica(d=>{d.comenzi=d.comenzi.filter(x=>x.id!==id);}); };
+  const redenumesteClient=(vechi,nou)=>{const n=(nou||"").trim(); if(!n||n===vechi) return; modifica(d=>{d.comenzi.forEach(o=>{if(o.client===vechi)o.client=n;});});};
+
+  const active=comenzi.filter(o=>!o.livrat), livrate=comenzi.filter(o=>o.livrat);
+  const grupe=(lista)=>{const g={};lista.forEach(o=>{(g[o.client]=g[o.client]||[]).push(o);});return Object.keys(g).sort((a,b)=>a.localeCompare(b,"ro")).map(k=>({client:k,items:g[k].slice().sort((a,b)=>(a.livrare||"9999").localeCompare(b.livrare||"9999"))}));};
+  const tot=(lista)=>({valoare:lista.reduce((s,o)=>s+plNum(o.valoare),0),avans:lista.reduce((s,o)=>s+plNum(o.avans),0),rest:lista.reduce((s,o)=>s+rest(o),0)});
+  const T=tot(active);
+  const neplan=active.filter(o=>o.livrareNeplan&&!o.livrare);
+  const azi=tday();
+  const sumBox=(l,v,hi)=><div style={{padding:"8px 14px",background:hi?C.accent:C.surface,border:`1px solid ${hi?C.accent:C.border}`,color:hi?"#fff":C.text,minWidth:120}}><div style={{fontSize:10,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.75}}>{l}</div><div style={{fontSize:16,fontWeight:700}}>{plFm(v)} lei</div></div>;
+  const subBtn=(id,l)=><button key={id} onClick={()=>setSub(id)} style={{padding:"7px 16px",border:`1px solid ${sub===id?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:sub===id?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:sub===id?500:400}}>{l}</button>;
+
+  const cardComanda=(o)=>{
+    const ov=!o.livrat&&o.livrare&&o.livrare<azi;
+    return <div key={o.id} style={{background:C.surface,border:`1px solid ${ov?"#C4A3A0":C.border}`,padding:"10px 12px",marginBottom:8,opacity:o.livrat?0.75:1}}>
+      <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap",marginBottom:8}}>
+        <PlFld label="Comandă / descriere" value={o.nr} ph="ex. mobilier living, comanda 123" onCommit={v=>upd(o.id,{nr:v})}/>
+        <PlFld label="Valoare comandă" w={110} align="right" value={o.valoare||""} ph="0" onCommit={v=>upd(o.id,{valoare:plNum(v)})}/>
+        <PlFld label="Avans" w={100} align="right" value={o.avans||""} ph="0" onCommit={v=>upd(o.id,{avans:plNum(v)})}/>
+        <PlFld label="Avans la data" w={140} type="date" value={o.dataAvans} onCommit={v=>upd(o.id,{dataAvans:v})}/>
+        <div style={{flex:"0 0 110px",display:"flex",flexDirection:"column",gap:2}}><div style={{fontSize:10,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>Rest de plată</div><div style={{fontSize:14,fontWeight:700,color:rest(o)>0?C.text:C.accent,padding:"4px 0",textAlign:"right"}}>{plFm(rest(o))}</div></div>
+        <button onClick={()=>sterge(o.id)} title="Șterge comanda" style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,fontSize:18,padding:"0 4px"}}>×</button>
+      </div>
+      <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
+        <PlFld label="Livrare în data de" w={140} type="date" value={o.livrare} onCommit={v=>upd(o.id,{livrare:v,...(v?{livrareNeplan:false}:{})})}/>
+        <PlChk label="livrare neplanificată" checked={o.livrareNeplan} onChange={v=>upd(o.id,{livrareNeplan:v,...(v?{livrare:""}:{})})}/>
+        <PlFld label="Producție de la" w={140} type="date" value={o.prodDe} onCommit={v=>upd(o.id,{prodDe:v})}/>
+        <PlFld label="Producție până la" w={140} type="date" value={o.prodPana} onCommit={v=>upd(o.id,{prodPana:v})}/>
+        <PlChk label="avans încasat" checked={o.avansIncasat} onChange={v=>upd(o.id,{avansIncasat:v})}/>
+        <PlChk label="producție gata" checked={o.prodGata} onChange={v=>upd(o.id,{prodGata:v})}/>
+        <PlChk label="livrat" checked={o.livrat} onChange={v=>upd(o.id,{livrat:v})}/>
+        {ov&&<span style={{fontSize:11,color:C.danger,fontWeight:700}}>livrare depășită</span>}
+        {o.livrareNeplan&&!o.livrat&&<span style={{fontSize:11,color:C.warn,fontWeight:700}}>data livrării încă necunoscută</span>}
+      </div>
+    </div>;
+  };
+
+  const vedereComenzi=()=><div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>{sumBox("Total comenzi",T.valoare)}{sumBox("Total avansuri",T.avans)}{sumBox("Total rest de plată",T.rest,true)}</div>
+    <div style={{display:"flex",gap:8,marginBottom:18}}>
+      <input value={clientNou} onChange={e=>setClientNou(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")adaugaClient();}} placeholder="Client nou — scrie numele și apasă Enter…" style={{flex:1,padding:"9px 12px",border:`1px solid ${C.border}`,background:C.surface,color:C.text,fontSize:14,outline:"none"}}/>
+      <button onClick={adaugaClient} style={{padding:"9px 16px",background:C.accent,color:"#fff",border:"none",cursor:"pointer",fontSize:13,fontWeight:600}}>+ Client</button>
+    </div>
+    {neplan.length>0&&<div style={{marginBottom:18,padding:"10px 14px",background:C.surface,border:`1px solid ${C.border}`}}>
+      <div style={{fontSize:12,fontWeight:700,color:C.warn,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:6}}>Livrare neplanificată ({neplan.length}) · {plFm(tot(neplan).valoare)} lei</div>
+      {neplan.map(o=><div key={o.id} style={{fontSize:13,color:C.text,padding:"2px 0"}}><b>{o.client}</b>{o.nr?" — "+o.nr:""} · valoare {plFm(plNum(o.valoare))} · rest {plFm(rest(o))}</div>)}
+    </div>}
+    {active.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"14px 0"}}>Nicio comandă activă. Adaugă un client mai sus.</div>}
+    {grupe(active).map(g=>{const t=tot(g.items);return <div key={g.client} style={{marginBottom:20}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",padding:"8px 0",borderBottom:`2px solid ${plCuloare(g.client)}`,marginBottom:8}}>
+        <div style={{flex:1,minWidth:160}}><PlFld label="Client" value={g.client} onCommit={v=>redenumesteClient(g.client,v)}/></div>
+        <div style={{fontSize:12,color:C.textSub}}>{g.items.length} {g.items.length===1?"comandă":"comenzi"} · total <b>{plFm(t.valoare)}</b> · avans <b>{plFm(t.avans)}</b> · rest <b style={{color:C.accent}}>{plFm(t.rest)}</b></div>
+        <button onClick={()=>adaugaComanda(g.client)} style={{padding:"6px 12px",border:`1px solid ${C.accent}`,background:"transparent",color:C.accent,cursor:"pointer",fontSize:12,fontWeight:600}}>+ comandă</button>
+      </div>
+      {g.items.map(cardComanda)}
+    </div>;})}
+    {livrate.length>0&&<div style={{marginTop:22}}>
+      <button onClick={()=>setArataLivrate(v=>!v)} style={{background:"none",border:"none",color:C.textMuted,cursor:"pointer",fontSize:12,padding:0}}>{arataLivrate?"▾":"▸"} Livrate ({livrate.length}) · {plFm(tot(livrate).valoare)} lei</button>
+      {arataLivrate&&<div style={{marginTop:8}}>{grupe(livrate).map(g=><div key={g.client} style={{marginBottom:10}}><div style={{fontSize:12,fontWeight:700,color:C.textSub,marginBottom:4}}>{g.client}</div>{g.items.map(cardComanda)}</div>)}</div>}
+    </div>}
+  </div>;
+
+  const vedereAvansuri=()=>{
+    const lista=comenzi.filter(o=>plNum(o.avans)>0&&!o.avansIncasat).slice().sort((a,b)=>(a.dataAvans||"9999").localeCompare(b.dataAvans||"9999")||a.client.localeCompare(b.client,"ro"));
+    const total=lista.reduce((s,o)=>s+plNum(o.avans),0);
+    return <div style={{maxWidth:760}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>{sumBox("Avansuri de încasat",total,true)}</div>
+      <div style={{fontSize:12,color:C.textMuted,marginBottom:10}}>Clienții care urmează să plătească avans, în ordinea datei. Bifezi „încasat" și dispar de aici. Data și suma avansului se completează la comandă, în Comenzi.</div>
+      {lista.length===0&&<div style={{fontSize:13,color:C.textMuted,padding:"14px 0"}}>Niciun avans de încasat.</div>}
+      {lista.map(o=>{const ov=o.dataAvans&&o.dataAvans<azi;return <div key={o.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:C.surface,border:`1px solid ${C.border}`,marginBottom:6}}>
+        <input type="checkbox" checked={false} onChange={()=>upd(o.id,{avansIncasat:true})} title="Marchează avansul ca încasat" style={{width:17,height:17,cursor:"pointer"}}/>
+        <div style={{flex:1,minWidth:0}}><div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em"}}>{o.client}</div><div style={{fontSize:13,color:C.text}}>{o.nr||"comandă"}</div></div>
+        <span style={{fontSize:12,color:ov?C.danger:C.textSub,fontWeight:ov?700:400}}>{o.dataAvans?fmtD(o.dataAvans):"fără dată"}</span>
+        <b style={{fontSize:14,minWidth:90,textAlign:"right"}}>{plFm(plNum(o.avans))} lei</b>
+      </div>;})}
+    </div>;
+  };
+
+  const vedereCalendar=()=>{
+    const LUNI=["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+    const ZILE=["Lu","Ma","Mi","Jo","Vi","Sâ","Du"];
+    const nz=new Date(luna.y,luna.m+1,0).getDate();
+    const off=(new Date(luna.y,luna.m,1).getDay()+6)%7;
+    const key=(d)=>`${luna.y}-${String(luna.m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    const cells=[];
+    for(let i=0;i<off;i++) cells.push(<div key={"e"+i}/>);
+    for(let d=1;d<=nz;d++){
+      const k=key(d);
+      const dow=new Date(luna.y,luna.m,d).getDay(); const wk=dow===0||dow===6;
+      const prod=comenzi.filter(o=>o.prodDe&&k>=o.prodDe&&k<=(o.prodPana&&o.prodPana>=o.prodDe?o.prodPana:o.prodDe));
+      const liv=comenzi.filter(o=>o.livrare===k);
+      const avn=comenzi.filter(o=>o.dataAvans===k&&plNum(o.avans)>0&&!o.avansIncasat);
+      cells.push(<div key={k} style={{minHeight:74,padding:"3px 3px",background:wk&&!prod.length&&!liv.length?"#EEF1EF":C.bg,border:k===azi?`1.5px solid ${C.text}`:`1px solid ${C.border}`,overflow:"hidden"}}>
+        <div style={{fontSize:11,fontWeight:k===azi?700:400,color:C.textMuted,marginBottom:2}}>{d}</div>
+        {prod.map(o=><div key={"p"+o.id} title={`Producție: ${o.client}${o.nr?" — "+o.nr:""}`} style={{fontSize:9,color:"#fff",background:plCuloare(o.client),fontWeight:600,padding:"1px 3px",marginBottom:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",opacity:(o.prodGata||o.livrat)?0.5:1}}>{o.client}{o.nr?" · "+o.nr:""}</div>)}
+        {liv.map(o=><div key={"l"+o.id} title={`Livrare: ${o.client}${o.nr?" — "+o.nr:""}`} style={{fontSize:9,color:plCuloare(o.client),border:`1.5px solid ${plCuloare(o.client)}`,fontWeight:700,padding:"0 3px",marginBottom:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>LIVRARE {o.client}</div>)}
+        {avn.map(o=><div key={"a"+o.id} title={`Avans de încasat: ${o.client}`} style={{fontSize:9,color:C.textSub,fontStyle:"italic",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>avans {o.client}</div>)}
+      </div>);
+    }
+    const prodFaraData=active.filter(o=>!o.prodDe).length;
+    return <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:8}}>
+        <button onClick={()=>setLuna(p=>p.m===0?{y:p.y-1,m:11}:{y:p.y,m:p.m-1})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>‹</button>
+        <div style={{fontSize:14,fontWeight:600,color:C.text,minWidth:160,textAlign:"center"}}>{LUNI[luna.m]} {luna.y}</div>
+        <button onClick={()=>setLuna(p=>p.m===11?{y:p.y+1,m:0}:{y:p.y,m:p.m+1})} style={{background:"none",border:`1px solid ${C.border}`,cursor:"pointer",padding:"4px 10px",fontSize:13,color:C.textSub}}>›</button>
+      </div>
+      <div style={{fontSize:11,color:C.textMuted,textAlign:"center",marginBottom:10}}>bară plină = perioadă de producție · chenar „LIVRARE" = data livrării · italic = avans de încasat · estompat = producție gata</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3,marginBottom:3}}>{ZILE.map(z=><div key={z} style={{textAlign:"center",fontSize:10,color:C.textMuted,fontWeight:600}}>{z}</div>)}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:3}}>{cells}</div>
+      {neplan.length>0&&<div style={{fontSize:12,color:C.textSub,marginTop:12}}><b style={{color:C.warn}}>Livrare neplanificată:</b> {neplan.map(o=>o.client+(o.nr?" ("+o.nr+")":"")).join(", ")}</div>}
+      {prodFaraData>0&&<div style={{fontSize:11,color:C.textMuted,marginTop:10}}>{prodFaraData} comenzi active fără perioadă de producție — nu apar în calendar până o completezi.</div>}
+    </div>;
+  };
+
+  return <div style={{maxWidth:980}}>
+    <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>{subBtn("comenzi","Comenzi")}{subBtn("calendar","Calendar producție")}{subBtn("avansuri","Avansuri de încasat")}</div>
+    {msg&&<div style={{fontSize:12,color:"#B04040",marginBottom:10}}>{msg}</div>}
+    {sub==="comenzi"?vedereComenzi():sub==="calendar"?vedereCalendar():vedereAvansuri()}
+  </div>;
+}
+function PlanificareTabs({C,modul,setModul,vopsele}){
+  return <div>
+    <div style={{display:"flex",gap:6,marginBottom:16}}>
+      {[["vopsele","Vopsele"],["plan","Planificare producție / livrări"]].map(([id,l])=><button key={id} onClick={()=>setModul(id)} style={{padding:"7px 16px",border:`1px solid ${modul===id?C.accent:C.border}`,background:"#33444D",color:"#fff",boxShadow:modul===id?"inset 0 -3px 0 #fff":"none",cursor:"pointer",fontSize:12,fontWeight:modul===id?500:400}}>{l}</button>)}
+    </div>
+    {modul==="plan"?<PlanificareLivrari C={C}/>:vopsele}
+  </div>;
+}
+
 // ============ TASKURILE MELE (sarcinile din fișele clienților alocate lui Nico / Dan) ============
 const taskuriAlocate=(clients,who)=>{
   const out=[];
@@ -14163,7 +14370,7 @@ function AppInner({authRole,authEmail,onLogout}) {
         <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:22,fontWeight:600,color:C.text,letterSpacing:"0.02em"}}>Radu</div>
         <div style={{fontSize:11,color:C.accent,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginTop:2}}>Vopsele · Kreativo Studio</div>
       </div>
-      <VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} rolRadu={true} C={C}/>
+      <PlanificareTabs C={C} modul={raduModul} setModul={setRaduModul} vopsele={<VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} rolRadu={true} C={C}/>}/>
     </div>;
   }
 
@@ -14926,7 +15133,7 @@ function AppInner({authRole,authEmail,onLogout}) {
     </div>}
 
     {tab==="tudor"&&<div>
-      <VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C} comenziFurn={comenziFurnizori} setComenziFurn={setComenziFurnizori} onDeschideComandaFurn={(id)=>{setOpenComandaFurn(id);setAchizSub("comenzi");setTab("achizitii");}}/>
+      <PlanificareTabs C={C} modul={raduModul} setModul={setRaduModul} vopsele={<VopseleStoc items={vopseleStoc} setItems={setVopseleStoc} miscari={vopseleMiscari} setMiscari={setVopseleMiscari} comenzi={vopseleComenzi} setComenzi={setVopseleComenzi} C={C} comenziFurn={comenziFurnizori} setComenziFurn={setComenziFurnizori} onDeschideComandaFurn={(id)=>{setOpenComandaFurn(id);setAchizSub("comenzi");setTab("achizitii");}}/>}/>
     </div>}
 
     {tab==="motionblinds"&&<TabMotionBlinds motoare={motoare} clients={clients} iesiri={iesiri} intrari={intrari} openModel={openModel} setOpenModel={setOpenModel} stocRamas={stocRamas} soldInitial={soldInitial} totalIntrat={totalIntrat} updStoc={updStoc} delMotorModel={delMotorModel} addMotorModel={addMotorModel} newMotorModel={newMotorModel} setNewMotorModel={setNewMotorModel} adaugaFactura={adaugaFactura} updPozitie={updPozitie} stergeFactura={stergeFactura} stergePozitie={stergePozitie} card={card} C={C} fmtD={fmtD} inp={inp} btnP={btnP}/>}
