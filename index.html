@@ -2179,9 +2179,10 @@ function impactScore(task,cat,prio) {
 
 const C={bg:"#EDF0ED",surface:"#F7F9F7",border:"#DCE3DF",text:"#1F2A30",textSub:"#34444C",textMuted:"#5F7078",accent:"#33444D",accentLight:"#E6ECE8",danger:"#1F2A30",dangerLight:"#F7F9F7",warn:"#34444C",warnLight:"#F7F9F7"};
 
-function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,asignat,onAsignatChange,eticheta,onEtichetaChange,etichete,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onOraChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
+function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,asignat,onAsignatChange,eticheta,onEtichetaChange,etichete,onTextChange,furnizoriCunoscuti,onToggle,onDelete,onDateChange,onOraChange,onNotifChange,onAchizChange,onMaterialChange,onFurnizorChange,onCantitateChange}) {
   const taskTitle=typeof task==="object"?task.title:task;
   const [d,setD]=useState(date||"");
+  const [editT,setEditT]=useState(null);
   const [o,setO]=useState(ora||"");
   const [mat,setMat]=useState(material||"");
   const [furn,setFurn]=useState(furnizor||"");
@@ -2193,7 +2194,11 @@ function ClientTaskRow({task,date,ora,notif,achiz,material,furnizor,cantitate,as
   return <div style={{background:C.surface,border:`1px solid ${ov?"#C4CFCA":soon?"#C4CFCA":C.border}`,padding:"10px 14px",marginBottom:8}}>
     <div style={{display:"flex",alignItems:"center",gap:8}}>
       <input type="checkbox" checked={false} onChange={onToggle} style={{cursor:"pointer",width:15,height:15,flexShrink:0}}/>
-      <span style={{flex:1,fontSize:13,color:C.text}}>{taskTitle}</span>
+      {editT!==null?<input autoFocus value={editT} onChange={e=>setEditT(e.target.value)}
+        onBlur={()=>{const t=(editT||"").trim();setEditT(null);if(t&&t!==taskTitle&&onTextChange)onTextChange(t);}}
+        onKeyDown={e=>{if(e.key==="Enter")e.target.blur();else if(e.key==="Escape")setEditT(null);}}
+        style={{flex:1,fontSize:13,color:C.text,border:`1px solid ${C.accent}`,padding:"3px 6px",background:C.surface,outline:"none",minWidth:0}}/>
+        :<span style={{flex:1,fontSize:13,color:C.text,cursor:onTextChange?"text":"default"}} title={onTextChange?"Click pentru a modifica textul sarcinii":undefined} onClick={()=>{if(onTextChange)setEditT(taskTitle||"");}}>{taskTitle}</span>}
       <span style={{fontSize:10,padding:"2px 7px",background:tg.bg,color:tg.color,fontWeight:500,flexShrink:0}}>{tg.label}</span>
       <input type="date" value={d} onChange={e=>{const v=e.target.value;setD(v);onDateChange(v);}}
         style={{fontSize:12,border:`1px solid ${ov?"#C4CFCA":C.border}`,padding:"3px 7px",background:C.surface,color:ov?C.danger:soon?C.warn:C.textSub,outline:"none",flexShrink:0}}/>
@@ -12679,15 +12684,20 @@ const normEticheta=(v,clients)=>{
   return ex||t;
 };
 function EtichetaInput({value,etichete,onCommit,listId,wide}){
-  const [v,setV]=useState(value||"");
-  useEffect(()=>{setV(value||"");},[value]);
-  const commit=()=>{ if((v||"").trim()!==(value||"")) onCommit((v||"").trim()); };
-  return <>
-    <input list={listId} value={v} placeholder="etichetă…" title="Etichetă (alege una sau scrie una nouă). Sarcinile cu aceeași etichetă se văd grupate în Calendar → Pe etichete."
-      onChange={e=>setV(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==="Enter"){e.target.blur();}}}
-      style={{fontSize:11,width:wide||96,border:`1px solid ${value?C.accent:C.border}`,padding:"3px 6px",background:C.surface,color:value?C.accent:C.textMuted,outline:"none",flexShrink:0,fontWeight:value?700:400}}/>
-    <datalist id={listId}>{etichete.map(e=><option key={e} value={e}/>)}</datalist>
-  </>;
+  const [nou,setNou]=useState(false);
+  const [v,setV]=useState("");
+  const lista=(value&&!etichete.some(e=>e.toLowerCase()===value.toLowerCase()))?[value,...etichete]:etichete;
+  const stil={fontSize:11,width:wide||112,border:`1px solid ${value?C.accent:C.border}`,padding:"3px 4px",background:C.surface,color:value?C.accent:C.textMuted,outline:"none",flexShrink:0,fontWeight:value?700:400};
+  if(nou) return <input autoFocus value={v} placeholder="etichetă nouă…" onChange={e=>setV(e.target.value)}
+    onBlur={()=>{const t=(v||"").trim();setNou(false);setV("");if(t) onCommit(t);}}
+    onKeyDown={e=>{if(e.key==="Enter"){e.target.blur();}else if(e.key==="Escape"){setV("");setNou(false);}}}
+    style={{...stil,border:`1px solid ${C.accent}`,color:C.text,fontWeight:400}}/>;
+  return <select title="Etichetă (alege una sau creează una nouă). Sarcinile cu aceeași etichetă se văd grupate în Calendar → Pe etichete." value={value||""}
+    onChange={e=>{const x=e.target.value; if(x==="__nou__"){setNou(true);} else onCommit(x);}} style={stil}>
+    <option value="">etichetă: —</option>
+    {lista.map(e=><option key={e} value={e}>{e}</option>)}
+    <option value="__nou__">+ etichetă nouă…</option>
+  </select>;
 }
 const taskuriToate=(clients)=>{
   const out=[];
@@ -14816,7 +14826,7 @@ function AppInner({authRole,authEmail,onLogout}) {
             </div>}
             {client.tasks.map((task,ti)=>{
               if(client.done[ti]) return null;
-              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} ora={(client.oraTask||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} asignat={(client.taskAsignat||[])[ti]||""} onAsignatChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.taskAsignat||[])[j]||"");a[ti]=v;return {...c,taskAsignat:a};}))} eticheta={(client.taskEticheta||[])[ti]||""} etichete={listaEtichete(clients)} onEtichetaChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.taskEticheta||[])[j]||"");a[ti]=normEticheta(v,p);return {...c,taskEticheta:a};}))} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onOraChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const o=Array.from({length:c.tasks.length},(_,j)=>(c.oraTask||[])[j]||"");o[ti]=v;return {...c,oraTask:o};}))} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
+              return <ClientTaskRow key={`${client.id}-${ti}`} task={task} date={(client.dates||[])[ti]||""} ora={(client.oraTask||[])[ti]||""} notif={(client.notifs||[])[ti]||false} achiz={(client.achizitii||[])[ti]||false} material={(client.achizMaterial||[])[ti]||""} furnizor={(client.achizFurnizor||[])[ti]||""} cantitate={(client.achizCantitate||[])[ti]||""} asignat={(client.taskAsignat||[])[ti]||""} onAsignatChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.taskAsignat||[])[j]||"");a[ti]=v;return {...c,taskAsignat:a};}))} eticheta={(client.taskEticheta||[])[ti]||""} etichete={listaEtichete(clients)} onTextChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;return {...c,tasks:c.tasks.map((t,j)=>j!==ti?t:(typeof t==="object"&&t?{...t,title:v}:v))};}))} onEtichetaChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.taskEticheta||[])[j]||"");a[ti]=normEticheta(v,p);return {...c,taskEticheta:a};}))} furnizoriCunoscuti={furnizoriCunoscuti} onToggle={()=>togCli(ci,ti)} onDelete={()=>delCliTask(ci,ti)} onDateChange={v=>updCliDate(ci,ti,v)} onOraChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const o=Array.from({length:c.tasks.length},(_,j)=>(c.oraTask||[])[j]||"");o[ti]=v;return {...c,oraTask:o};}))} onNotifChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const n=Array.from({length:c.tasks.length},(_,j)=>(c.notifs||[])[j]||false);n[ti]=v;return {...c,notifs:n};}))} onAchizChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const a=Array.from({length:c.tasks.length},(_,j)=>(c.achizitii||[])[j]||false);a[ti]=v;return {...c,achizitii:a};}))} onMaterialChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const m=Array.from({length:c.tasks.length},(_,j)=>(c.achizMaterial||[])[j]||"");m[ti]=v;return {...c,achizMaterial:m};}))} onFurnizorChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const f=Array.from({length:c.tasks.length},(_,j)=>(c.achizFurnizor||[])[j]||"");f[ti]=v;return {...c,achizFurnizor:f};}))} onCantitateChange={v=>setClients(p=>p.map((c,i)=>{if(i!==ci)return c;const q=Array.from({length:c.tasks.length},(_,j)=>(c.achizCantitate||[])[j]||"");q[ti]=v;return {...c,achizCantitate:q};}))}/>;
             })}
             {addingTo===ci?<div style={{...row,marginTop:8}}>
               <input autoFocus value={newTask[ci]||""} onChange={e=>setNewTask(p=>({...p,[ci]:e.target.value}))} onKeyDown={e=>{if(e.key==="Enter")addCliTask(ci);if(e.key==="Escape")setAddingTo(null);}} placeholder="Sarcina nouă..." style={{...inp,flex:1,padding:"7px 10px"}}/>
